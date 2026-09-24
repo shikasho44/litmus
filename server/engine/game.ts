@@ -111,6 +111,33 @@ export class GameService {
     return this.issue(c, initialState(c.data, this.clock()));
   }
 
+  /**
+   * DEV/ADMIN ONLY (routed under /api/admin/mint-token). Issues a token at a chosen stage so
+   * scene builders and QA can jump straight to the inquest / solution without playing.
+   *   stage 'fresh'        → initial state
+   *   stage 'investigated' → every fact with spoilerLevel ≤ 3 unlocked (+ their memos)
+   *   stage 'debated'      → investigated + all debate rounds cleared
+   *   stage 'solved'       → debated + verdict accepted
+   *   stage 'reconstructed'→ solved + reconstruction complete
+   */
+  async mintToken(caseId: string, stage: 'fresh' | 'investigated' | 'debated' | 'solved' | 'reconstructed', o?: CallOptions): Promise<{ token: ProgressToken; progress: ProgressSnapshot }> {
+    const c = await this.loaded(caseId, o);
+    const s = initialState(c.data, this.clock());
+    const order = ['fresh', 'investigated', 'debated', 'solved', 'reconstructed'];
+    const at = Math.max(0, order.indexOf(stage));
+    if (at >= 1) {
+      for (const f of c.data.facts) {
+        if (f.spoilerLevel <= 3 && !s.unlocked.includes(f.id)) s.unlocked.push(f.id);
+        if (f.spoilerLevel <= 3 && f.scienceMemo && !s.memos.includes(f.scienceMemo)) s.memos.push(f.scienceMemo);
+      }
+      s.asked = Math.max(s.asked, 20);
+    }
+    if (at >= 2) s.cleared = c.data.debate.map((r) => r.id);
+    if (at >= 3) { s.solved = true; s.verdictAttempts = Math.max(1, s.verdictAttempts); s.nearCore = true; }
+    if (at >= 4) s.reconstructed = true;
+    return this.issue(c, sanitizeState(c.data, s));
+  }
+
   async ask(req: AskRequest, o?: CallOptions): Promise<AskResponse> {
     const c = await this.loaded(req?.caseId, o);
     if (typeof req.question !== 'string') throw badRequest('question is required');

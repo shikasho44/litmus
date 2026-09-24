@@ -20,6 +20,7 @@
  *   Admin (dev, or production with header x-admin-token === ADMIN_TOKEN; else 404):
  *   GET  /api/admin/status | /api/admin/cases | /api/admin/traces | /api/admin/bench
  *   POST /api/admin/ask-debug           {caseId, question, token?, mode?}
+ *   POST /api/admin/mint-token          {caseId, stage: fresh|investigated|debated|solved|reconstructed}  (QA shortcut)
  *
  * Errors: { error: { code, message, retryable } } with code ∈ ApiError codes.
  */
@@ -237,6 +238,11 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
   };
 
   const adminPost: Record<string, Route> = {
+    'mint-token': async ({ body }) => {
+      const b = await body();
+      const stage = (['fresh', 'investigated', 'debated', 'solved', 'reconstructed'] as const).find((x) => x === b.stage) ?? 'investigated';
+      return json(200, await svc.mintToken(b.caseId as string, stage, { admin: true }));
+    },
     'ask-debug': async ({ body }) => {
       const b = await body();
       const mode = typeof b.mode === 'string' && (PIPELINE_MODES as readonly string[]).includes(b.mode) ? (b.mode as PipelineMode) : undefined;

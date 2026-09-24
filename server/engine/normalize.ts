@@ -86,45 +86,95 @@ const POS_STEMS = [
   '入って', '入れ', '使っ', '使わ', '使い',
 ];
 const NEG_STEMS = [
-  '止ま', '止め', '止っ', '停止', '切れ', '消え', '消し', '壊れ', 'こわれ', '故障', '閉ま', '閉じ', '閉め', '塞', 'ふさが',
+  '止ま', '止め', '止っ', '停止', '切れ', '消え', '消し', '閉ま', '閉じ', '閉め', '塞', 'ふさが',
   '不足', '低下', '下が', '減っ', '減少', '少な', '薄か', '薄く', '薄い', '薄ま', '薄れ', '空っぽ', 'からっぽ', 'ぜろ', '無かっ', '無い', '無く', '無し', 'なし',
+  // negated verbs of the working axis read as one stem (「鳴らなかった」「動かなくなった」)
+  '動かな', '鳴らな', '鳴らず', '点かな', '開かな', '効かな', '回らな', '作動しな', '作動せず', '機能しな', '機能せず',
 ];
+/**
+ * Broken / out of order is its own axis: 「壊れていた？」 must not be answered from a fact that
+ * says the fan was merely switched off (「止まっていた」), and 「正常だった？」 is not 「壊れていない」.
+ */
+const BROKEN_STEMS = ['壊れ', 'こわれ', '故障'];
+/** Open / closed is its own axis too: a closed door is not "not working". */
+const OPEN_STEMS = new Set(['開い', '開け', '開放', '閉ま', '閉じ', '閉め', '塞', 'ふさが', '開かな']);
 const NEGATION_AFTER = /^(?:[ってでいおられ]{0,4})(?:な(?:い|かっ|く|さ)|ず|ませ|ねー|ねえ)/u;
 const BARE_NEGATION = 'な(?:い|かった|く)|ません|おらず|せず|ず$';
-const POLARITY_RE = new RegExp(`(${POS_STEMS.join('|')})|(${NEG_STEMS.join('|')})|(${BARE_NEGATION})`, 'gu');
+// 「閉め忘れ」「止め忘れ」「消し忘れ」 — the action was NOT done, so the state is the opposite.
+const FORGOT = /^(?:忘れ|わすれ)/u;
+const NEG_ALL = [...NEG_STEMS, ...BROKEN_STEMS].sort((a, b) => b.length - a.length);
+const POLARITY_RE = new RegExp(`(${POS_STEMS.join('|')})|(${NEG_ALL.join('|')})|(${BARE_NEGATION})`, 'gu');
+const BROKEN_SET = new Set(BROKEN_STEMS);
 // 「毒ではないですか」「変なにおいはなかったですか」 ask about the affirmative (rhetorical negative).
 const RHETORICAL_NEG_TAIL = /(?:(?:では|じゃ|でわ)(?:ない|なかった)(?:です|でした)?(?:か|かな|かね)?|(?:ない|なかった)(?:です|でした)(?:か|かな|かね)|(?:ない|なかった)(?:か|かな|かね))$/u;
 
 export type Polarity = 'pos' | 'neg';
+/**
+ * Axis a state stem belongs to: working / present / enough ('state'), open vs closed ('open'),
+ * intact vs broken ('broken').
+ */
+export type PolarityFamily = 'state' | 'open' | 'broken';
 
 /** One predicate found in a text: its polarity and whether it came from a state stem. */
 export interface PolarityMark {
   polarity: Polarity;
   /** true = a state stem (止まる/動く/…, possibly negated); false = bare grammatical negation. */
   stem: boolean;
+  /** Axis of a state stem ('broken': 壊れ/故障, pos = intact). Undefined for bare negations. */
+  family?: PolarityFamily;
 }
+
+const flipPol = (p: Polarity): Polarity => (p === 'pos' ? 'neg' : 'pos');
 
 export function polarityMarks(norm: string): PolarityMark[] {
   const out: PolarityMark[] = [];
   let consumedUntil = -1;
   for (const m of norm.matchAll(POLARITY_RE)) {
     const at = m.index ?? 0;
-    const end = at + m[0].length;
+    let end = at + m[0].length;
     if (m[3]) {
       if (at < consumedUntil) continue; // negation already applied to the stem before it
       out.push({ polarity: 'neg', stem: false });
       continue;
     }
+    const family: PolarityFamily = BROKEN_SET.has(m[0]) ? 'broken' : OPEN_STEMS.has(m[0]) ? 'open' : 'state';
+    let base: Polarity = m[1] ? 'pos' : 'neg';
+    const forgot = FORGOT.exec(norm.slice(end, end + 3));
+    if (forgot) {
+      base = flipPol(base);
+      end += forgot[0].length;
+      consumedUntil = Math.max(consumedUntil, end);
+    }
     const neg = NEGATION_AFTER.exec(norm.slice(end, end + 8));
     if (neg) consumedUntil = end + neg[0].length;
-    const base: Polarity = m[1] ? 'pos' : 'neg';
-    out.push({ polarity: neg ? (base === 'pos' ? 'neg' : 'pos') : base, stem: true });
+    out.push({ polarity: neg ? flipPol(base) : base, stem: true, family });
   }
   return out;
 }
 
 export function polarities(norm: string): Polarity[] {
   return polarityMarks(norm).map((m) => m.polarity);
+}
+
+/**
+ * Whether two axes can be compared. Working and open/closed are compared with each other
+ * (「換気口は閉じていた？」 vs 「ファンは止まっていた」); broken only with broken.
+ */
+export function comparableFamilies(a: PolarityFamily | undefined, b: PolarityFamily | undefined): boolean {
+  if (!a || !b) return true;
+  return (a === 'broken') === (b === 'broken');
+}
+
+/**
+ * Unanimous polarity of a set of marks, restricted to one axis: at least one state stem of that
+ * family, and every stem of that family plus every bare negation agreeing. Without `family` the
+ * stems of all families count (legacy behaviour of statementPolarity). `strict` compares the
+ * exact family instead of comparable families.
+ */
+export function marksPolarity(marks: readonly PolarityMark[], family?: PolarityFamily, strict = false): Polarity | undefined {
+  const m = family ? marks.filter((x) => !x.stem || (strict ? x.family === family : comparableFamilies(x.family, family))) : marks;
+  if (m.length === 0 || !m.some((x) => x.stem)) return undefined;
+  return m.every((x) => x.polarity === m[0].polarity) ? m[0].polarity : undefined;
 }
 
 export interface Proposition {
@@ -135,6 +185,8 @@ export interface Proposition {
    * and causal questions are not comparable.
    */
   determinate: boolean;
+  /** Axis of the main predicate (only when it is a state stem). */
+  family?: PolarityFamily;
 }
 
 // Causal questions (「〜のせいですか」「〜だからですか」) propose a reason, not a state.
@@ -153,14 +205,17 @@ export function questionProposition(raw: string): Proposition {
   const marks = polarityMarks(t);
   const main = marks[marks.length - 1];
   const polarity = main?.polarity ?? (negated ? 'neg' : 'pos');
-  return { polarity, determinate: !!main && main.stem && !CAUSAL.test(norm) };
+  const prop: Proposition = { polarity, determinate: !!main && main.stem && !CAUSAL.test(norm) };
+  if (main?.stem && main.family) prop.family = main.family;
+  return prop;
 }
 
-/** Polarity of a fact statement — only when every predicate agrees and at least one is a state stem. */
-export function statementPolarity(norm: string): Polarity | undefined {
-  const m = polarityMarks(norm);
-  if (m.length === 0 || !m.some((x) => x.stem)) return undefined;
-  return m.every((x) => x.polarity === m[0].polarity) ? m[0].polarity : undefined;
+/**
+ * Polarity of a fact statement — only when every predicate agrees and at least one is a state
+ * stem. With `family`, only that axis counts (see marksPolarity).
+ */
+export function statementPolarity(norm: string, family?: PolarityFamily): Polarity | undefined {
+  return marksPolarity(polarityMarks(norm), family);
 }
 
 // Open (wh-) questions. Indefinites (何か/誰か/どこか/いつか…) are yes/no questions.
@@ -169,14 +224,33 @@ const OPEN_Q = new RegExp(
     'なぜ(?!か)', '何故(?!か)', 'なんで', 'どうして', 'どうやって', 'どうすれば', 'どのよう', 'どんな', 'どういう',
     'どうだった', 'どうなった', 'どうなって', 'どうした', 'どう思', 'どうです', 'どうでした', 'どうでしょう', 'どうなの', 'どうなん', '(?<![ぶこそあ])どう$',
     'どれくらい', 'どれぐらい', 'どのくらい', 'どのぐらい', 'いくつ', 'いくら',
-    '何(?!か|も|らか|とか|とも|気|度も|回も|人か|個か|者か|にも)', 'なに(?!か|も|げ|より|にも)', 'なんの', 'なんじ', 'なんさい', 'なんにん',
+    '何(?!か|も|らか|とか|とも|気|度も|回も|人か|個か|者か|者が|者に|にも)', 'なに(?!か|も|げ|より|にも|おい)', 'なんの', 'なんじ', 'なんさい', 'なんにん',
+    // 「犯人を教えて」 asks for a culprit that may not exist → rephrase, never 'cannot'
+    '(?:犯人|はんにん)(?:の(?:名前|なまえ|正体|顔))?(?:を|は|って)?(?:教え|おしえ)',
     '誰(?!か|も|にも|とも|ひとり|一人)', 'だれ(?!か|も|にも|とも)', 'どこ(?!か|にも|も)', '(?<![あこそど])いつ(?!か|も)', 'どれ(?!か|も)', 'どちら', 'どっち', 'それとも',
   ].join('|'),
   'u',
 );
 
+/**
+ * A bare topic that asks for a value: 「死亡推定時刻は？」「気温は？」「窒素とは？」. Existence
+ * shorthands (「毒は？」「どこかに傷は」) stay yes/no questions.
+ */
+const VALUE_TOPIC = new RegExp(
+  '(?:' +
+    [
+      '時刻', 'じこく', '時間', 'じかん', '時期', '日時', '日付', '時間帯', '季節', '気温', 'きおん', '温度', 'おんど', '体温', 'たいおん', '室温',
+      '天気', 'てんき', '天候', '年齢', 'ねんれい', '歳', '名前', 'なまえ', '本名', '場所', 'ばしょ', '職業', 'しょくぎょう', '身長', '体重',
+      '距離', 'きょり', '量', '人数', '速さ', '速度', 'すぴーど', '原因', 'げんいん', '理由', 'りゆう', '方法', 'ほうほう', '目的', '動機',
+      '死因', 'しいん', '正体', '状況', '状態', '様子', 'ようす', '経緯', '順番', '順序', '大きさ', '広さ', '重さ', '長さ', '高さ', '深さ',
+      '濃度', '割合', '程度', '結果', '内容', '中身', '種類', '手段', '経過', '服装', '格好', '持ち物', '所持品', '性格', '関係', '犯人',
+    ].join('|') +
+    ')(?:は|って)$|とは$',
+  'u',
+);
+
 export function isOpenQuestion(norm: string): boolean {
-  return OPEN_Q.test(norm);
+  return OPEN_Q.test(norm) || VALUE_TOPIC.test(norm);
 }
 
 // "Is X relevant / important?" — answered from the importance of the fact X points at.
@@ -189,11 +263,13 @@ export function isRelevanceQuestion(norm: string): boolean {
 export type MetaKind = 'askAnswer' | 'askHint' | 'offtopic' | 'aboutHolma' | 'rude' | 'empty' | 'tooLong';
 
 const META_ASK_ANSWER: RegExp[] = [
-  /(?:死因|しいん|答え|こたえ|正解|せいかい|真相|しんそう|結論|けつろん|犯人|はんにん|真実|しんじつ)(?:を|は|って|が|とか)?(?:教え|おしえ|言って|いって|知りたい|しりたい|なに|何|なん|だれ|誰|どれ|ちょうだい|頂戴|ください|下さい|くれ|ずばり|早く|はやく)/u,
+  // 犯人 is deliberately absent: 「犯人は誰？」 must not imply that a culprit exists (→ open/vague).
+  /(?:死因|しいん|答え|こたえ|正解|せいかい|真相|しんそう|結論|けつろん|真実|しんじつ)(?:を|は|って|が|とか)?(?:教え|おしえ|言って|いって|知りたい|しりたい|なに|何|なん|だれ|誰|どれ|ちょうだい|頂戴|ください|下さい|くれ|ずばり|早く|はやく)/u,
   /(?:死因|答え|正解|真相|真実|結論|全部|ぜんぶ|すべて|全て|何が起き|なにがおき)(?:を|は|って|が)?.{0,4}(?:教えて|おしえて|話して|はなして|説明し|せつめいし|言って|いって)/u,
   /(?:なぜ|どうして|なんで|何が|なにが).{0,14}(?:説明し|せつめいし)(?:て|ろ)/u,
-  /(?:彼女|かのじょ|被害者)?(?:の)?(?:名前|なまえ|本名|身元|みもと|正体)(?:を|は|って)?(?:教え|おしえ|なに|何|なん|知りたい|だれ|誰)/u,
-  /(?:何|なに|誰|だれ)(?:が|で)(?:彼女を)?(?:殺|ころ)/u,
+  // the victim's name (not 「犯人の名前」 — that would imply a culprit; it stays an open question)
+  /(?<!(?:犯人|はんにん)の?)(?:彼女|かのじょ|被害者)?(?:の)?(?:名前|なまえ|本名|身元|みもと|正体)(?:を|は|って)?(?:教え|おしえ|なに|何|なん|知りたい|だれ|誰)/u,
+  /(?:何|なに)(?:が|で)(?:彼女を)?(?:殺|ころ)/u,
   /ねたばれ/u,
   /(?:なぜ|何故|なんで|どうして)(?:彼女は|かのじょは|この人は|このひとは)?(?:死ん|しん|亡くな|なくな)/u,
   /(?:何|なに|なん)(?:で|が原因で|によって)(?:死ん|しん|亡くな|なくな)/u,
@@ -201,7 +277,9 @@ const META_ASK_ANSWER: RegExp[] = [
 ];
 const META_ASK_HINT: RegExp[] = [
   /(?:ひんと|手がかり|手掛かり|てがかり)/u,
-  /^(?:わからない|分からない|わかんない|わかりません|分かりません|降参|こうさん|ぎぶあっぷ|お手上げ|おてあげ|詰んだ|つんだ|助けて|たすけて|むり|無理)/u,
+  // The whole message is "I'm stuck" (「わからん」「もう無理」「降参です」) — not 「無理やり…」.
+  /^(?:もう|全然|ぜんぜん|さっぱり|全く|まったく|ほんとに|本当に|ほんと|まじで|うーん|うーむ)?(?:わから(?:ない|ん|なく|なくなった|なくなってきた)|分から(?:ない|ん|なく|なくなった)|わかんな(?:い)?|わかんね(?:ー|え)?|わかりません|分かりません|降参|こうさん|ぎぶあっぷ|ぎぶ|お手上げ|おてあげ|詰んだ|つんだ|詰み|手詰まり|てづまり|行き詰(?:まった|まり|まってる)|いきづま(?:った|り|ってる)|助けて|たすけて|むり|無理|だめだ|もうだめ|難しい|むずかしい|むずい|困った|こまった)(?:です|でした|だ|だよ|だわ|よ|ね|な|なあ|なぁ|わ|かも|ー|w|笑)*$/u,
+  /(?:何|なに)を(?:聞|訊|き|質問し|しつもんし)(?:けば|いたら|たらいい|すれば|ればいい)/u,
 ];
 const META_RUDE = /(?:ばか(?!り|ら|す)|馬鹿|あほ(?!う)|阿呆|くそ(?!う)|糞|うざ|きも(?!ち|の|ど|だめ)|きしょ|ぼけ(?!る|て)|かす(?![かりれみんけ])|だまれ|黙れ|死ね|しねよ|^しね$|きえろ|消えろ|ころすぞ|殺すぞ|ふざけんな|ふざけるな|役立たず|やくたたず|のろま|くたばれ)/u;
 const META_OFFTOPIC = /^(?:こんにちは|こんにちわ|こんばんは|こんばんわ|おはよう|はじめまして|よろしく|ありがとう|さようなら|さよなら|おやすみ|やあ|hello|hi|hey|もしもし|てすと|test|元気|げんき|天気|てんき|好きな食べ物|すきなたべもの|趣味|しゅみ|今何時|いまなんじ|暇|ひま|眠い|ねむい|お腹すいた|おなかすいた|疲れた|つかれた|おい|ねえ|ねぇ|へい)/u;

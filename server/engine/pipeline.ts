@@ -4,8 +4,13 @@
  *   question → normalise/split → retrieve → judge (rules | model) → policy (code rules)
  *            → reply (canned FAST PATH | model phrasing) → post-check → unlock + token + trace
  *
+ * Safety first: before anything else (probes, judges, models) the message and each part go
+ * through safety.ts. A hit — or a model judge flagging selfHarm ≥ 0.5 — answers the whole turn
+ * with one calm, serious fixed line, answerClass 'cannot', notice 'support', no unlocks, no
+ * model phrasing; the trace records only the rule (the text is redacted).
+ *
  * Failure policy: a model call is retried once on a retryable ProviderError, then that
- * part of the turn degrades to the rules judge (marked degraded; the canned
+ * part of the turn degrades to the rules judge (marked degraded, notice 'degraded'; the canned
  * error.degraded line is prefixed). A per-turn deadline keeps the whole turn under the
  * HTTP client's timeout. Player state is only ever advanced by policy.ts — never lost.
  */
@@ -24,6 +29,7 @@ import type { LoadedCase } from './registry.js';
 import type { GameState } from './state.js';
 import type { BudgetGuard } from './budget.js';
 import { StageTimer, type EngineTrace, type PartTrace } from './trace.js';
+import { detectSafety, flaggedByModel, safetyLine, type SafetyHit } from './safety.js';
 
 export const TURN_DEADLINE_MS = 9000;
 export const STAGE_TIMEOUT_MS = { judge: 4500, render: 4000, check: 3000 } as const;
@@ -47,6 +53,64 @@ export interface AskOutcome {
   state: GameState;
   trace: EngineTrace;
   degraded: boolean;
+  /** Set when the turn was answered by the safety filter (the caller must not log the text). */
+  safety?: SafetyHit;
+}
+
+/** Placeholder written to traces instead of a question the safety filter answered. */
+export const REDACTED = '[safety]';
+
+/**
+ * The whole turn answered by the safety filter: one serious fixed line, 'cannot', notice
+ * 'support', nothing unlocked. Counts as one question. The question text is not traced.
+ */
+function safetyOutcome(ctx: AskContext, hit: SafetyHit, timer: StageTimer, usage: Usage, mode: PipelineMode, budgetExceeded: boolean): AskOutcome {
+  const line = safetyLine(hit);
+  const answer: AskAnswer = {
+    question: ctx.question.trim(),
+    answerClass: 'cannot',
+    line,
+    mood: 'serious',
+    unlocked: [],
+    memos: [],
+    notice: 'support',
+  };
+  const judge = { source: 'safety', kind: hit.kind, rule: hit.rule };
+  const part: PartTrace = {
+    question: REDACTED,
+    normalized: REDACTED,
+    negated: false,
+    open: false,
+    answerClass: 'cannot',
+    source: 'meta',
+    meta: 'safety',
+    confidence: 1,
+    closeness: 0,
+    factIds: [],
+    unlocked: [],
+    blocked: [],
+    candidates: [],
+    probes: [],
+    judge,
+    rendered: { text: line, canned: true },
+  };
+  ctx.budget?.add(usage.costUsd);
+  const trace: EngineTrace = {
+    mode: budgetExceeded ? 'rules' : mode,
+    requestedMode: ctx.components.mode,
+    normalized: [REDACTED],
+    candidates: [],
+    judge,
+    confidence: 1,
+    fastPath: true,
+    fallback: [budgetExceeded ? 'budget' : undefined, `safety:${hit.kind}:${hit.rule}`].filter(Boolean).join(' '),
+    timings: timer.timings(),
+    tokens: { input: usage.inputTokens, output: usage.outputTokens },
+    costUsd: Math.round(usage.costUsd * 1e8) / 1e8,
+    parts: [part],
+    degraded: false,
+  };
+  return { answers: [answer], state: { ...ctx.state, asked: ctx.state.asked + 1 }, trace, degraded: false, safety: hit };
 }
 
 interface CallResult<T> {
@@ -153,6 +217,11 @@ export async function runAsk(ctx: AskContext): Promise<AskOutcome> {
   const tooLong = [...ctx.question].length > MAX_QUESTION_CHARS;
   const split = tooLong ? { parts: [ctx.question], dropped: 0 } : timer.timeSync('normalize', () => splitQuestions(ctx.question));
   const rawParts = split.parts.length > 0 ? split.parts : [ctx.question];
+
+  // 0. safety filter — before probes, judges and models; never sent to a model
+  const safetyHit = timer.timeSync('safety', () => detectSafety(ctx.question) ?? rawParts.map((p) => detectSafety(p)).find((h): h is SafetyHit => !!h));
+  if (safetyHit) return safetyOutcome(ctx, safetyHit, timer, usage, components.mode, budgetExceeded);
+
   const work: PartWork[] = rawParts.map((raw) => {
     const q = timer.timeSync('normalize', () => analyze(raw));
     const cand = timer.timeSync('retrieve', () => retrieve(q, loaded.index));
@@ -185,6 +254,11 @@ export async function runAsk(ctx: AskContext): Promise<AskOutcome> {
         }),
       ),
     );
+  }
+
+  // A model judge may flag self-harm / harming others the rules filter missed.
+  if (work.some((w) => w.decision !== w.rules && flaggedByModel(w.decision.flags))) {
+    return safetyOutcome(ctx, { kind: 'model', rule: 'judge-flag' }, timer, usage, components.mode, budgetExceeded);
   }
 
   // 3. policy + canned line (sequential: a later part sees earlier unlocks)
@@ -307,7 +381,7 @@ export async function runAsk(ctx: AskContext): Promise<AskOutcome> {
   // 5. answers + trace
   const answers: AskAnswer[] = work.map((w, i) => {
     const { policy } = composed[i];
-    return {
+    const a: AskAnswer = {
       question: w.raw,
       answerClass: w.decision.answerClass,
       line: finalLines[i].text,
@@ -315,6 +389,8 @@ export async function runAsk(ctx: AskContext): Promise<AskOutcome> {
       unlocked: policy.unlock.map((id) => publicFact(loaded.index.factById.get(id)!.fact)),
       memos: policy.memos.map((m) => memoView(c, m)).filter((m): m is NonNullable<typeof m> => !!m),
     };
+    if (w.degraded) a.notice = 'degraded';
+    return a;
   });
 
   work.forEach((w, i) => {

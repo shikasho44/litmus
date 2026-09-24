@@ -4,8 +4,8 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
-  /* clip only the bottom edge so ears may rise above the box */
-  clip-path: inset(-60% -40% 0 -40%);
+  /* clip only the bottom edge so ears / probe may leave the box upwards and sideways */
+  clip-path: inset(-80% -90% 0 -90%);
 }
 .holma__fig,
 .holma__breath {
@@ -18,6 +18,9 @@
 }
 .holma.is-talking .holma__breath {
   animation: holma-talk 0.32s ease-in-out infinite alternate;
+}
+.holma.is-thinking .holma__breath {
+  animation: holma-think 2.4s ease-in-out infinite;
 }
 .holma.is-flipped .holma__fig {
   transform: scaleX(-1);
@@ -53,6 +56,11 @@
 @keyframes holma-talk {
   from { transform: translateY(0) scale(1, 1); }
   to { transform: translateY(-3px) scale(1.004, 1.012); }
+}
+@keyframes holma-think {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  30% { transform: rotate(-1.6deg) translateY(-2px); }
+  60% { transform: rotate(0.8deg) translateY(0); }
 }
 [data-reduce-motion='true'] .holma__breath {
   animation: none !important;

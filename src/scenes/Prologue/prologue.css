@@ -119,10 +119,11 @@
   color: var(--bone-2);
 }
 
+/* phone: hip-up framing in a shorter, wider box (a tall narrow box would over-zoom) */
 [data-layout='narrow'] .prologue__holma {
-  right: 0;
-  width: 58%;
-  height: 100%;
+  right: -6%;
+  width: 76%;
+  height: 64%;
 }
 [data-layout='narrow'] .prologue__jane {
   left: 4%;

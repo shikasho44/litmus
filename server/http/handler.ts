@@ -27,6 +27,7 @@
 import { ApiError, type PipelineMode } from '../../shared/api.js';
 import { EngineError, statusOf } from '../engine/errors.js';
 import { MAX_QUESTION_CHARS } from '../engine/normalize.js';
+import { detectSafety } from '../engine/safety.js';
 import { MAX_VERDICT_CHARS } from '../engine/game.js';
 import { PIPELINE_MODES } from '../engine/env.js';
 import type { ContentRegistry } from '../engine/registry.js';
@@ -103,7 +104,7 @@ async function validations(rt: ApiRuntime): Promise<{ reg: ContentRegistry; list
   const reg = await rt.content();
   let list = validationCache.get(reg);
   if (!list) {
-    list = reg.cases.map((c) => validateParsedCase(c.data, { path: c.path }));
+    list = reg.cases.map((c) => validateParsedCase(c.data, { path: c.path, assetExists: rt.assetExists }));
     validationCache.set(reg, list);
   }
   return { reg, list };
@@ -158,7 +159,8 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
       limit('ask', ip);
       const b = await body();
       if (typeof b.question !== 'string') throw new EngineError('bad_request', 'question is required', 400);
-      if ([...b.question].length > MAX_QUESTION_CHARS) throw new EngineError('bad_request', `question is too long (max ${MAX_QUESTION_CHARS})`, 400);
+      // Over-long is refused — except a message the safety filter answers (support notice first).
+      if ([...b.question].length > MAX_QUESTION_CHARS && !detectSafety(b.question)) throw new EngineError('bad_request', `question is too long (max ${MAX_QUESTION_CHARS})`, 400);
       return json(200, await svc.ask({ caseId: b.caseId as string, question: b.question, token: b.token as string | undefined }, { admin, withTrace: dev || admin }));
     },
     hint: async ({ body, admin, ip }) => {
@@ -185,7 +187,7 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
       limit('verdict', ip);
       const b = await body();
       if (typeof b.text !== 'string') throw new EngineError('bad_request', 'text is required', 400);
-      if ([...b.text].length > MAX_VERDICT_CHARS) throw new EngineError('bad_request', `text is too long (max ${MAX_VERDICT_CHARS})`, 400);
+      if ([...b.text].length > MAX_VERDICT_CHARS && detectSafety(b.text)?.kind !== 'selfHarm') throw new EngineError('bad_request', `text is too long (max ${MAX_VERDICT_CHARS})`, 400);
       return json(200, await svc.verdict({ caseId: b.caseId as string, token: b.token as string, text: b.text }, { admin, withTrace: dev || admin }));
     },
     reconstruction: async ({ body, admin, ip }) => {

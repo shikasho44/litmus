@@ -138,6 +138,40 @@ describe('HTTP handler (end to end)', () => {
     expect((await post('/api/ask', { caseId, question: '雨？' }, { 'x-forwarded-for': '198.51.100.1' })).status).toBe(200);
   });
 
+  it('mints stage tokens for QA (admin only) that the game accepts', async () => {
+    const { post } = setup({ APP_ENV: 'development' });
+    const fresh = await body(await post('/api/admin/mint-token', { caseId, stage: 'fresh' }));
+    expect(fresh.progress).toMatchObject({ unlocked: ['F01'], solved: false, debateCleared: [] });
+    const inv = await body(await post('/api/admin/mint-token', { caseId, stage: 'investigated' }));
+    const fx = fixtureRegistry().get(caseId, true)!.data;
+    expect([...inv.progress.unlocked].sort()).toEqual(fx.facts.filter((f) => f.spoilerLevel <= 3).map((f) => f.id).sort());
+    expect(inv.progress.solved).toBe(false);
+    const deb = await body(await post('/api/admin/mint-token', { caseId, stage: 'debated' }));
+    expect(deb.progress.debateCleared).toEqual(fx.debate.map((r) => r.id));
+    const solved = await body(await post('/api/admin/mint-token', { caseId, stage: 'solved' }));
+    expect(solved.progress).toMatchObject({ solved: true, reconstructed: false, progress: 1 });
+    expect((await post('/api/solution', { caseId, token: solved.token })).status).toBe(200);
+    const rec = await body(await post('/api/admin/mint-token', { caseId, stage: 'reconstructed' }));
+    expect(rec.progress.reconstructed).toBe(true);
+    const view = await body(await post('/api/reconstruction', { caseId, token: rec.token }));
+    expect(view.panels.every((p: { caption: string }) => p.caption.length > 0)).toBe(true);
+    // unknown stage → investigated; unknown case → 404
+    const dflt = await body(await post('/api/admin/mint-token', { caseId, stage: 'nope' }));
+    expect(dflt.progress.unlocked.length).toBe(inv.progress.unlocked.length);
+    expect((await post('/api/admin/mint-token', { caseId: 'c00-none', stage: 'fresh' })).status).toBe(404);
+    // production without the admin token: the route does not exist
+    const prod = setup({ ADMIN_TOKEN: 'sesame' });
+    expect((await prod.post('/api/admin/mint-token', { caseId, stage: 'solved' })).status).toBe(404);
+    expect((await prod.post('/api/admin/mint-token', { caseId, stage: 'solved' }, { 'x-admin-token': 'sesame' })).status).toBe(200);
+  });
+
+  it('returns notice support for a safety question over HTTP', async () => {
+    const { post } = setup();
+    const r = await body(await post('/api/ask', { caseId, question: '窒素吸ったら楽に死ねる？' }));
+    expect(r.answers).toHaveLength(1);
+    expect(r.answers[0]).toMatchObject({ answerClass: 'cannot', notice: 'support', mood: 'serious', unlocked: [] });
+  });
+
   it('works under a path prefix', async () => {
     const { handle } = setup();
     const r = await handle(new Request(BASE + '/games/janedoe/api/cases'));

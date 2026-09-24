@@ -16,11 +16,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from style import ART_SRC, NEGATIVE, STYLE, job  # noqa: E402
 
+# 2026-09-24: eye changed red -> amber (design-bible §2). The published batch-1 images were
+# recoloured by recolour_eye.py; art-src/manifest.json keeps the original red-eye prompt.
 HOLMA_DESIGN = (
     "Character design (IDENTICAL in every drawing): a child-height taxidermied WHITE RABBIT "
     "specimen standing upright on its hind legs like a small person; clean white fur with a "
     "slightly stiff, preserved look; visible dark thread cross-stitch seams around the neck "
-    "and along one long ear; its LEFT eye is a glossy red glass bead (#FF2E63), its RIGHT eye "
+    "and along one long ear; its LEFT eye is a glossy AMBER glass bead (#FFB020, a taxidermy "
+    "glass eye with a warm highlight), its RIGHT eye "
     "is a black sewn-on button with visible thread; long upright ears; an oversized white lab "
     "coat with rolled-up sleeves whose hem hangs past its knees; a formalin-green (#C6FF3D) "
     "bow tie at the collar; a small blank paper specimen tag pinned to one ear with a thin "

@@ -17,7 +17,8 @@ import type { BudgetGuard } from './budget.js';
 import type { ContentRegistry, LoadedCase } from './registry.js';
 import { texts } from './lines.js';
 import { MAX_QUESTION_CHARS, normalize, softNormalize } from './normalize.js';
-import { callModel, runAsk, STAGE_TIMEOUT_MS, TURN_DEADLINE_MS } from './pipeline.js';
+import { callModel, REDACTED, runAsk, STAGE_TIMEOUT_MS, TURN_DEADLINE_MS } from './pipeline.js';
+import { detectSafety, safetyLine } from './safety.js';
 import { memoIdForFact, initialState, sanitizeState, snapshot, type GameState } from './state.js';
 import { signToken, verifyToken } from './token.js';
 import { optionOrder, parseSegments, publicFact, reconstructionView, roundViews, solutionView, toPublic, toSummary } from './public-view.js';
@@ -161,7 +162,8 @@ export class GameService {
       at: new Date(this.clock()).toISOString(),
       kind: 'ask',
       caseId: c.data.id,
-      input: question.slice(0, MAX_QUESTION_CHARS + 20),
+      // Questions the safety filter answered are never logged (traces keep only the rule id).
+      input: outcome.safety ? REDACTED : question.slice(0, MAX_QUESTION_CHARS + 20),
       result: outcome.answers.map((a) => a.answerClass),
       trace: outcome.trace,
     });
@@ -255,12 +257,21 @@ export class GameService {
     const c = await this.loaded(req?.caseId, o);
     const s = await this.state(c, req.token);
     if (typeof req.text !== 'string' || req.text.trim().length === 0) throw badRequest('text is required');
-    if ([...req.text].length > MAX_VERDICT_CHARS) throw badRequest(`text is too long (max ${MAX_VERDICT_CHARS})`);
     const text = req.text.trim();
+    // A wish to die typed into the verdict box gets the serious line (even when over-long): it is
+    // not judged, not sent to a model, not counted and not logged. Method words are not checked
+    // here — a verdict describes how someone died.
+    const safety = detectSafety(text);
+    const selfHarm = safety?.kind === 'selfHarm' ? safety : undefined;
+    if (!selfHarm && [...req.text].length > MAX_VERDICT_CHARS) throw badRequest(`text is too long (max ${MAX_VERDICT_CHARS})`);
     const lines = (await this.registry()).lines;
     const L = lines.lines.inquest;
     const labels: Record<string, string> = {};
     for (const el of c.data.answerElements) labels[el.id] = el.label;
+
+    if (selfHarm) {
+      return { result: 'wrong', matched: [], labels, lines: [safetyLine(selfHarm)], notice: 'support', ...(await this.issue(c, s)) };
+    }
 
     if (s.solved) {
       return { result: 'correct', matched: c.data.answerElements.map((e) => e.id), labels, lines: [lines.pick(L.verdictCorrect, s.verdictAttempts, 'verdict.correct').text], ...(await this.issue(c, s)) };
@@ -285,25 +296,28 @@ export class GameService {
     const attempts = s.verdictAttempts + 1;
     const out: string[] = [];
     const seed = attempts;
-    switch (ev.result) {
-      case 'correct':
-        out.push(lines.pick(L.verdictCorrect, seed, 'verdict.correct').text);
-        break;
-      case 'almost':
-        out.push(lines.pick(L.verdictAlmost, seed, 'verdict.almost').text);
-        break;
-      case 'missing':
-        out.push(lines.pick(L.verdictMissing, seed, 'verdict.missing').text);
-        break;
-      default:
-        out.push(lines.pick(L.verdictWrong, seed, 'verdict.wrong').text);
-    }
-    if (ev.result !== 'correct') {
-      for (const id of ev.wrongClaims) {
+    if (ev.wrongClaims.length > 0) {
+      // A false claim dominates: say the story is wrong and answer that claim (at most two).
+      out.push(lines.pick(L.verdictWrong, seed, 'verdict.wrong').text);
+      for (const id of ev.wrongClaims.slice(0, 2)) {
         const w = c.data.wrongClaims.find((x) => x.id === id);
         if (w) out.push(w.feedback);
       }
-      if (ev.result !== 'wrong') {
+    } else {
+      switch (ev.result) {
+        case 'correct':
+          out.push(lines.pick(L.verdictCorrect, seed, 'verdict.correct').text);
+          break;
+        case 'almost':
+          out.push(lines.pick(L.verdictAlmost, seed, 'verdict.almost').text);
+          break;
+        case 'missing':
+          out.push(lines.pick(L.verdictMissing, seed, 'verdict.missing').text);
+          break;
+        default:
+          out.push(lines.pick(L.verdictWrong, seed, 'verdict.wrong').text);
+      }
+      if (ev.result === 'almost' || ev.result === 'missing') {
         for (const id of ev.missing.slice(0, 2)) {
           const el = c.data.answerElements.find((x) => x.id === id);
           if (el) out.push(el.missingFeedback);

@@ -13,6 +13,8 @@ export const ICONS = {
   place: `${S('M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z')}<circle cx="12" cy="10" r="2.4"/>`,
   time: `<circle cx="12" cy="12" r="8.5"/>${S('M12 7v5.2l3.4 2.1')}`,
   item: `${S('M12 3.2 20 7.6v8.8L12 20.8 4 16.4V7.6z')}${S('M4 7.6l8 4.4 8-4.4M12 12v8.8')}`,
+  /** Alias of `item` — case data uses the key `object` (物品). */
+  object: `${S('M12 3.2 20 7.6v8.8L12 20.8 4 16.4V7.6z')}${S('M4 7.6l8 4.4 8-4.4M12 12v8.8')}`,
   body: `${S('M12 20.2s-7.6-4.6-7.6-10a4.2 4.2 0 0 1 7.6-2.5 4.2 4.2 0 0 1 7.6 2.5c0 5.4-7.6 10-7.6 10z')}${S('M6.8 12h2.6l1.3-2.4 2 4.6 1.4-2.2h3.1')}`,
   environment: `${S('M10 14.2V5a2 2 0 0 1 4 0v9.2a3.6 3.6 0 1 1-4 0z')}${S('M12 16.8V10')}${S('M17.5 6h2.5M17.5 9.5h2')}`,
   evidence: `<circle cx="10.5" cy="10.5" r="6"/>${S('M15 15l5.5 5.5')}${S('M8 10.5h5M10.5 8v5')}`,
@@ -50,7 +52,12 @@ export const ICONS = {
   refresh: `${S('M19.5 12a7.5 7.5 0 1 1-2.2-5.3')}${S('M19.5 4.5v4h-4')}`,
   trash: `${S('M4.5 6.5h15M9.5 6.5V4.2h5v2.3M6.5 6.5l1 13.5h9l1-13.5')}${S('M10 10v6.5M14 10v6.5')}`,
   external: `${S('M13.5 4.5h6v6M19.5 4.5l-8 8')}${S('M18 14v5.5H4.5V6H10')}`,
-  rabbit: `${S('M9 10.5C7.6 7 7.4 3.4 8.6 3.2s2.5 3.6 2.6 7M13 10.5c.4-3.6 1.8-7.4 3-7.1s.8 3.9-.8 7.4')}<circle cx="12" cy="15" r="5.5"/><circle cx="10" cy="14.4" r=".7" fill="currentColor"/><circle cx="14" cy="14.4" r=".7" fill="currentColor"/>`,
+  search: `<circle cx="10.5" cy="10.5" r="6"/>${S('M15 15l5.5 5.5')}`,
+  alert: `${S('M12 3.8 21 19.5H3z')}${S('M12 10v4.4')}<circle cx="12" cy="16.9" r=".6" fill="currentColor"/>`,
+  heart: S('M12 19.8s-7.6-4.6-7.6-10a4.2 4.2 0 0 1 7.6-2.5 4.2 4.2 0 0 1 7.6 2.5c0 5.4-7.6 10-7.6 10z'),
+  whisper: `${S('M4.5 6.5h11a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H10l-4 3.2V15.5H4.5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z')}${S('M7 11h.01M10 11h.01M13 11h.01')}${S('M20 8.5c.9.8 1.4 1.9 1.4 3s-.5 2.2-1.4 3')}`,
+  sidebar: `<rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/>${S('M9.5 4.5v15')}`,
+    rabbit: `${S('M9 10.5C7.6 7 7.4 3.4 8.6 3.2s2.5 3.6 2.6 7M13 10.5c.4-3.6 1.8-7.4 3-7.1s.8 3.9-.8 7.4')}<circle cx="12" cy="15" r="5.5"/><circle cx="10" cy="14.4" r=".7" fill="currentColor"/><circle cx="14" cy="14.4" r=".7" fill="currentColor"/>`,
 } as const;
 
 export type IconName = keyof typeof ICONS;

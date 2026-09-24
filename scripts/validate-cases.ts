@@ -42,14 +42,21 @@ function readCaseArg(p: string): { path: string; data?: unknown; error?: string 
   }
 }
 
+/** public/<path> exists (image references in case files are relative to public/). */
+export function publicAssetChecker(contentRoot: string): (publicPath: string) => boolean {
+  const publicDir = resolve(contentRoot, '..', 'public');
+  return (p) => existsSync(join(publicDir, p));
+}
+
 export function runValidation(files: string[] = []): Report {
   const root = resolveContentRoot(process.env as Record<string, string | undefined>);
   const raw = readRawContent(root);
+  const assetExists = publicAssetChecker(root);
   const inputs = files.length > 0 ? files.map(readCaseArg) : raw.cases.map((c) => ({ path: c.path, data: c.data, error: c.error }));
   const cases: CaseValidation[] = inputs.map((i) =>
     i.error !== undefined
       ? { caseId: '(unreadable)', path: i.path, ok: false, errors: [`cannot read/parse JSON: ${i.error}`], warnings: [], info: [] }
-      : { ...validateCase(i.data, { path: i.path }), path: i.path },
+      : { ...validateCase(i.data, { path: i.path, assetExists }), path: i.path },
   );
   for (const c of cases) {
     const dir = c.path?.split('/').slice(-2, -1)[0];

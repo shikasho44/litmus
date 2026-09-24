@@ -26,6 +26,8 @@ export interface ApiRuntime {
   budget: BudgetGuard;
   content: () => ContentRegistry | Promise<ContentRegistry>;
   listBenchReports?: () => Promise<BenchReportInfo[]>;
+  /** public/<path> exists (Node hosts) — lets the admin case check warn about missing images. */
+  assetExists?: (publicPath: string) => boolean;
   startedAt: number;
   warnings: string[];
 }
@@ -36,6 +38,7 @@ export interface RuntimeOptions {
   /** Extra trace sinks (e.g. the dev JSONL file sink). */
   sinks?: TraceSink[];
   listBenchReports?: () => Promise<BenchReportInfo[]>;
+  assetExists?: (publicPath: string) => boolean;
   rateRules?: Record<string, RateRule[]>;
   clock?: () => number;
   /** Test hook: pre-built components instead of the env factory. */
@@ -85,6 +88,7 @@ export function createRuntime(o: RuntimeOptions): ApiRuntime {
     budget,
     content: o.content,
     listBenchReports: o.listBenchReports,
+    assetExists: o.assetExists,
     startedAt: (o.clock ?? Date.now)(),
     warnings,
   };

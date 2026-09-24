@@ -93,7 +93,7 @@ export function ShardPortrait({ image, shardCount = 34, revealed = 0, solved = f
         onAssembled?.();
       },
     });
-    tl.to(glass, { opacity: 0, duration: 0.35, stagger: { each: 0.008, from: 'center' } }, 0);
+    if (glass.length) tl.to(glass, { opacity: 0, duration: 0.35, stagger: { each: 0.008, from: 'center' } }, 0);
     pieces.forEach((p) => {
       const cx = Number(p.dataset.cx);
       const cy = Number(p.dataset.cy);

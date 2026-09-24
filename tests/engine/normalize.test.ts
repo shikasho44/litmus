@@ -130,7 +130,7 @@ describe('proposition polarity', () => {
     expect(polarities(normalize('換気は止まっていた'))).toEqual(['neg']);
     expect(polarities(normalize('換気は止まっていなかった'))).toEqual(['pos']);
     expect(polarities(normalize('警報は鳴らなかった'))).toEqual(['neg']);
-    expect(questionProposition('換気扇は回っていましたか')).toEqual({ polarity: 'pos', determinate: true });
+    expect(questionProposition('換気扇は回っていましたか')).toEqual({ polarity: 'pos', determinate: true, family: 'state' });
     expect(questionProposition('酸欠ではないですよね')).toMatchObject({ polarity: 'neg', determinate: false });
     expect(questionProposition('毒ではないですか').determinate).toBe(false); // rhetorical → affirmative
     expect(questionProposition('換気が止まったせいですか').determinate).toBe(false); // causal

@@ -45,6 +45,11 @@ export interface ValidateOptions {
   path?: string;
   /** Skip the (slower) leave-one-out generalisation pass. */
   skipGeneralization?: boolean;
+  /**
+   * Checks that a public asset path (relative to public/, e.g. cases/c01/panel-1.webp) exists.
+   * Injected by Node callers (npm run validate, the admin API); missing files are warnings.
+   */
+  assetExists?: (publicPath: string) => boolean;
 }
 
 const isHttps = (u: string) => /^https:\/\//i.test(u);
@@ -172,6 +177,9 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
 
   // ── debate ────────────────────────────────────────────────────
   for (const r of c.debate) {
+    if (r.success.length === 0 || r.success.some((l) => !l.trim())) errors.push(`debate ${r.id}: success lines are missing or blank`);
+    if (r.wrongShot.some((l) => !l.trim())) warnings.push(`debate ${r.id}: a wrongShot line is blank`);
+    if (!r.hint.trim()) warnings.push(`debate ${r.id}: hint is blank`);
     const st = r.statements.find((s) => s.id === r.answer.statement);
     if (!st) {
       errors.push(`debate ${r.id}: answer.statement ${r.answer.statement} not found`);
@@ -202,13 +210,34 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
     if (q.answer < 0 || q.answer >= q.choices.length) errors.push(`quiz #${i + 1}: answer index ${q.answer} out of range`);
   });
 
+  // ── image files (warnings: art may land later than the case) ──
+  if (opts.assetExists) {
+    const images: [string, string | undefined][] = [
+      ['assets.background', c.assets.background],
+      ['victim.portrait', c.victim.portrait],
+      ...c.reconstruction.panels.map((p) => [`panel ${p.id}.image`, p.image] as [string, string | undefined]),
+    ];
+    for (const [where, path] of images) {
+      if (!path) continue;
+      const rel = path.replace(/^\.?\//, '');
+      if (/^(?:https?:)?\/\//i.test(path)) continue;
+      if (!opts.assetExists(rel)) warnings.push(`${where}: image file not found: public/${rel}`);
+    }
+  }
+
   // ── leak terms in public fields ───────────────────────────────
   const publicFields: [string, string][] = [
     ['intro.summary', c.intro.summary],
+    ['contentWarning', c.contentWarning ?? ''],
+    ['intro.location', c.intro.location],
+    ['intro.time', c.intro.time],
     ...c.intro.narration.map((t, i) => [`intro.narration[${i}]`, t] as [string, string]),
     ...c.intro.starterQuestions.map((t, i) => [`intro.starterQuestions[${i}]`, t] as [string, string]),
     ...c.intro.jane.map((t, i) => [`intro.jane[${i}]`, t] as [string, string]),
     ...c.intro.holma.map((t, i) => [`intro.holma[${i}]`, t] as [string, string]),
+    // sent with the public case view (idle / near-core flavour during the investigation)
+    ...c.holmaLines.idle.map((t, i) => [`holmaLines.idle[${i}]`, t] as [string, string]),
+    ...c.holmaLines.nearCore.map((t, i) => [`holmaLines.nearCore[${i}]`, t] as [string, string]),
     ...c.scienceMemos.map((m) => [`scienceMemos.${m.id}`, `${m.title} ${m.text}`] as [string, string]),
     ...c.facts.filter((f) => f.spoilerLevel <= 2).flatMap((f) => [[`${f.id}.text`, f.text], [`${f.id}.cardTitle`, f.cardTitle ?? '']] as [string, string][]),
   ];

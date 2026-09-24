@@ -4,7 +4,7 @@
  * feeds both the rules judge and the model judges as context).
  */
 import type { AnalyzedQuestion } from './normalize.js';
-import { bigrams, containment, dice } from './normalize.js';
+import { bigrams, comparableFamilies, containment, dice } from './normalize.js';
 import type { CaseIndex, IndexedFact, IndexedProbe } from './case-index.js';
 
 export interface ScoredFact {
@@ -88,9 +88,12 @@ export function scoreProbes(q: AnalyzedQuestion, probes: IndexedProbe[], limit =
     let s = q.core === entry.core ? 1 : dice(qGrams, entry.grams);
     if (s <= 0) continue;
     // Opposite propositions (「なかったですよね」 vs 「ありましたか」, 「回って」 vs 「止まって」):
-    // same topic, the authored label must be flipped.
-    const flip = q.prop.polarity !== entry.prop.polarity;
+    // same topic, the authored label must be flipped. Predicates on different axes
+    // (「壊れていた」 vs 「止まっていた」) are not opposites — they are different questions.
+    const crossAxis = !comparableFamilies(q.prop.family, entry.prop.family);
+    const flip = !crossAxis && q.prop.polarity !== entry.prop.polarity;
     if (flip) s *= 0.95;
+    if (crossAxis) s *= 0.85;
     if (q.open !== entry.open) s *= 0.9;
     if (s < 1 && (qWords.some((w) => !entry.norm.includes(w)) || entry.keywords.some((w) => !q.norm.includes(w)))) s *= CONTENT_MISMATCH_PENALTY;
     out.push({ score: round(s), flip, entry });

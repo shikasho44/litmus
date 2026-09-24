@@ -44,13 +44,14 @@ export function CutIn({ text, en, tone = 'formalin', character = null, mood = 'l
         .to(el, { opacity: 0, duration: 0.25 }, `+=${hold + 0.3}`);
       return () => tl.kill();
     }
+    // sub (no `en`) and chr (no character) may be absent: only tween what exists (GSAP warns on null targets)
     tl.fromTo(back, { scaleY: 0 }, { scaleY: 1, duration: 0.16, ease: 'power3.out' }, 0)
       .fromTo(band, { scaleY: 0 }, { scaleY: 1, duration: 0.18, ease: 'power3.out' }, 0.04)
-      .fromTo(txt, { xPercent: 60, opacity: 0, skewX: -18 }, { xPercent: 0, opacity: 1, skewX: 0, duration: 0.36, ease: 'expo.out' }, 0.1)
-      .fromTo(sub, { xPercent: -40, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 0.4, ease: 'expo.out' }, 0.16)
-      .fromTo(chr, { xPercent: -70, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 0.4, ease: 'expo.out' }, 0.08)
-      .to(txt, { xPercent: -4, duration: hold, ease: 'none' }, '>')
-      .to([txt, sub, chr], { xPercent: '-=70', opacity: 0, duration: 0.24, ease: 'power3.in' }, '>')
+      .fromTo(txt, { xPercent: 60, opacity: 0, skewX: -18 }, { xPercent: 0, opacity: 1, skewX: 0, duration: 0.36, ease: 'expo.out' }, 0.1);
+    if (sub) tl.fromTo(sub, { xPercent: -40, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 0.4, ease: 'expo.out' }, 0.16);
+    if (chr) tl.fromTo(chr, { xPercent: -70, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 0.4, ease: 'expo.out' }, 0.08);
+    tl.to(txt, { xPercent: -4, duration: hold, ease: 'none' }, 0.48)
+      .to([txt, sub, chr].filter(Boolean), { xPercent: '-=70', opacity: 0, duration: 0.24, ease: 'power3.in' }, '>')
       .to([band, back], { scaleY: 0, duration: 0.2, ease: 'power3.in' }, '<0.08');
     return () => tl.kill();
   }, []);

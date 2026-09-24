@@ -31,6 +31,21 @@
   flex-direction: column;
   border-right: 1px solid var(--bone-a08);
   background: rgba(11, 13, 18, 0.55);
+  overflow: hidden;
+  transition: width var(--dur-3) var(--ease-out), opacity var(--dur-2) linear, border-color var(--dur-2);
+}
+.sl__side-inner {
+  /* keeps its width while the column animates, so the content never reflows */
+  width: var(--side-w);
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sl__side.is-collapsed {
+  width: 0;
+  opacity: 0;
+  border-right-color: transparent;
 }
 .sl__center {
   flex: 1 1 auto;
@@ -114,6 +129,21 @@
 .sl__bottom {
   min-height: 0;
 }
+/* 'fill' stage: as wide as the column allows (≤ 2.4:1), height = what bottomHeight leaves */
+.sl--fill .sl__center {
+  --stage-h-max: calc(100cqh - var(--sl-bottom-h) - 20px);
+  --stage-w: min(calc(100cqw - 8px), calc(var(--stage-h-max) * 2.4));
+  --stage-h: min(var(--stage-h-max), calc(var(--stage-w) * 9 / 16));
+}
+.sl--fill .sl__stage {
+  height: var(--stage-h);
+  aspect-ratio: auto;
+}
+.sl--fill .sl__bottom {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
 .sl--cinematic .sl__center {
   --stage-w: min(calc(100cqw - 8px), calc((100cqh - 16px) * 16 / 9));
   justify-content: center;
@@ -164,4 +194,18 @@
 }
 [data-layout='narrow'][data-kb='open'] .sl {
   padding-bottom: 0;
+}
+
+[data-layout='narrow'] .sl--fill .sl__stage {
+  height: calc(var(--vvh) * 0.38);
+}
+[data-layout='narrow'][data-kb='open'] .sl--fill .sl__stage {
+  height: calc(var(--vvh) * 0.2);
+}
+[data-layout='narrow'] .sl--fill .sl__bottom {
+  overflow: hidden;
+  padding: 0;
+}
+[data-reduce-motion='true'] .sl__side {
+  transition: none;
 }

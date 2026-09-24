@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0B0D12" />
+    <meta name="color-scheme" content="dark" />
+    <!-- The admin console is never indexed, whatever VITE_OFFICIAL_RELEASE_ENABLED says. -->
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="referrer" content="no-referrer" />
+    <title>管理コンソール — %VITE_APP_TITLE%</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #0b0d12;
+        color: #f2efe6;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="admin"></div>
+    <noscript>JavaScript を有効にしてください。</noscript>
+    <script type="module" src="/src/admin/main.tsx"></script>
+  </body>
+</html>

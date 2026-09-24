@@ -54,6 +54,7 @@ describe('model pipeline', () => {
     expect(judge.calls).toBe(2);
     expect(r.answers[0].answerClass).toBe('no'); // rules keyword answer
     expect(r.answers[0].line).toContain('簡易判定');
+    expect(r.answers[0].notice).toBe('degraded');
     expect((r.trace as EngineTrace | undefined)?.degraded).toBe(true);
     expect(r.trace?.fallback).toContain('judge:fake:server');
   });
@@ -77,6 +78,7 @@ describe('model pipeline', () => {
     expect(r.trace?.mode).toBe('rules');
     expect(r.trace?.fallback).toContain('budget');
     expect(r.answers[0].line).not.toContain('簡易判定');
+    expect(r.answers[0].notice).toBeUndefined();
   });
 
   it('uses model phrasing, rejects leaks and re-renders once after a failed post-check', async () => {
@@ -116,12 +118,12 @@ describe('model pipeline', () => {
 });
 
 describe('factory', () => {
-  it('degrades to rules while the AI modules are stubs, with warnings', () => {
-    const comp = createComponents({ PIPELINE_MODE: 'jev', OPENROUTER_API_KEY: 'x' });
-    expect(comp.mode).toBe('rules');
-    expect(comp.judge).toBeUndefined();
-    expect(comp.warnings.join(' ')).toMatch(/degraded: jev → rules/);
+  it('builds rules without a key and never throws for model modes', () => {
     expect(createComponents({}).mode).toBe('rules');
+    expect(createComponents({ PIPELINE_MODE: 'rules', OPENROUTER_API_KEY: 'x' })).toMatchObject({ mode: 'rules', warnings: [] });
+    // model modes either assemble a judge or degrade to rules with a warning (see factory.ts)
+    const comp = createComponents({ PIPELINE_MODE: 'jev', OPENROUTER_API_KEY: 'x' });
+    expect(comp.mode === 'rules' ? comp.warnings.length > 0 : !!comp.judge).toBe(true);
     expect(createComponents({ PIPELINE_MODE: 'jev+llm', LLM_PROVIDER: 'none', OPENROUTER_API_KEY: 'x' }).warnings.join(' ')).toContain('LLM_PROVIDER');
   });
 });

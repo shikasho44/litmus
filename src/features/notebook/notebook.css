@@ -1,0 +1,293 @@
+/* ==========================================================================
+   捜査ノート (Notebook) — PC side panel & phone sheet
+   ========================================================================== */
+.nb {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+.nb__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 12px 10px 18px;
+  border-bottom: 1px solid var(--bone-a08);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(198, 255, 61, 0.1), transparent 55%),
+    transparent;
+}
+.nb__titles {
+  display: grid;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+.nb__en {
+  font-family: var(--font-en);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.34em;
+  color: var(--formalin);
+}
+.nb__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  line-height: 1.2;
+}
+.nb__count {
+  display: grid;
+  justify-items: end;
+  font-size: var(--fs-xl);
+  line-height: 1;
+  color: var(--bone);
+}
+.nb__count small {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--mute);
+}
+.nb__collapse {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--bone-a14);
+  color: var(--bone-3);
+}
+.nb__collapse:hover {
+  color: var(--formalin);
+  border-color: var(--formalin);
+}
+.nb__tabs {
+  flex: none;
+  padding: 8px 10px 0;
+  border-bottom: 1px solid var(--bone-a14);
+}
+.nb__tabs .tab {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+.nb__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 14px 16px 28px;
+}
+
+/* phone sheet: the sheet body scrolls; tabs stick to its top */
+.nb--sheet {
+  height: auto;
+}
+.nb--sheet .nb__tabs {
+  position: sticky;
+  top: -14px;
+  z-index: 3;
+  margin: -14px -16px 0;
+  padding: 6px 8px 0;
+  background: var(--ink-3);
+}
+.nb--sheet .nb__body {
+  overflow: visible;
+  padding: 14px 0 12px;
+}
+
+.nb-empty {
+  padding: 28px 8px;
+  text-align: center;
+  font-size: var(--fs-sm);
+  line-height: 1.8;
+  color: var(--mute);
+}
+.nb-summary {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 12px;
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.08em;
+  color: var(--mute);
+}
+.nb-summary b {
+  font-size: var(--fs-md);
+  font-weight: 400;
+  color: var(--bone);
+  margin-left: 2px;
+}
+.nb-summary .is-core b {
+  color: var(--alarm);
+}
+.nb-group + .nb-group {
+  margin-top: 18px;
+}
+.nb-group__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--bone-2);
+}
+.nb-group__head::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: repeating-linear-gradient(90deg, var(--bone-a24) 0 4px, transparent 4px 8px);
+}
+.nb-group__head .icon {
+  color: var(--formalin);
+}
+.nb-group__count {
+  padding: 0 6px;
+  font-size: 10px;
+  color: var(--ink);
+  background: var(--bone-3);
+}
+.nb-group__cards {
+  display: grid;
+  gap: 14px;
+  padding: 4px 4px 0;
+}
+
+/* log */
+.nb-log__tools {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.nb-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--bone-a24);
+  background: var(--ink);
+  color: var(--mute);
+}
+.nb-search:focus-within {
+  border-color: var(--formalin);
+}
+.nb-search input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--bone);
+  font: inherit;
+  font-size: max(16px, var(--fs-sm));
+  outline: none;
+}
+.nb-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.nb-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--bone-a24);
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  color: var(--bone-2);
+}
+.nb-filter__n {
+  font-size: 10px;
+  color: var(--mute);
+}
+.nb-filter.is-on {
+  background: var(--bone);
+  color: var(--ink);
+  border-color: var(--bone);
+}
+.nb-filter.is-on .nb-filter__n {
+  color: var(--ink);
+}
+.nb-filter--yes.is-on { background: var(--c-yes); border-color: var(--c-yes); }
+.nb-filter--no.is-on { background: var(--c-no); border-color: var(--c-no); color: var(--bone); }
+.nb-filter--no.is-on .nb-filter__n { color: var(--bone); }
+.nb-filter--partial.is-on { background: var(--c-partial); border-color: var(--c-partial); }
+.nb-filter--irrelevant.is-on { background: var(--c-irrelevant); border-color: var(--c-irrelevant); }
+.nb-filter--cannot.is-on { background: var(--c-cannot); border-color: var(--c-cannot); color: var(--bone); }
+.nb-filter--cannot.is-on .nb-filter__n { color: var(--bone); }
+.nb-filter--hint.is-on { background: var(--violet); border-color: var(--violet); color: var(--bone); }
+.nb-rows {
+  display: grid;
+  gap: 8px;
+}
+.nb-row {
+  --ac: var(--c-vague);
+  padding: 8px 10px 9px 12px;
+  border-left: 3px solid var(--ac);
+  background: rgba(11, 13, 18, 0.55);
+}
+.nb-row--yes { --ac: var(--c-yes); }
+.nb-row--no { --ac: var(--c-no); }
+.nb-row--partial { --ac: var(--c-partial); }
+.nb-row--irrelevant { --ac: var(--c-irrelevant); }
+.nb-row--cannot { --ac: var(--c-cannot); }
+.nb-row--hint { --ac: var(--violet); border-left-style: dashed; }
+.nb-row__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nb-row__no {
+  flex: none;
+  font-size: 10px;
+  color: var(--mute);
+}
+.nb-row__q {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+.nb-row__stamp {
+  flex: none;
+}
+.nb-row__line {
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  line-height: 1.7;
+  color: var(--bone-3);
+  white-space: pre-line;
+}
+.nb-row__got {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--formalin);
+}
+
+/* memos */
+.nb-memos {
+  display: grid;
+  gap: 12px;
+}
+.nb-memo {
+  padding: 12px 14px 14px;
+  border: 1px solid rgba(61, 224, 255, 0.35);
+  background: linear-gradient(135deg, rgba(61, 224, 255, 0.1), rgba(61, 224, 255, 0.02));
+}
+.nb-memo header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--cyan);
+}
+.nb-memo h3 {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--bone);
+}
+.nb-memo p {
+  margin-top: 6px;
+  font-size: var(--fs-sm);
+  line-height: 1.8;
+  color: var(--bone-2);
+}

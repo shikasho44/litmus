@@ -165,7 +165,7 @@ describe('inquest', () => {
     expect(evaluateVerdict(c, '一酸化炭素中毒').result).toBe('almost');
     expect(evaluateVerdict(c, 'テントの中の七輪が原因').result).toBe('missing');
     expect(evaluateVerdict(c, '心臓発作').result).toBe('wrong');
-    expect(evaluateVerdict(c, 'テントの炭火で一酸化炭素中毒。犯人に殺された').result).toBe('almost');
+    expect(evaluateVerdict(c, 'テントの炭火で一酸化炭素中毒。犯人に殺された').result).toBe('missing'); // wrong claim dominates
     expect(evaluateVerdict(c, 'テントの炭火で一酸化炭素中毒。殺されたのではない').result).toBe('correct');
 
     const { svc } = makeService();
@@ -181,7 +181,13 @@ describe('inquest', () => {
     expect(almost.result).toBe('almost');
     expect(almost.lines).toContain('その気体は、どこから来たのでしょう？');
     expect(almost.progress.verdictAttempts).toBe(2);
-    const ok = await svc.verdict({ caseId, token: almost.token, text: 'テントの中で七輪を使い、換気できずに一酸化炭素中毒' });
+    // an affirmed wrong claim: the wrong line + that claim's feedback, no element nudges
+    const claim = await svc.verdict({ caseId, token: almost.token, text: 'テントの炭火で一酸化炭素中毒。犯人に殺された' });
+    expect(claim.result).toBe('missing');
+    const w2 = c.wrongClaims.find((w) => w.id === 'W2')!;
+    expect(claim.lines).toContain(w2.feedback);
+    expect(claim.lines).not.toContain('その気体は、どこから来たのでしょう？');
+    const ok = await svc.verdict({ caseId, token: claim.token, text: 'テントの中で七輪を使い、換気できずに一酸化炭素中毒' });
     expect(ok.result).toBe('correct');
     expect(ok.progress.solved).toBe(true);
     t = ok.token;

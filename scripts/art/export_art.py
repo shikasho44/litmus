@@ -14,7 +14,10 @@ Outputs
     public/og.png                                            1200x630
 
 Face centres for meta.json come from art-src/holma/face.json (normalized x/y, hand-checked);
-a red-glass-eye heuristic fills in any missing entry.
+a red-glass-eye heuristic fills in any missing entry (it only finds the eye on the red-eye
+originals; since the amber recolour, keep face.json complete).
+Holma's eye is recoloured red -> amber by recolour_eye.py, which edits art-src/holma/split/*.png
+and art-src/key-art/key-art.png in place (originals: *.red-eye.png) and then calls this script.
 
 Reusable helpers for batch 2: cover_resize(), save_webp().
 """

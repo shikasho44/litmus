@@ -30,6 +30,7 @@
                                                    ▼
    ┌──────────────────────── server/engine（純粋 TS。Node API なし。ブラウザでも動く）─────────────────────┐
    │ registry.ts   事件の読込・zod 検証・壊れた事件はスキップして報告        lines.ts / default-lines.ts 定型文 │
+   │ safety.ts     自傷・方法・加害の質問を最初に止める（モデルに渡さない）                                       │
    │ normalize.ts  正規化・分割・否定・疑問詞・メタ・命題の極性             case-index.ts 事件ごとの前計算       │
    │ retrieve.ts   所見（キーワード＋bigram）と想定質問（Dice）の候補        rules-judge.ts オフライン判定        │
    │ pipeline.ts   ask の流れ（判定→規則→返答→検査→トレース）             policy.ts  所見を開けてよいかの規則   │
@@ -52,6 +53,7 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
 ```
 質問(≤200字)
  → 分割（？ / ? / 。 / ！ / 改行 / 「それと」「あと」、最大3問。4問目以降は捨てて trace に dropped:n）
+ → 安全フィルター safety.ts（メッセージ全体と各パート。当たればターン全体を下の「安全フィルター」の返答にして終了）
  → 正規化（NFKC・小文字・カタカナ→ひらがな・記号/絵文字/空白を除去。表示用の原文は保持）
  → 候補（所見: キーワード命中＋bigram 包含率 上位8 / 想定質問: Dice 類似 上位5）
  → 判定（mode に応じて rules / Jev / LLM。モデル失敗は1回再試行 → rules に退避）
@@ -60,20 +62,56 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
  → 状態更新（所見・科学メモ・nearCore・質問数）→ 新しいトークン → TurnTrace
 ```
 
+### 安全フィルター（safety.ts・公開の必須条件）
+- **判定より前に**走る（想定質問・rules・Jev・LLM のどれよりも先）。当たった質問は**モデルに一切送らない**。
+- 対象: 死にたい・消えたい・自殺したい などの打ち明け（`selfHarm`）／死ねる・楽に死ぬ・死に方・致死量・何分で死ぬ・どのくらいで死ぬ・吸ったら死ぬ・同じ方法で／真似して・自殺に使える・○○死する方法 など（`method`）／殺せる・殺し方・人を殺す・毒を盛る方法・心臓を止められる・わざと起こせる など（`harmOthers`）。
+- 誤検知を避ける設計: 過去形（「毒で死んだ？」「苦しまずに死んだ？」）、被害者についての問い（「自殺ですか」「彼女の死に方は」「死にたいと言っていた？」）、話題語だけ（「窒素は関係ありますか」）では**鳴らない**。鳴るのは可能形（死ねる／殺せる）・方法／量／時間の語・一人称の願い・「〜に使える」「〜したら死ぬ」の形。`tests/engine/safety.test.ts` が**全事件の全想定質問**（SAFETY 以外）で鳴らないことを毎回確かめる。
+- 返答: メッセージ全体で1つの答え。`answerClass: 'cannot'`・`mood: 'serious'`・`notice: 'support'`（UI は相談窓口カードを出す）・所見もメモも開かない・nearCore も変えない・質問数は1。台詞は固定（ホルマの声だが冗談なし。`SAFETY_LINES`: selfHarm / method / harmOthers の3種）。
+- モデル判定の `JudgeDecision.flags.selfHarm ≥ 0.5` も同じ扱い（`safety:model:judge-flag`）。LLM の言い換えは呼ばない。
+- 記録: trace には規則名だけ（`fallback: safety:<kind>:<rule>`、`parts[0].meta: 'safety'`）。質問文は trace・JSONL・管理 API に残さない（`[safety]` に置き換え）。
+- 200字を超えても、安全フィルターに当たる質問は 400 にせず上の返答を返す。
+- 死因宣告の欄に「死にたい」などの打ち明け（`selfHarm`）が書かれたら、判定せず（モデルにも送らず、回数にも数えず）同じ真剣な台詞を返す。宣告は死に方を説明する文なので `method` の語では止めない。
+- 既知の限界: c01「酸欠死は苦しくないですか？」（被害者の体験を問う正当な質問、partial）と c03「凍死は苦しくないのですか？」（SAFETY）は同じ形で、エンジンでは分けられない。c03 のものは想定質問（cannot）で答えるが、support カードは出ない。
+
+### 通信失敗の印
+- モデルの失敗で rules に退避したパートは `notice: 'degraded'`（従来どおり `error.degraded` の一言も前置）。
+
 ### rules 判定の順番（rules-judge.ts）
+0. 安全フィルター（pipeline が先に処理。上記）
 1. 空・長すぎ → `vague`（質問数に数えない）
 2. 想定質問とほぼ同文（類似 ≥ 0.9）→ その正解ラベル（作者のラベルが最優先）
-3. メタ: 答えを聞く・名前を聞く→`cannot` / ヒント→`cannot` / 雑談・ホルマ自身→`irrelevant` / 暴言→`cannot`
+3. メタ: 答えを聞く・名前を聞く→`cannot` / ヒント（「ヒント」、または全文が「わからん」「わからない」「もう無理」「詰んだ」「降参」「何を聞けばいい？」など）→`cannot` / 雑談・ホルマ自身→`irrelevant` / 暴言→`cannot`。
+   **「犯人は誰？」「誰が殺した？」「犯人を教えて」は `cannot` にしない**（犯人がいると匂わせるため）→ 5 の `vague`
 4. 想定質問と類似 ≥ 0.6 → そのラベル。**命題が逆なら反転**（「なかったですよね」⇔「ありましたか」、「回って」⇔「止まって」）。
+   軸が違う述語（「壊れていた」と「止まっていた」）は反転せず類似度 ×0.85。
    事件の内容語（キーワード）が片方にしか無い場合は類似度 ×0.65（「一酸化炭素」と「二酸化炭素」を取り違えない）
-5. 疑問詞だけの質問（何/なぜ/誰/どこ/いつ…。「何か」「誰か」「誰にも」は除く）→ `vague`（はい/いいえで訊いて）
+5. 疑問詞だけの質問（何/なぜ/誰/どこ/いつ…。「何か」「誰か」「誰にも」「何者か」は除く）と、
+   **値を問う名詞だけの「〜は？」**（死亡推定時刻は？／気温は？／死因は？／犯人は？／〜とは？）→ `vague`（はい/いいえで訊いて）。
+   「毒は？」「外傷は？」のような有無の省略形は はい/いいえ の質問のまま
 6. 「〜は関係ありますか」→ 指す所見が重要（importance ≥2）なら `yes`、否定済み（ifAsked=no）なら `no`、それ以外 `irrelevant`
-7. キーワード所見（最も具体的なもの。「〜のせい」系は原因の直前の語）→
-   質問の述語の極性（止まる/動く/ある/ない…）と、所見のそのキーワードを含む節の極性を比べる。比べられないときは `fact.ifAsked`（否定確認なら反転）
+7. キーワード所見。どの所見の話かは次の順で決める（routing）:
+   1. **因果・責め**（「Xのせい／Xが原因／Xのため／Xによって」「Xが悪い／Xは悪くない」）:
+      因果そのものを含むキーワード（「弟のせい」「暑さが原因」）があればそれ。X が**人**（弟・家族・友人・大人・同僚・警備員・捜索隊・通行人…）なら
+      その事件の「誰のせいでもない」所見（キーワードに 誰のせい／誰かのせい／誰も悪／責め／責任／過失 を持つ否定所見）、無ければ「事件性なし」所見。
+      それ以外は目印の直前の語の所見。「Xは悪くない？」は責めの否定なので答えを反転
+   2. **意図・行為者**（わざと・故意・意図的・誰かが・何者か・殺され・犯人・事件・第三者…）: その語を含むキーワードの所見を話題の所見より優先。
+      無ければ（殺・犯人・事件・何者か・第三者 などの行為者語があるとき）「事件性なし」所見（ifAsked≠yes でキーワードに 殺され/殺人/他殺/犯人/事件/襲われ/故意/わざと… を2つ以上持つもの）
+   3. それ以外は得点1位。**1位と同点（差 ≤0.02）の上位3件**では、質問の状態と比べられる所見 → まだ開いていない所見（visibleFromStart でない）→ キーワードの長さ の順で選ぶ
+   答え: 質問の述語の極性と、所見のそのキーワードを含む節の極性を**同じ軸で**比べる。比べられないときは `fact.ifAsked`（否定確認・責めの否定なら反転）。
+   - 軸: 動く/止まる・鳴る・点く・電池が切れる・足りる/減る・ある/ない（state）と 開く/閉まる（open）は互いに比べる。**壊れる/故障（broken）は別の軸**。
+   - 「壊れていた？」に対し所見に壊れた話が無いとき: 所見が「動いていない（止まっていた・電池切れ）」なら `partial`、それ以外は `no`（壊れていない）
+   - 「閉め忘れ／止め忘れ／消し忘れ」は逆の状態（閉め忘れた＝開いたまま）。「鳴らなかった」「動かなくなった」は止まった側の状態語として読む
 8. 類似 0.45 以上の想定質問が `irrelevant` → `irrelevant`
 9. それ以外 → `vague`
 
-現在の汎化性能（想定質問を1問ずつ抜いて当てる leave-one-out）: c01 73% / c02 85% / c03 74%（ほぼ同文なら 100%）。
+汎化性能（想定質問を1問ずつ抜いて当てる leave-one-out。2026-09-24、同じ事件データで比較）:
+| 事件 | 自己一致 | leave-one-out（修正前 → 修正後） |
+|---|---|---|
+| c01 | 100% | 61.8% → 67.5% |
+| c02 | 100% | 56.7% → 59.7% |
+| c03 | 100% | 75.4% → 76.8% |
+
+（ほぼ同文なら 100%。レビューで足した想定質問の多くは rules が一般化できない言い回しを個別に塞ぐものなので、LOO は低めに出る。）
 キーワードの読み・言い換え・表記ゆれを事件データに足すほど上がる。
 
 ### 開示の規則（policy.ts）
@@ -108,8 +146,18 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
 - 1ターン 9 秒の締切（ブラウザ側は 12 秒）。締切が近いとモデルを呼ばない。
 - `DAILY_COST_LIMIT_USD` を超えたら当日（UTC）中は rules（前置きなし、trace に `budget`）。インスタンスごとのメモリ集計なので目安。
 
-### 次の担当（AI 実装）へ
-`server/engine/judge-types.ts` の冒頭コメントが契約。スタブを置き換えるファイルとシグネチャ:
+### 死因宣告の判定（verdict.ts）
+- 文を「。」などで文に、「、」と接続（〜たが・けど・ので・のに・〜ではなく）で節に分ける。
+- **否定は言及ごと**に見る: キーワードの直後が「ではない／じゃない／ではなく／は関係ない／無関係／とは違う／のせいではない／はいない／は検出されなかった／〜ていない／わけではない／〜の形跡はない／AもBもなく／と思われた・だと思い込んだ（他人の誤解）」なら、その言及は否定。
+  複合語の中のキーワード（「毒物は認められなかった」の「毒」）は複合語ごと判定。「A、B、Cはいずれも認められなかった」の A・B も否定。
+  **「酸素がなくなった」「足りなくなった」「少なくなる」は否定ではない**（答えそのものの描写）。「暑いと思い込んで」のような本人の錯覚も否定ではない。
+- 答えの要素（answerElements）も誤主張（wrongClaims）も、**否定されていない言及**だけで一致する（「液体窒素は関係ない」は要素 B にならない）。
+- **誤主張が1つでも肯定されたら、結果は最良でも `missing`**（要素が1つも無ければ `wrong`）。返答は `verdictWrong` の一言＋その誤主張の `feedback`（最大2つ）。要素の不足ヒントは添えない。
+- VerdictJudge（モデル）: 要素の確率 ≥0.7 は一致を**足せる**。誤主張の確率 ≥0.7 は**それだけで止める**。rules が肯定した誤主張は、モデルが 0.4 未満と言ったときだけ取り消す。
+- 回帰: `tests/engine/verdict.test.ts`（c01 査読の3文・各事件の真相文が `correct`）、`tests/content/regression/*.json` の宣告セット。
+
+### AI 部品（実装済み・詳細は docs/ai.md）
+`server/engine/judge-types.ts` の冒頭コメントが契約。実装ファイルとシグネチャ（旧スタブはすべて置き換え済み）:
 - `server/engine/providers/jev.ts` → `createJevProvider(env): DecisionProvider`
 - `server/engine/providers/openrouter-llm.ts` → `createOpenRouterLlm(env): LlmProvider`
 - `server/engine/providers/codex.ts` → `createCodexLlm(env): LlmProvider`（Node 専用処理は server/node/ に置き動的 import）
@@ -117,6 +165,7 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
 - `server/engine/ai/llm-renderer.ts` → `new LlmRenderer({ llm })`（`canned = false`）
 - `server/engine/ai/llm-judge.ts` → `new LlmJudge({ llm })`（`JudgeDecision.line` に一言を入れてよい）
 
+`JudgeDecision.flags.selfHarm ≥ 0.5` を返すと pipeline は安全フィルターと同じ返答にする（所見・言い換えなし、notice 'support'）。
 守ること: 失敗は `ProviderError` を投げる（握りつぶさない）/ `usage` を返す / `raw` に生の判断を入れる /
 `signal`・`timeoutMs` を尊重 / モデルに渡す所見は `candidates`（判定）か `allowedFacts`（言い換え）だけ。
 開示の可否は policy.ts が決めるので、Judge は「どの所見の話か・どれだけ確かか」を正直に返せばよい。
@@ -146,8 +195,10 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
 スキーマ / 真相・死因あり / 核心所見（importance ≥3）あり / ヒントちょうど3つ（1,2,3）/ 答えの要素と solveRule の id /
 出典 3件以上・https / id の重複 / 参照先の所見が存在（想定質問・requires・related・議論の答え・alsoAccept・伏線）/
 requires の循環 / 議論の答えの span が `[[...]]` の中にあり、その所見が証拠として使える（spoilerLevel ≤3・importance ≥1）/
-再構成の選択肢の正解がちょうど1つ / クイズの答え番号 / 公開欄（導入・ナレーション・例チップ・ジェーンとホルマの台詞・科学メモ・
-spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 想定質問の種類（yes/no/irrelevant/core/spoiler-bait/paraphrase/typo/negated）/
+議論の各ラウンドの成功台詞（success）が空でない（wrongShot・hint の空は警告）/
+再構成の選択肢の正解がちょうど1つ / クイズの答え番号 / 公開欄（導入・**内容の注意書き contentWarning・場所 intro.location・時刻 intro.time**・ナレーション・例チップ・ジェーンとホルマの台詞・事件ごとのホルマの台詞（holmaLines.idle / nearCore）・科学メモ・
+spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画像ファイルの存在（背景・肖像・再構成コマの `image` → `public/<path>`。無ければ**警告**。
+`npm run validate` と管理 API が確認する。純粋関数の validate.ts には `assetExists` で注入）/ 想定質問の種類（yes/no/irrelevant/core/spoiler-bait/paraphrase/typo/negated）/
 **rules 自己一致率 ≥95%**（想定質問をそのまま rules に通して正解ラベルが出るか。外れは警告に列挙）/
 真相の文章そのものが死因宣告で `correct` になるか（警告）/ 想定質問が一つも触れない所見（警告）/ leave-one-out 汎化率（情報）。
 
@@ -174,6 +225,7 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 想�
 | GET | `/api/admin/cases` | 全データ＋検査結果＋読込エラー |
 | GET | `/api/admin/traces?limit=&caseId=` | 直近 300 ターン |
 | POST | `/api/admin/ask-debug` | `{caseId, question, token?, mode?}` → trace 付き（mode を一時上書き） |
+| POST | `/api/admin/mint-token` | `{caseId, stage}` → `{token, progress}`。QA・画面作りの近道。stage: `fresh`（初期）/ `investigated`（spoilerLevel ≤3 の所見とメモを全部・質問数20）/ `debated`（＋全ラウンド突破）/ `solved`（＋宣告正解）/ `reconstructed`（＋再構成完了）。不明な stage は `investigated`。管理 API と同じく dev か `x-admin-token` のときだけ（本番の通常利用者には 404） |
 | GET | `/api/admin/bench` | `bench/reports/*.json` の一覧（無ければ `[]`） |
 
 - エラーは `{ "error": { "code", "message", "retryable" } }`。code は `ApiError` と同じ:
@@ -243,8 +295,8 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 想�
   拡張子の無いパスは `index.html` へ（`/api` 除く）、セキュリティヘッダー（CSP・HSTS・nosniff 等）、`/assets` は長期キャッシュ。
   環境変数は §7 を Vercel の Project Settings に入れる（`SESSION_SECRET` 必須）。
 - **静的ホスティング**（fourthplace43.com/games/ など）: `npm run build:static` の `dist/` をそのまま置く（`base: './'`）。API 不要・rules 固定。
-- ローカル: `npm run dev`（5190、API 付き）/ `npm run preview`（4190、API 付き・本番相当）/ `npm run dev:static`（埋め込みエンジン）。
-  ※ Node の `fetch` は 4190 番を「危険ポート」として拒否する。Node から preview を叩くときは `http` モジュールか curl を使う（Playwright の Chromium は可）。
+- ローカル: `npm run dev`（5190、API 付き）/ `npm run preview`（4191、API 付き・本番相当）/ `npm run dev:static`（埋め込みエンジン）。
+  ※ 4190 は Chromium・Node `fetch` の「危険ポート」なので preview は 4191 に変更済み（vite.config.ts）。
 
 ---
 
@@ -253,6 +305,7 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 想�
 - `import { api } from '../api'` だけを使う。失敗は `ApiError`（`code` で分岐: `network`/`timeout` → 再送ボタン、`rate_limited` → 少し待つ、`bad_token` → その事件のセーブをリセットして `newToken`）。
 - 返ってきた `token` は毎回保存し直す（localStorage、try/catch）。`progress` がそのまま画面の状態。
 - `AskAnswer.line` は複数の一言を `\n` で連結していることがある（前置き・本体・所見入手・核心接近）。`white-space: pre-line` で表示。
+- `AskAnswer.notice`: `'support'`（安全フィルター。真剣な台詞の横に相談窓口カード https://www.mhlw.go.jp/mamorouyokokoro/ を出す。スタンプや茶化し演出は出さない）/ `'degraded'`（簡易判定で答えた。控えめな印）。安全フィルターの返答は `answers` が1つだけ（質問文はメッセージ全体）。
 - 複数質問は `answers[]` に分割された順で返る。`question` は分割後の原文（先頭の「それと」「あと」は除去済み）。
 - 質問数（`progress.asked`）は空入力・長すぎを数えない。
 - 集中力（5）とラウンド中の演出は UI 側で管理（サーバーは `correct` と `hint` を返すだけ）。泣きつき回数は `ProgressSnapshot` に無いので UI 側で数える（トークン内部には記録）。
@@ -268,5 +321,17 @@ npx tsc --noEmit            型
 npm run test:engine         エンジンのテスト（tests/engine/**。実事件の想定質問も rules で流す）
 npm run validate            事件の検査（エラーで exit 1）
 npm run build / build:static
+npm run qa                  通しプレイ（タイトル→…→事件ファイルのランク、rules モード、:5198、qa/flow/）
+npm run qa:mobile           同じく 390x844
 ```
 計測: dev は `logs/trace-YYYY-MM-DD.jsonl`、本番は 1ターン1行の JSON をコンソールへ、管理 API で直近 300 件。
+dev の JSONL は**90日より古いファイルを起動時に削除**（`server/node/trace-file.ts` の `pruneTraceFiles`。プライバシーの約束「90日以内」）。
+安全フィルターに当たった質問の本文はどこにも記録しない。
+
+回帰:
+```
+npx vitest run tests/engine/safety.test.ts    安全フィルター（全事件の想定質問で誤検知なし）
+npx vitest run tests/engine/verdict.test.ts   宣告の否定・誤主張の優先
+npx vitest run tests/engine/routing.test.ts   因果・責め・意図・軸・名詞だけの問い
+npx vitest run tests/content                  事件ごとの回帰セット（STRICT_PENDING=1 で保留分も検査）
+```

@@ -58,6 +58,7 @@ export function toPublic(c: Case): CasePublic {
     totalFacts: c.facts.filter((f) => f.spoilerLevel < 4).length,
     shardWeights: shardWeights(c),
     hintCount: c.hints.length,
+    holmaLines: { idle: [...c.holmaLines.idle], nearCore: [...c.holmaLines.nearCore] },
   };
 }
 

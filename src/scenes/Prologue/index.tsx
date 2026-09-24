@@ -124,7 +124,7 @@ export function PrologueScene({ params }: SceneProps) {
               <ShardPortrait revealed={0} seed="prologue" label="ジェーン・ドゥの影" glow={speaker === 'jane'} />
             </div>
             <div class={`prologue__holma ${speaker === 'holma' ? 'is-speaking' : ''} ${speaker === 'narration' && i < 2 ? 'is-hidden' : ''}`}>
-              <HolmaSprite mood={mood} talking={speaker === 'holma'} framing={layout.value === 'narrow' ? 'full' : 'knee'} rim={speaker === 'holma' ? 'rgba(198,255,61,0.28)' : undefined} />
+              <HolmaSprite mood={mood} talking={speaker === 'holma'} framing={layout.value === 'narrow' ? 'hip' : 'knee'} rim={speaker === 'holma' ? 'rgba(198,255,61,0.28)' : undefined} />
             </div>
           </div>
         }

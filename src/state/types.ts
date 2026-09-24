@@ -63,7 +63,7 @@ export interface LogAnswer {
 
 export type LogEntry =
   | { id: string; at: number; kind: 'question'; text: string }
-  | ({ id: string; at: number; kind: 'answer'; degraded?: boolean } & LogAnswer)
+  | ({ id: string; at: number; kind: 'answer'; degraded?: boolean; notice?: 'support' | 'degraded' } & LogAnswer)
   | { id: string; at: number; kind: 'hint'; level: number; text: string }
   | { id: string; at: number; kind: 'system'; text: string; tone?: 'info' | 'warn' | 'error' };
 
@@ -114,6 +114,8 @@ export interface CaseProgress {
   notes: string;
   inquest?: InquestState;
   quiz?: { answers: Record<string, number>; correct: string[] };
+  /** The identity ceremony (Resolution) has played once this run → a reload shows the record page. */
+  resolutionSeen?: boolean;
   completed: boolean;
   clears: number;
   bestRank?: Rank;

@@ -1,0 +1,936 @@
+// End-to-end flow QA — plays a case from the title screen to the rank on the files screen,
+// in a real browser, against the dev API in rules mode.
+//
+//   npm run qa                      c01 full flow at 1440x900 + mint-token smoke of the other cases
+//   npm run qa:mobile               the same at 390x844 (touch, DPR 2)
+//   node scripts/qa.mjs --case c02  full flow for another case (id or prefix; 'all' = every case)
+//   node scripts/qa.mjs --no-smoke  full flow only          --smoke-only   smoke runs only
+//   node scripts/qa.mjs --port 5198 (default; a dev server already answering there is reused if it runs in rules mode)
+//
+// Full flow: title (gate → 審問を始める) → prologue (skip) → files → intro (title card, narration,
+// skip → catch cut-in) → investigation (starter chip, then case probes until the findings the
+// debate needs are unlocked, one hint, notebook) → 審問を開く → inquest (one miss, every round,
+// an incomplete verdict, the truth summary, reconstruction with one wrong pick, finale) →
+// resolution (ceremony → record) → science → quiz (one wrong answer) → result → files (rank).
+// Resume checks: reload in investigation / inquest / verdict / resolution / science / quiz /
+// result lands on the same scene with its state, and title 「続きから」 reopens the case.
+//
+// Smoke (other cases): files → intro (skip) → 3 questions, then a dev-minted 'investigated'
+// token (POST /api/admin/mint-token) → inquest → endings → files rank.
+//
+// Time: every page runs on Playwright's virtual clock and the script advances it (tick), so
+// GSAP timelines / typewriters / timers are frame-exact however busy the machine is. The API
+// runs in real time (short real sleeps between ticks). Chromium headless + SwiftShader.
+// Screenshots: qa/flow/<size>-<case>-<nn>-<state>.png. Exit 1 on page errors, console
+// errors, failed checks, wrong scene order or horizontal overflow.
+import { mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { chromium } from 'playwright';
+
+const root = fileURLToPath(new URL('..', import.meta.url));
+const argv = process.argv.slice(2);
+const arg = (k, d) => {
+  const i = argv.indexOf(k);
+  return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : d;
+};
+const MOBILE = argv.includes('--mobile');
+const PORT = Number(arg('--port', process.env.QA_PORT || 5198));
+const BASE = `http://127.0.0.1:${PORT}/`;
+const SMOKE = !argv.includes('--no-smoke');
+const SMOKE_ONLY = argv.includes('--smoke-only');
+const SIZE = MOBILE
+  ? { tag: 'sp', ctx: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true } }
+  : { tag: 'pc', ctx: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 } };
+const NARROW = MOBILE;
+
+const out = resolve(root, 'qa', 'flow');
+mkdirSync(out, { recursive: true });
+for (const f of readdirSync(out)) if (f.startsWith(`${SIZE.tag}-`) && f.endsWith('.png')) rmSync(resolve(out, f));
+
+/* ------------------------------------------------------------------ cases */
+const CASES = readdirSync(resolve(root, 'content', 'cases'))
+  .filter((d) => /^c\d\d/.test(d))
+  .sort()
+  .map((d) => JSON.parse(readFileSync(resolve(root, 'content', 'cases', d, 'case.json'), 'utf8')));
+const findCase = (k) => CASES.find((c) => c.id === k || c.id.startsWith(k));
+const caseArg = arg('--case', 'c01');
+const FULL = SMOKE_ONLY ? [] : caseArg === 'all' ? CASES : [findCase(caseArg)].filter(Boolean);
+if (!SMOKE_ONLY && !FULL.length) {
+  console.error(`[qa] unknown case "${caseArg}" (have: ${CASES.map((c) => c.id).join(', ')})`);
+  process.exit(1);
+}
+const SMOKES = SMOKE ? CASES.filter((c) => !FULL.includes(c)) : [];
+
+/** Verdicts that name part of the story but not all of it (never 'correct'). */
+const INCOMPLETE = {
+  c01: '酸欠で亡くなったのだと思う。夜なので部屋の換気が止まっていた。',
+  c02: 'ボールが胸に当たって、心室細動が起きた。',
+  c03: '寒さで体が冷えて亡くなった。',
+};
+
+/** Case probes (exact bank questions → deterministic rules answers) that unlock the findings the debate needs, then the weightiest others. */
+function questionPlan(c, max = 14) {
+  const probeFor = (id, skip = new Set()) =>
+    c.probes.find((p) => !skip.has(p.q) && p.facts?.includes(id) && ['yes', 'partial', 'no'].includes(p.answer) && p.kind !== 'multi' && p.kind !== 'typo');
+  const want = [];
+  for (const r of c.debate) want.push(r.answer.fact);
+  const others = c.facts
+    .filter((f) => !f.visibleFromStart && f.spoilerLevel <= 3 && f.importance >= 2)
+    .sort((a, b) => b.importance - a.importance || a.id.localeCompare(b.id));
+  for (const f of others) if (!want.includes(f.id)) want.push(f.id);
+  const plan = [];
+  const covered = new Set();
+  const used = new Set();
+  for (const id of want) {
+    if (covered.has(id)) continue;
+    const p = probeFor(id, used);
+    if (!p) continue;
+    used.add(p.q);
+    plan.push({ q: p.q, answer: p.answer, facts: p.facts ?? [] });
+    for (const f of p.facts ?? []) covered.add(f);
+    if (plan.length >= max) break;
+  }
+  return { plan, probeFor, used };
+}
+
+/* ------------------------------------------------------------------ server */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function health() {
+  try {
+    const r = await fetch(`${BASE}api/health`);
+    return r.ok ? await r.json() : null;
+  } catch {
+    return null;
+  }
+}
+let server = null;
+{
+  const h = await health();
+  if (h) {
+    if (h.mode !== 'rules') {
+      console.error(`[qa] a server on :${PORT} is running in "${h.mode}" mode — stop it (the QA needs rules mode) or pick another --port`);
+      process.exit(1);
+    }
+    console.log(`[qa] reusing the server on :${PORT} (rules mode)`);
+  } else {
+    // Our own Vite dev server (JS API): rules mode, no HMR / file watching, so nothing reloads
+    // the page mid-run. Closed at the end.
+    Object.assign(process.env, { PIPELINE_MODE: 'rules', DECISION_PROVIDER: 'rules', LLM_PROVIDER: 'none', TRACE_FILE: '0' });
+    const { createServer } = await import('vite');
+    server = await createServer({
+      configFile: resolve(root, 'vite.config.ts'),
+      root,
+      logLevel: 'warn',
+      server: { host: '127.0.0.1', port: PORT, strictPort: true, hmr: false, watch: { ignored: ['**/*'] } },
+    });
+    await server.listen();
+    let hh = null;
+    for (let i = 0; i < 160 && !hh; i++) {
+      hh = await health();
+      if (!hh) await sleep(250);
+    }
+    if (!hh || hh.mode !== 'rules') {
+      console.error(`[qa] dev server not ready on :${PORT} (${JSON.stringify(hh)})`);
+      await server.close();
+      process.exit(1);
+    }
+    console.log(`[qa] vite dev server on :${PORT}, API mode ${hh.mode}, ${hh.cases} cases`);
+  }
+}
+
+/* ------------------------------------------------------------------ helpers */
+const problems = [];
+const passed = [];
+const check = (cond, msg) => {
+  if (cond) passed.push(msg);
+  else problems.push(`CHECK FAILED: ${msg}`);
+  console.log(`  ${cond ? '✓' : '✗'} ${msg}`);
+  return !!cond;
+};
+
+/** Advance the page's virtual clock in 100 ms slices (so rAF renders intermediate frames). */
+async function tick(page, ms) {
+  for (let t = 0; t < ms; t += 100) await page.clock.runFor(Math.min(100, ms - t));
+}
+
+/** Poll fn(arg) in the page, advancing virtual time between polls. `each` runs between polls. */
+async function waitFor(page, fn, arg, { timeout = 90000, label = 'condition', step = 120, each } = {}) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeout) {
+    const v = await page.evaluate(fn, arg);
+    if (v) return v;
+    if (each) await each();
+    await tick(page, step);
+    await sleep(20);
+  }
+  throw new Error(`timeout waiting for ${label}`);
+}
+const has = (page, sel) => page.evaluate((s) => !!document.querySelector(s), sel);
+const waitSel = (page, sel, opts = {}) => waitFor(page, (s) => !!document.querySelector(s), sel, { label: sel, ...opts });
+const waitGone = (page, sel, opts = {}) => waitFor(page, (s) => !document.querySelector(s), sel, { label: `no ${sel}`, ...opts });
+const sceneOf = (page) => page.evaluate(() => window.__JD?.getState().route.scene ?? null);
+const waitScene = (page, scene, opts = {}) =>
+  waitFor(page, (s) => window.__JD?.getState().route.scene === s && !window.__JD.getState().transitioning, scene, { label: `scene ${scene}`, ...opts });
+const saveOf = (page, id) => page.evaluate((id) => window.__JD.getState().save.cases[id] ?? null, id);
+const skipText = (page) => page.evaluate(() => window.__JD.skipText());
+
+async function overflow(page, label) {
+  const o = await page.evaluate(() => {
+    const vw = window.innerWidth;
+    const res = [];
+    if (document.documentElement.scrollWidth > vw + 1) res.push(`document ${document.documentElement.scrollWidth}>${vw}`);
+    for (const e of document.querySelectorAll('.scene, .page, .chat__scroll, .sl__bottom, .sheet__body, .iq__verdict, .recon__pagewrap, .iq-mag')) {
+      const ox = getComputedStyle(e).overflowX;
+      if ((ox === 'auto' || ox === 'scroll') && e.scrollWidth > e.clientWidth + 1) res.push(`${String(e.className).split(' ').slice(0, 2).join('.')} ${e.scrollWidth}>${e.clientWidth}`);
+    }
+    return res;
+  });
+  if (o.length) problems.push(`${label}: horizontal overflow → ${o.join(', ')}`);
+}
+
+/** Images in view that failed to load (broken image icons). */
+async function brokenImages(page, label) {
+  const bad = await page.evaluate(() =>
+    [...document.images].filter((i) => i.complete && i.naturalWidth === 0 && i.getAttribute('src') && i.getBoundingClientRect().width > 0).map((i) => i.getAttribute('src')),
+  );
+  if (bad.length) problems.push(`${label}: broken images → ${bad.join(', ')}`);
+}
+
+function namer(tag) {
+  let n = 0;
+  return (s) => `${SIZE.tag}-${tag}-${String(++n).padStart(2, '0')}-${s}`;
+}
+async function shot(page, name) {
+  await sleep(200); // CSS-only transitions run on real time
+  await overflow(page, name);
+  await brokenImages(page, name);
+  await page.screenshot({ path: resolve(out, `${name}.png`) });
+  console.log(`  📷 ${name}.png`);
+}
+
+function watch(page, tag) {
+  page.on('pageerror', (e) => problems.push(`${tag} pageerror: ${e.message}`));
+  page.on('console', (m) => {
+    if (m.type() === 'error') problems.push(`${tag} console: ${m.text()}`);
+  });
+}
+
+/** Record every route the app visits (router uses pushState/replaceState, not hashchange). */
+const ROUTE_RECORDER = () => {
+  // kept in sessionStorage so reloads (resume checks) do not lose entries
+  const rec = () => {
+    const m = location.hash.match(/^#\/([a-z]+)/);
+    const s = m ? m[1] : 'title';
+    let a = [];
+    try {
+      a = JSON.parse(sessionStorage.getItem('qa:routes') || '[]');
+    } catch {}
+    if (a[a.length - 1] !== s) a.push(s);
+    sessionStorage.setItem('qa:routes', JSON.stringify(a));
+  };
+  for (const k of ['pushState', 'replaceState']) {
+    const orig = history[k].bind(history);
+    history[k] = (...a) => {
+      const r = orig(...a);
+      rec();
+      return r;
+    };
+  }
+  addEventListener('popstate', rec);
+};
+async function drainRoutes(page, into) {
+  const r = await page.evaluate(() => {
+    const a = JSON.parse(sessionStorage.getItem('qa:routes') || '[]');
+    // keep the current scene as the dedup anchor
+    sessionStorage.setItem('qa:routes', JSON.stringify(a.slice(-1)));
+    return a;
+  });
+  for (const s of r) if (into[into.length - 1] !== s) into.push(s);
+}
+
+async function boot(page, { url = `${BASE}?mute=1`, reload = false } = {}) {
+  if (reload) {
+    await page.evaluate(() => window.__JD?.flushSave?.());
+    await page.reload({ waitUntil: 'load' });
+  } else await page.goto(url, { waitUntil: 'load' });
+  for (let i = 0; i < 600; i++) {
+    if (await page.evaluate(() => !!window.__JD && document.documentElement.classList.contains('app-ready'))) break;
+    await tick(page, 100);
+    await sleep(20);
+  }
+  // Freeze page time: from here on it only moves when the script ticks it.
+  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 100);
+  await waitFor(page, () => !window.__JD.getState().transitioning, null, { label: 'boot transition' });
+}
+
+async function newPage(browser, tag) {
+  const ctx = await browser.newContext({ ...SIZE.ctx, locale: 'ja-JP', reducedMotion: 'no-preference' });
+  const page = await ctx.newPage();
+  await page.addInitScript(ROUTE_RECORDER);
+  await page.clock.install();
+  watch(page, tag);
+  return { ctx, page };
+}
+
+/* ------------------------------------------------------------------ title / files / intro */
+async function titleGate(page) {
+  if (await has(page, '.title__enter')) {
+    await page.click('.title__enter');
+    await waitSel(page, '.menu__item');
+    await tick(page, 900);
+  }
+}
+async function titleToFiles(page, name) {
+  await waitScene(page, 'title');
+  await tick(page, 1200);
+  await shot(page, name('title-gate'));
+  await titleGate(page);
+  await shot(page, name('title-menu'));
+  await page.locator('.menu__item', { hasText: '審問を始める' }).click();
+  await waitScene(page, 'prologue');
+  await waitSel(page, '.prologue .dlg');
+  await tick(page, 1500);
+  await skipText(page);
+  await tick(page, 300);
+  await shot(page, name('prologue'));
+  await page.locator('.prologue__top button', { hasText: 'スキップ' }).click();
+  await waitScene(page, 'files');
+  await waitSel(page, '.tag__open');
+  await tick(page, 1600);
+  await shot(page, name('files'));
+  const seen = await page.evaluate(() => window.__JD.getState().save.meta.prologueSeen);
+  check(seen === true, 'prologue skip marks the prologue as seen');
+}
+
+async function openFromFiles(page, c) {
+  const tag = page.locator(`article.tag:has(#case-${c.id}-title)`);
+  await tag.scrollIntoViewIfNeeded();
+  await tick(page, 300);
+  await tag.locator('.tag__open').click();
+  await waitScene(page, 'intro');
+}
+
+async function intro(page, c, name, { watchSome = true } = {}) {
+  await waitSel(page, '.itc__num', { label: 'intro title card' });
+  await tick(page, 1400);
+  // first click completes the card (readout filled), the second continues
+  await page.click('.intro__stage', { position: { x: 20, y: 120 } });
+  await tick(page, 300);
+  await waitSel(page, '.itc__continue');
+  await tick(page, 400);
+  if (watchSome) await shot(page, name('intro-title'));
+  await page.click('.intro__stage', { position: { x: 20, y: 120 } });
+  await waitSel(page, '.intro.is-narration');
+  await tick(page, 1400);
+  await skipText(page);
+  await tick(page, 200);
+  if (watchSome) await shot(page, name('intro-narration'));
+  // advance to Jane's first line
+  for (let i = 0; i < 25 && !(await has(page, '.intro.is-jane')); i++) {
+    await skipText(page);
+    await tick(page, 80);
+    await page.click('.intro__dlg .dlg', { force: true }).catch(() => {});
+    await tick(page, 260);
+  }
+  await tick(page, 1400);
+  await skipText(page);
+  await tick(page, 200);
+  if (watchSome) await shot(page, name('intro-jane'));
+  // skip → catchphrase cut-in → investigation
+  await page.locator('.intro__skip').click();
+  await waitSel(page, '.icc', { label: 'catch cut-in' });
+  await tick(page, 750);
+  if (watchSome) await shot(page, name('intro-catch'));
+  await waitScene(page, 'investigation', { timeout: 60000 });
+  const s = await saveOf(page, c.id);
+  check(!!s?.token, `${c.id}: the intro created the case token`);
+}
+
+/* ------------------------------------------------------------------ investigation */
+async function invReady(page) {
+  await waitSel(page, '.iv .dock__input', { label: 'investigation dock' });
+  await waitFor(page, () => !document.querySelector('.iv.is-presenting') && !document.querySelector('.dock.is-busy') && !document.querySelector('.flight') && !document.querySelector('.fx-cutin'), null, {
+    label: 'investigation settled',
+  });
+}
+const answerCount = (page, id) => page.evaluate((id) => (window.__JD.getState().save.cases[id]?.log ?? []).filter((e) => e.kind === 'answer').length, id);
+
+/** Send one question; returns the answer classes of the new answer entries once the presentation is over. */
+async function ask(page, c, q, { viaChip = false, onPresent } = {}) {
+  const before = await answerCount(page, c.id);
+  if (viaChip) {
+    await page.locator('.dock__chip').first().click();
+    await tick(page, 200);
+  } else {
+    await page.locator('.dock__input').click();
+    await page.locator('.dock__input').fill(q);
+  }
+  await page.locator('.dock__input').press('Enter');
+  const answered = ({ id, before, cut }) =>
+    (cut && !!document.querySelector('.fx-cutin')) || (window.__JD.getState().save.cases[id]?.log ?? []).filter((e) => e.kind === 'answer').length > before || !!document.querySelector('.arow--error');
+  if (onPresent) {
+    await waitFor(page, answered, { id: c.id, before, cut: true }, { label: `answer to 「${q}」` });
+    await onPresent();
+  }
+  await waitFor(page, answered, { id: c.id, before, cut: false }, { label: `answer to 「${q}」` });
+  await invReady(page);
+  const log = (await saveOf(page, c.id)).log.filter((e) => e.kind === 'answer').slice(before);
+  return log;
+}
+
+async function investigation(page, c, name, { questions, full }) {
+  await invReady(page);
+  await tick(page, 600);
+  await shot(page, name('inv-empty'));
+  const { plan, probeFor, used } = questionPlan(c);
+  const list = questions ? plan.slice(0, questions) : plan;
+
+  // 1) the first starter chip (fills, then sent with Enter)
+  const chipQ = await page.locator('.dock__chip').first().textContent();
+  const a0 = await ask(page, c, chipQ, { viaChip: true });
+  check(a0.length >= 1, `${c.id}: starter chip question answered (${a0.map((a) => a.answerClass).join(',')})`);
+  await shot(page, name('inv-first-answer'));
+
+  // 2) probes — shots of the first finding cut-in / flight
+  let shotFinding = false;
+  for (const [i, p] of list.entries()) {
+    const got = await ask(page, c, p.q, {
+      onPresent: async () => {
+        if (shotFinding || !full || !p.facts.length) return;
+        // the stamp comes first, then the 所見入手 cut-in (step in small slices so it is not skipped)
+        const cut = await waitSel(page, '.fx-cutin', { timeout: 6000, step: 60 }).then(() => true, () => false);
+        if (cut) {
+          shotFinding = true;
+          await tick(page, 300);
+          await shot(page, name('inv-finding-cutin'));
+          await waitSel(page, '.flight', { timeout: 15000 }).catch(() => {});
+          await tick(page, 300);
+          await shot(page, name('inv-finding-flight'));
+        }
+      },
+    });
+    const cls = got.map((a) => a.answerClass).join(',');
+    if (got[0]?.answerClass !== p.answer) problems.push(`${c.id}: probe 「${p.q}」 answered ${cls}, case bank says ${p.answer}`);
+    else console.log(`  · Q${i + 1} 「${p.q}」 → ${cls}${got.flatMap((a) => a.unlocked ?? []).length ? ` +${got.flatMap((a) => (a.unlocked ?? []).map((f) => f.id ?? f)).join(',')}` : ''}`);
+
+    if (full && i === 3) {
+      // resume check: reload mid-investigation keeps the log and the scene
+      const n = await answerCount(page, c.id);
+      await boot(page, { reload: true });
+      await waitScene(page, 'investigation');
+      await invReady(page);
+      await tick(page, 600);
+      check((await answerCount(page, c.id)) === n && (await page.locator('.arow[data-answer]').count()) >= n, `${c.id}: reload in the investigation keeps the scene and all ${n} answers`);
+      await shot(page, name('inv-resumed-reload'));
+    }
+    if (full && i === 5) {
+      // one whisper (hint)
+      await page.locator('.ivtop__hint').click();
+      await waitSel(page, '.modal-root .ivdlg__foot');
+      await tick(page, 400);
+      await page.locator('.modal-root button', { hasText: '囁きを聞く' }).click();
+      await waitSel(page, '.whisper__close', { label: 'whisper card' });
+      await tick(page, 1200);
+      await skipText(page);
+      await tick(page, 300);
+      await shot(page, name('inv-whisper'));
+      await page.locator('.whisper__close').click();
+      await waitGone(page, '.whisper');
+      check(((await saveOf(page, c.id)).hints ?? []).length === 1, `${c.id}: the whisper is saved as hint 1`);
+    }
+  }
+
+  // 3) make sure every debate round has its evidence (ask more probes if needed)
+  const held = async () => new Set(Object.keys((await saveOf(page, c.id)).facts ?? {}));
+  for (const r of c.debate) {
+    const ok = [r.answer.fact, ...(r.alsoAccept ?? [])];
+    for (let k = 0; k < 3; k++) {
+      const h = await held();
+      if (ok.some((f) => h.has(f))) break;
+      const p = probeFor(r.answer.fact, used);
+      if (!p) break;
+      used.add(p.q);
+      await ask(page, c, p.q);
+    }
+  }
+  const h = await held();
+  if (full || questions === undefined) {
+    for (const r of c.debate) {
+      const ok = [r.answer.fact, ...(r.alsoAccept ?? [])];
+      check(ok.some((f) => h.has(f)), `${c.id}: evidence for debate ${r.id} (${ok.join('/')}) was unlocked by questioning`);
+    }
+  }
+
+  // 4) notebook
+  if (full) {
+    if (NARROW) {
+      await page.locator('.ivtop__nb').click();
+      await waitSel(page, '.sheet-root');
+      await tick(page, 700);
+      await shot(page, name('inv-notebook'));
+      await page.keyboard.press('Escape');
+      await waitGone(page, '.sheet-root');
+    } else {
+      await tick(page, 400);
+      await shot(page, name('inv-notebook-side'));
+    }
+    // title → 続きから resumes the investigation
+    await page.evaluate(() => window.__JD.goto('title'));
+    await waitScene(page, 'title');
+    await titleGate(page);
+    await tick(page, 600);
+    const cont = page.locator('.menu__item', { hasText: '続きから' });
+    check((await cont.count()) === 1, `${c.id}: title offers 「続きから」`);
+    await shot(page, name('title-continue'));
+    await cont.click();
+    await waitScene(page, 'investigation');
+    await invReady(page);
+  }
+  return h;
+}
+
+async function openInquest(page, c, name) {
+  await page.locator('.ivtop__inquest').click();
+  await waitSel(page, '.modal-root .ivdlg__foot');
+  await tick(page, 500);
+  await shot(page, name('inquest-confirm'));
+  await page.locator('.modal-root .ivdlg__foot button').last().click();
+  await waitScene(page, 'inquest');
+  const s = await saveOf(page, c.id);
+  check(s.stage === 'inquest', `${c.id}: stage = inquest after 審問を開く`);
+}
+
+/* ------------------------------------------------------------------ inquest */
+const iq = (page) =>
+  page.evaluate(() => {
+    const el = document.querySelector('.iq');
+    return el
+      ? { phase: el.dataset.phase, step: el.dataset.step, vstep: el.dataset.verdictStep, dlg: el.dataset.dialogue, busy: el.dataset.busy, card: el.dataset.card, cut: !!document.querySelector('.fx-cutin'), scene: window.__JD.getState().route.scene }
+      : { phase: null, scene: window.__JD.getState().route.scene };
+  });
+/** Advance time until pred(state); finishes and advances dialogue lines on the way when asked. */
+async function until(page, pred, { advance = true, timeout = 120000, label = 'condition', step = 120 } = {}) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeout) {
+    const st = await iq(page);
+    if (pred(st)) return st;
+    if (advance && st.dlg === 'on') {
+      await skipText(page);
+      await tick(page, 60);
+      await page.click('.iq__dialogue .dlg', { timeout: 3000, force: true }).catch(() => {});
+    }
+    await tick(page, step);
+    await sleep(25);
+  }
+  throw new Error(`timeout waiting for ${label}: ${JSON.stringify(await iq(page))}`);
+}
+async function lockNoise(page, round, stmtId, span) {
+  const i = round.statements.findIndex((s) => s.id === stmtId);
+  await page.click(`.debate__dot >> nth=${i}`);
+  await waitSel(page, `.band[data-statement-id="${stmtId}"]`);
+  await tick(page, 700);
+  for (const h of await page.$$(`.band[data-statement-id="${stmtId}"] .noise`)) {
+    const t = await h.getAttribute('data-noise');
+    if (t && (t.includes(span) || span.includes(t))) {
+      await h.click({ force: true });
+      await tick(page, 400);
+      return;
+    }
+  }
+  throw new Error(`noise "${span}" not found in ${stmtId}`);
+}
+async function pickEvidence(page, factId) {
+  if (NARROW) {
+    await tick(page, 400); // locking with an empty chamber opens the drawer by itself
+    if (!(await page.$('.sheet-root'))) await page.click('[data-loaded-slot]');
+    await waitSel(page, `.sheet-root [data-fact-id="${factId}"]`);
+    await tick(page, 400);
+    const el = page.locator(`.sheet-root [data-fact-id="${factId}"]`);
+    await el.scrollIntoViewIfNeeded();
+    await el.click();
+    await waitGone(page, '.sheet-root');
+  } else {
+    const el = page.locator(`.iq-mag [data-fact-id="${factId}"]`);
+    await el.scrollIntoViewIfNeeded();
+    await el.click();
+  }
+  await tick(page, 150);
+}
+async function pickOption(page, panelId, text) {
+  await page.locator(`[data-panel-id="${panelId}"]`).scrollIntoViewIfNeeded();
+  await page.click(`[data-panel-id="${panelId}"]`);
+  const scope = NARROW ? '.sheet-root ' : '.recon__side ';
+  await waitSel(page, `${scope}[data-choice-for="${panelId}"]`);
+  await tick(page, NARROW ? 400 : 150);
+  await page.locator(`${scope}.choice__opt`, { hasText: text }).first().click();
+  if (NARROW) await waitGone(page, '.sheet-root');
+  await tick(page, 200);
+}
+async function evidenceIds(page) {
+  if (NARROW) return null; // the list lives in the drawer
+  return page.evaluate(() => [...document.querySelectorAll('.iq-mag [data-fact-id]')].map((e) => e.getAttribute('data-fact-id')));
+}
+
+async function inquest(page, c, name, { full, held }) {
+  await until(page, (s) => s.card === 'on' || (s.step === 'play' && s.dlg === 'off'), { label: 'round card' });
+  await tick(page, 900);
+  await shot(page, name('inquest-round1-card'));
+  await until(page, (s) => s.step === 'play' && s.dlg === 'off' && s.card === 'off', { label: 'debate play' });
+  await tick(page, 1200);
+  await shot(page, name('inquest-debate'));
+
+  for (const [ri, round] of c.debate.entries()) {
+    if (ri > 0) await until(page, (s) => s.step === 'play' && s.dlg === 'off' && s.card === 'off', { label: `round ${ri + 1}` });
+    const okIds = [round.answer.fact, ...(round.alsoAccept ?? [])];
+    // the evidence the player actually holds for this round
+    const listed = await evidenceIds(page);
+    const fact = held ? okIds.find((f) => held.has(f)) ?? round.answer.fact : round.answer.fact;
+    if (listed) check(listed.includes(fact), `${c.id}: ${round.id} evidence ${fact} is in the magazine`);
+    if (ri === 0 && full) {
+      // one miss with another finding
+      const wrong = (listed ?? [...(held ?? [])]).find((f) => !okIds.includes(f) && c.facts.find((x) => x.id === f)?.importance >= 1);
+      if (wrong) {
+        await lockNoise(page, round, round.answer.statement, round.answer.span);
+        await pickEvidence(page, wrong);
+        await page.click('[data-fire]');
+        await tick(page, 380);
+        await shot(page, name('inquest-miss'));
+        await until(page, (s) => s.step === 'play' && s.busy === 'off', { advance: false, label: 'after miss' });
+      }
+    }
+    await lockNoise(page, round, round.answer.statement, round.answer.span);
+    await pickEvidence(page, fact);
+    if (ri === 0) await shot(page, name('inquest-loaded'));
+    await page.click('[data-fire]');
+    if (ri === 0) {
+      await waitSel(page, '.fx-cutin', { label: 'refute cut-in' });
+      await tick(page, 450);
+      await shot(page, name('inquest-refute'));
+    }
+    await until(page, (s) => s.step === 'success' || s.phase === 'verdict', { advance: false, label: `hit ${round.id}` });
+    if (ri === 0 && full) {
+      // resume check: reload after the first round → the next round
+      await until(page, (s) => (s.step === 'play' && s.dlg === 'off' && s.card === 'off') || s.phase === 'verdict', { label: 'after round 1' });
+      const before = await saveOf(page, c.id);
+      await boot(page, { reload: true });
+      await waitScene(page, 'inquest');
+      await until(page, (s) => (s.phase === 'debate' && s.step === 'play' && s.dlg === 'off' && s.card === 'off' && !s.cut) || s.phase === 'verdict', { label: 'resume inquest' });
+      const after = await saveOf(page, c.id);
+      check(after.inquest?.cleared?.includes(round.id) && after.inquest.roundIndex === before.inquest.roundIndex && after.inquest.composure === before.inquest.composure, `${c.id}: reload in the inquest resumes after ${round.id} (round ${after.inquest.roundIndex + 1}, composure ${after.inquest.composure})`);
+      await tick(page, 900);
+      await shot(page, name('inquest-resumed'));
+    }
+  }
+
+  // verdict
+  await until(page, (s) => s.phase === 'verdict' && s.vstep === 'write' && s.dlg === 'off' && !s.cut, { label: 'verdict' });
+  await tick(page, 2400);
+  await shot(page, name('verdict'));
+  if (full) {
+    await page.fill('#verdict-text', INCOMPLETE[c.id.slice(0, 3)] ?? '事故だったと思う。');
+    await page.click('[data-verdict-submit]');
+    await until(page, (s) => s.vstep === 'result', { advance: false, label: 'verdict result' });
+    await tick(page, 1100);
+    const res = await page.evaluate(() => window.__JD.getState().save.cases);
+    const lv = res[c.id]?.inquest?.lastVerdict?.result;
+    check(lv && lv !== 'correct', `${c.id}: an incomplete verdict is not accepted (${lv})`);
+    await shot(page, name('verdict-incomplete'));
+    await until(page, (s) => s.vstep === 'write' && s.dlg === 'off', { label: 'rewrite' });
+    // resume check at the verdict
+    await tick(page, 800);
+    await boot(page, { reload: true });
+    await waitScene(page, 'inquest');
+    await until(page, (s) => s.phase === 'verdict' && s.vstep === 'write' && s.dlg === 'off' && !s.cut, { label: 'resume verdict' });
+    check(true, `${c.id}: reload at the verdict returns to the verdict`);
+  }
+  await page.fill('#verdict-text', c.truth.summary);
+  await page.click('[data-verdict-submit]');
+  await until(page, (s) => s.vstep === 'result', { advance: false, label: 'verdict correct' });
+  await tick(page, 1100);
+  await shot(page, name('verdict-correct'));
+
+  // reconstruction
+  await until(page, (s) => s.phase === 'reconstruction' && s.dlg === 'off' && !s.cut, { label: 'reconstruction' });
+  await tick(page, 600);
+  await until(page, (s) => s.dlg === 'off' && !s.cut, { label: 'recon settled' });
+  await tick(page, 1200);
+  await shot(page, name('recon'));
+  const blanks = c.reconstruction.panels.filter((p) => p.choice);
+  for (const [k, p] of blanks.entries()) {
+    const good = p.choice.options.find((o) => o.correct).text;
+    const bad = p.choice.options.find((o) => !o.correct).text;
+    await pickOption(page, p.id, full && k === 0 ? bad : good);
+  }
+  await page.click('[data-recon-submit]');
+  if (full) {
+    await until(page, (s) => s.dlg === 'on', { advance: false, label: 'recon wrong line' });
+    await until(page, (s) => s.dlg === 'off' && s.busy === 'off', { label: 'recon retry' });
+    await tick(page, 300);
+    await pickOption(page, blanks[0].id, blanks[0].choice.options.find((o) => o.correct).text);
+    await page.click('[data-recon-submit]');
+  }
+  await until(page, (s) => s.phase === 'finale' && s.dlg === 'on', { advance: false, label: 'finale' });
+  for (let k = 0; k < 3; k++) {
+    await skipText(page);
+    await tick(page, 100);
+    await page.click('.iq__dialogue .dlg', { force: true }).catch(() => {});
+    await tick(page, 1300);
+  }
+  await skipText(page);
+  await tick(page, 500);
+  await shot(page, name('finale'));
+  await until(page, (s) => s.scene === 'resolution', { label: 'resolution' });
+  const st = await saveOf(page, c.id);
+  check(st.stage === 'resolution' && st.snapshot?.solved && st.snapshot?.reconstructed, `${c.id}: after the finale stage = resolution, token solved + reconstructed`);
+}
+
+/* ------------------------------------------------------------------ endings */
+async function resolution(page, c, name, { full }) {
+  await waitScene(page, 'resolution');
+  await waitSel(page, '.res-cer', { label: 'ceremony' });
+  await tick(page, 1900);
+  await shot(page, name('res-ceremony'));
+  // Holma's lines → assemble → name → farewell
+  for (let i = 0; i < 12 && (await has(page, '.res-cer__dock .dlg')); i++) {
+    await skipText(page);
+    await tick(page, 120);
+    await page.click('.res-cer__dock .dlg', { force: true }).catch(() => {});
+    await tick(page, 350);
+  }
+  await waitSel(page, '.nameplate.is-done', { label: 'name restored', timeout: 60000 });
+  await tick(page, 1200);
+  await shot(page, name('res-named'));
+  await waitSel(page, '.dlg--restored', { label: 'farewell' });
+  await skipText(page);
+  await tick(page, 900);
+  if (full) await shot(page, name('res-farewell'));
+  for (let i = 0; i < 16 && !(await has(page, '.res-rec')); i++) {
+    await skipText(page);
+    await tick(page, 120);
+    await page.click('.res-cer__dock .dlg', { force: true }).catch(() => {});
+    await tick(page, 350);
+  }
+  await waitSel(page, '.res-rec', { label: 'record page' });
+  await tick(page, 1000);
+  await shot(page, name('res-record'));
+  if (full) {
+    await boot(page, { reload: true });
+    await waitScene(page, 'resolution');
+    await waitFor(page, () => !!document.querySelector('.res-rec') || !!document.querySelector('.res-cer'), null, { label: 'resolution after reload' });
+    check(await has(page, '.res-rec'), `${c.id}: reload on the record page keeps the record (no second ceremony)`);
+    if (!(await has(page, '.res-rec'))) {
+      await page.locator('.res-cer__skip').click();
+      await waitSel(page, '.res-rec');
+    }
+  }
+  const cta = page.locator('.res-rec__next .end-cta, .res-rec__next button').first();
+  await cta.scrollIntoViewIfNeeded();
+  await tick(page, 300);
+  await cta.click();
+  await waitScene(page, 'science');
+}
+
+async function science(page, c, name, { full }) {
+  await waitSel(page, '.sci-article', { label: 'science article' });
+  await tick(page, 900);
+  await shot(page, name('science-top'));
+  check((await saveOf(page, c.id)).stage === 'science', `${c.id}: stage = science`);
+  if (full) {
+    await boot(page, { reload: true });
+    await waitScene(page, 'science');
+    await waitSel(page, '.sci-article');
+    check(true, `${c.id}: reload keeps the science page`);
+    const dg = page.locator('.dg').first();
+    if (await dg.count()) {
+      await dg.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+      await tick(page, 3600);
+      await shot(page, name('science-diagram'));
+    }
+  }
+  await page.evaluate(() => document.querySelector('.sci-end')?.scrollIntoView({ block: 'center' }));
+  await tick(page, 600);
+  await shot(page, name('science-end'));
+  await page.locator('.sci-end .end-cta').click();
+  await waitScene(page, 'quiz');
+}
+
+async function quiz(page, c, name, { full }) {
+  await waitSel(page, '.qz-card', { label: 'quiz card' });
+  await tick(page, 700);
+  await shot(page, name('quiz'));
+  const answers = await page.evaluate(async (id) => {
+    const token = window.__JD.getState().save.cases[id].token;
+    const r = await fetch('api/solution', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ caseId: id, token }) });
+    return (await r.json()).quiz.map((q) => q.answer);
+  }, c.id);
+  for (const [qi, ans] of answers.entries()) {
+    await waitSel(page, '.qz-choice');
+    await tick(page, 400);
+    if (qi === 0 && full) {
+      await page.locator('.qz-choice').nth(ans === 0 ? 1 : 0).click();
+      await tick(page, 700);
+      await shot(page, name('quiz-wrong'));
+    }
+    await page.locator('.qz-choice').nth(ans).click();
+    await tick(page, 700);
+    if (qi === 0 && full) {
+      // resume check: a reload mid-quiz keeps the answered question
+      await boot(page, { reload: true });
+      await waitScene(page, 'quiz');
+      await waitSel(page, '.qz-card');
+      const q = (await saveOf(page, c.id)).quiz;
+      check(q?.correct?.includes('0'), `${c.id}: reload in the quiz keeps the answered question`);
+      await tick(page, 600);
+      if (await has(page, '.qz-fb__actions .btn')) await page.click('.qz-fb__actions .btn');
+      await tick(page, 700);
+      continue;
+    }
+    await page.click('.qz-fb__actions .btn');
+    await tick(page, qi === answers.length - 1 ? 1600 : 700);
+  }
+  await waitSel(page, '.qz-done', { label: 'quiz complete' });
+  await tick(page, 1200);
+  await shot(page, name('quiz-complete'));
+  const s = await saveOf(page, c.id);
+  check(s.stage === 'complete' && !!s.lastResult?.rank, `${c.id}: the quiz seals the run (stage complete, rank ${s.lastResult?.rank})`);
+  await page.locator('.qz-done .btn').first().click();
+  await waitScene(page, 'result');
+}
+
+async function result(page, c, name, { full }) {
+  await waitSel(page, '.rs-rank__seal', { label: 'rank seal' });
+  await tick(page, 2800);
+  await shot(page, name('result'));
+  const s = await saveOf(page, c.id);
+  if (full) {
+    await boot(page, { reload: true });
+    await waitScene(page, 'result');
+    await waitSel(page, '.rs-rank__seal');
+    check(true, `${c.id}: reload keeps the result`);
+    await tick(page, 2800);
+  }
+  const btn = page.locator('.rs-actions button', { hasText: '事件ファイルへ' }).first();
+  await btn.scrollIntoViewIfNeeded();
+  await tick(page, 300);
+  await btn.click();
+  await waitScene(page, 'files');
+  await waitSel(page, `article.tag:has(#case-${c.id}-title) .tag__rank-value`, { label: 'best rank on the case tag' });
+  const shown = await page.locator(`article.tag:has(#case-${c.id}-title) .tag__rank-value`).textContent();
+  check(shown === s.bestRank, `${c.id}: files show best rank ${shown} (save ${s.bestRank}, run ${s.lastResult?.rank} ${s.lastResult?.title ?? ''})`);
+  const tag = page.locator(`article.tag:has(#case-${c.id}-title)`);
+  await tag.scrollIntoViewIfNeeded();
+  await tick(page, 1600);
+  await shot(page, name('files-rank'));
+  return s;
+}
+
+/* ------------------------------------------------------------------ runs */
+const ORDER_FULL = ['title', 'prologue', 'files', 'intro', 'investigation', 'title', 'investigation', 'inquest', 'resolution', 'science', 'quiz', 'result', 'files'];
+
+async function fullFlow(browser, c) {
+  const key = c.id.slice(0, 3);
+  const tag = `${key}-full`;
+  const name = namer(tag);
+  console.log(`\n[qa] FULL ${c.id} @ ${SIZE.tag} ${SIZE.ctx.viewport.width}x${SIZE.ctx.viewport.height}`);
+  const { ctx, page } = await newPage(browser, tag);
+  const routes = [];
+  const t0 = Date.now();
+  try {
+    await boot(page);
+    await page.evaluate(() => window.__JD.setSettings({ textSpeed: 'fast' }));
+    await titleToFiles(page, name);
+    await openFromFiles(page, c);
+    await intro(page, c, name);
+    await drainRoutes(page, routes);
+    const held = await investigation(page, c, name, { full: true });
+    await drainRoutes(page, routes);
+    await openInquest(page, c, name);
+    await inquest(page, c, name, { full: true, held });
+    await drainRoutes(page, routes);
+    await resolution(page, c, name, { full: true });
+    await science(page, c, name, { full: true });
+    await quiz(page, c, name, { full: true });
+    await result(page, c, name, { full: true });
+    await drainRoutes(page, routes);
+    check(JSON.stringify(routes) === JSON.stringify(ORDER_FULL), `${c.id}: scene order ${routes.join(' → ')}`);
+    // the finished case is no longer offered as 「続きから」
+    await page.evaluate(() => window.__JD.goto('title'));
+    await waitScene(page, 'title');
+    await titleGate(page);
+    check((await page.locator('.menu__item', { hasText: '続きから' }).count()) === 0, `${c.id}: a completed case is not offered as 「続きから」`);
+  } catch (e) {
+    problems.push(`${tag}: ${e.message.split('\n')[0]}`);
+    console.error(`  ✗ ${tag}: ${e.message.split('\n')[0]}`);
+    await page.screenshot({ path: resolve(out, `${SIZE.tag}-${tag}-FAIL.png`) }).catch(() => {});
+  } finally {
+    console.log(`  (${Math.round((Date.now() - t0) / 1000)} s)`);
+    await ctx.close();
+  }
+}
+
+async function smoke(browser, c) {
+  const key = c.id.slice(0, 3);
+  const tag = `${key}-smoke`;
+  const name = namer(tag);
+  console.log(`\n[qa] SMOKE ${c.id} @ ${SIZE.tag}`);
+  const { ctx, page } = await newPage(browser, tag);
+  const t0 = Date.now();
+  try {
+    await boot(page);
+    await page.evaluate(() => {
+      window.__JD.setMeta({ prologueSeen: true });
+      window.__JD.setSettings({ textSpeed: 'fast' });
+    });
+    await titleGate(page);
+    await page.locator('.menu__item', { hasText: '事件ファイル' }).click();
+    await waitScene(page, 'files');
+    await waitSel(page, '.tag__open');
+    await tick(page, 1200);
+    await openFromFiles(page, c);
+    await intro(page, c, name, { watchSome: false });
+    await investigation(page, c, name, { full: false, questions: 3 });
+    await shot(page, name('inv-after-3'));
+    // jump: a dev-minted token with every finding (the investigation itself is covered by the full run)
+    await page.evaluate(async (id) => {
+      const r = await fetch('api/admin/mint-token', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ caseId: id, stage: 'investigated' }) });
+      const { token, progress } = await r.json();
+      window.__JD.updateCase(id, { stage: 'inquest', token, snapshot: progress });
+      window.__JD.flushSave();
+      window.__JD.goto('inquest', { caseId: id });
+    }, c.id);
+    await waitScene(page, 'inquest');
+    await inquest(page, c, name, { full: false });
+    await resolution(page, c, name, { full: false });
+    await science(page, c, name, { full: false });
+    await quiz(page, c, name, { full: false });
+    await result(page, c, name, { full: false });
+  } catch (e) {
+    problems.push(`${tag}: ${e.message.split('\n')[0]}`);
+    console.error(`  ✗ ${tag}: ${e.message.split('\n')[0]}`);
+    await page.screenshot({ path: resolve(out, `${SIZE.tag}-${tag}-FAIL.png`) }).catch(() => {});
+  } finally {
+    console.log(`  (${Math.round((Date.now() - t0) / 1000)} s)`);
+    await ctx.close();
+  }
+}
+
+const browser = await chromium.launch({
+  headless: true,
+  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'],
+});
+try {
+  for (const c of FULL) await fullFlow(browser, c);
+  for (const c of SMOKES) await smoke(browser, c);
+} finally {
+  await browser.close();
+  if (server) await server.close();
+}
+
+console.log(`\n[qa] ${passed.length} checks passed`);
+if (problems.length) {
+  console.error(`[qa] ${problems.length} problem(s):`);
+  for (const p of problems) console.error(`  - ${p}`);
+  process.exit(1);
+}
+console.log('[qa] OK — full flow, resume checks and smoke runs passed; no page/console errors or overflow.');

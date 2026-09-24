@@ -476,6 +476,8 @@ button.ev:disabled {
   border: 3px double var(--alarm);
   border-radius: 50%;
   color: var(--alarm);
+  /* the stamp sits over the codename line: a paper-toned disc keeps the rank legible */
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
   transform: rotate(-10deg);
 }
 .tag__rank-label {

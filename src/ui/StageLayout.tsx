@@ -14,14 +14,24 @@ export interface StageLayoutProps {
   tone?: 'formalin' | 'alarm' | 'cyan' | 'amber';
   /** PC left column (collapsible notebook). Hidden on narrow layouts — use a BottomSheet there. */
   side?: ComponentChildren;
+  /** PC: collapse the side column (animated; stays mounted). Default true = open. */
+  sideOpen?: boolean;
   /** Conversation / dialogue area under the stage (PC) or between stage and dock (phone). */
   bottom?: ComponentChildren;
   /** Input bar pinned to the bottom (respects safe area + on-screen keyboard). */
   dock?: ComponentChildren;
   /** PC only: overlay `bottom` on the lower part of the stage (cinematic ADV look). */
   cinematic?: boolean;
+  /**
+   * PC stage sizing. 'fixed' (default) = 16:9 box. 'fill' = as wide as the column allows
+   * (up to 2.4:1) with the height left after `bottomHeight`; `bottom` then grows to fill
+   * the remaining height and should scroll internally.
+   */
+  stageFit?: 'fixed' | 'fill';
   /** Estimated height of bottom+dock on PC (px) used to size the stage. Default 230. */
   bottomHeight?: number;
+  /** Extra class on the stage element. */
+  stageClass?: string;
   class?: string;
 }
 
@@ -30,17 +40,39 @@ export interface StageLayoutProps {
  *  PC (wide):    [side] | top / 16:9 stage (centered) / bottom / dock — stage width is shared
  *  Phone:        top / stage (38% of visual viewport) / bottom (scrolls) / dock (above keyboard)
  */
-export function StageLayout({ top, stage, background, tone = 'formalin', side, bottom, dock, cinematic, bottomHeight = 230, class: cls }: StageLayoutProps) {
+export function StageLayout({
+  top,
+  stage,
+  background,
+  tone = 'formalin',
+  side,
+  sideOpen = true,
+  bottom,
+  dock,
+  cinematic,
+  stageFit = 'fixed',
+  bottomHeight = 230,
+  stageClass,
+  class: cls,
+}: StageLayoutProps) {
   const bg = useImage(background);
   const wide = layout.value === 'wide';
   const cine = !!cinematic && wide;
   return (
-    <div class={`sl ${cinematic ? 'sl--cinematic' : ''} ${side ? 'has-side' : ''} ${cls ?? ''}`} data-tone={tone} style={{ '--sl-bottom-h': `${cinematic ? 0 : bottomHeight}px` }}>
+    <div
+      class={`sl ${cinematic ? 'sl--cinematic' : ''} ${stageFit === 'fill' ? 'sl--fill' : ''} ${side ? 'has-side' : ''} ${cls ?? ''}`}
+      data-tone={tone}
+      style={{ '--sl-bottom-h': `${cinematic ? 0 : bottomHeight}px` }}
+    >
       {top && <div class="sl__top">{top}</div>}
       <div class="sl__main">
-        {side && wide && <aside class="sl__side">{side}</aside>}
+        {side && wide && (
+          <aside class={`sl__side ${sideOpen ? 'is-open' : 'is-collapsed'}`} aria-hidden={sideOpen ? undefined : 'true'} inert={!sideOpen}>
+            <div class="sl__side-inner">{side}</div>
+          </aside>
+        )}
         <div class="sl__center">
-          <div class="sl__stage" data-stage>
+          <div class={`sl__stage ${stageClass ?? ''}`} data-stage>
             <div class={`sl__bg ${bg ? 'has-img' : ''}`} aria-hidden="true">
               {bg ? <img src={bg} alt="" /> : <div class="sl__bg-fallback" />}
               <div class="sl__bg-shade" />

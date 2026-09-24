@@ -1,10 +1,12 @@
 /**
  * Node entry: `handleApi(request, env)` — used by the Vite plugin (dev via ssrLoadModule,
  * preview via an internal module runner) and by the Vercel function api/[...path].ts.
- * Wires the file-system content source, the dev JSONL trace sink and the bench listing
- * into the pure HTTP handler. The runtime is cached per environment signature.
+ * Wires the file-system content source, the dev JSONL trace sink (old files pruned on start),
+ * the bench listing and the public/ asset check into the pure HTTP handler. The runtime is
+ * cached per environment signature.
  */
-import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import type { EnvLike } from '../engine/env.js';
 import { isDev } from '../engine/env.js';
 import { createApiHandler } from '../http/handler.js';
@@ -44,6 +46,7 @@ export function getRuntime(env: EnvLike = process.env as EnvLike): { runtime: Ap
     content: createFsContent(contentRoot, { watch: dev }),
     sinks,
     listBenchReports: () => listBenchReports(resolve(projectRoot, 'bench', 'reports')),
+    assetExists: (p) => existsSync(join(resolve(contentRoot, '..', 'public'), p)),
   });
   cached = { sig, runtime, handler: createApiHandler(runtime) };
   return cached;

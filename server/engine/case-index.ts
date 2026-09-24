@@ -3,7 +3,7 @@
  * Built once per loaded case (see registry.ts).
  */
 import type { Case, Fact, Probe } from '../../shared/case-schema.js';
-import { bigrams, coreForm, isNegatedConfirmation, isOpenQuestion, normalize, questionProposition, statementPolarity, type Polarity, type Proposition } from './normalize.js';
+import { bigrams, coreForm, isNegatedConfirmation, isOpenQuestion, marksPolarity, normalize, polarityMarks, questionProposition, type Polarity, type PolarityFamily, type PolarityMark, type Proposition } from './normalize.js';
 
 export interface IndexedFact {
   fact: Fact;
@@ -14,7 +14,9 @@ export interface IndexedFact {
   /** Polarity of the statement (stopped/absent vs working/present), if unanimous. */
   polarity?: Polarity;
   /** Clauses (split on 、。) with their own polarity — used when a keyword sits in one clause. */
-  clauses: { norm: string; polarity?: Polarity }[];
+  clauses: { norm: string; polarity?: Polarity; marks: PolarityMark[] }[];
+  /** Polarity marks of the whole statement. */
+  marks: PolarityMark[];
 }
 
 export interface IndexedProbe {
@@ -43,16 +45,17 @@ export interface CaseIndex {
 
 /**
  * Polarity of what a fact says about the matched keywords: the clauses that literally contain
- * a hit (unanimous), else the whole statement (unanimous), else undefined.
+ * a hit (unanimous), else the whole statement (unanimous), else undefined. With `family`, only
+ * state stems of that axis count (「壊れていた？」 is never answered from 「止まっていた」).
  */
-export function factPolarityFor(f: IndexedFact, hits: readonly string[]): Polarity | undefined {
+export function factPolarityFor(f: IndexedFact, hits: readonly string[], family?: PolarityFamily, strict = false): Polarity | undefined {
   const cl = f.clauses.filter((c) => hits.some((h) => c.norm.includes(h)));
   if (cl.length > 0) {
-    const ps = cl.map((c) => c.polarity);
+    const ps = cl.map((c) => marksPolarity(c.marks, family, strict));
     if (ps.every((p) => p !== undefined && p === ps[0])) return ps[0];
     if (ps.some((p) => p !== undefined)) return undefined;
   }
-  return f.polarity;
+  return marksPolarity(f.marks, family, strict);
 }
 
 /** Content words of the case present in a normalised text. */
@@ -74,8 +77,12 @@ export function buildCaseIndex(c: Case): CaseIndex {
       .split(/[、。，．,.！？!?]/u)
       .map(normalize)
       .filter(Boolean)
-      .map((c) => ({ norm: c, polarity: statementPolarity(c) }));
-    return { fact, norm, grams: bigrams(norm), keywords: kws, polarity: statementPolarity(norm), clauses };
+      .map((c) => {
+        const marks = polarityMarks(c);
+        return { norm: c, polarity: marksPolarity(marks), marks };
+      });
+    const marks = polarityMarks(norm);
+    return { fact, norm, grams: bigrams(norm), keywords: kws, polarity: marksPolarity(marks), clauses, marks };
   });
   const contentWords = [...new Set(facts.flatMap((f) => f.keywords).filter((k) => [...k].length >= 2))];
   return {

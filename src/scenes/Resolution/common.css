@@ -1,0 +1,118 @@
+/* Shared chrome for the ending scenes (Resolution / Science / Quiz / Result) */
+.end-state {
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+}
+.end-state__box {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+}
+.end-state__box--error {
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: center;
+  justify-items: start;
+  gap: 24px;
+  max-width: 680px;
+  padding: 24px 28px;
+  background: rgba(11, 13, 18, 0.86);
+  border: 1px solid var(--bone-a14);
+  border-left: 5px solid var(--alarm);
+  box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.45);
+}
+.end-state__holma {
+  width: 150px;
+  height: 180px;
+}
+.end-state__title {
+  margin-top: 6px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--fs-xl);
+  line-height: 1.3;
+}
+.end-state__body {
+  margin-top: 8px;
+  color: var(--bone-2);
+  line-height: 1.8;
+}
+.end-state__spinner {
+  width: 46px;
+  height: 46px;
+  border: 2px solid var(--bone-a14);
+  border-top-color: var(--formalin);
+  border-radius: 50%;
+  animation: end-spin 0.9s linear infinite;
+}
+@keyframes end-spin {
+  to { transform: rotate(360deg); }
+}
+.end-state__label {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.2em;
+  color: var(--bone-3);
+}
+[data-layout='narrow'] .end-state__box--error {
+  grid-template-columns: 1fr;
+  padding: 18px;
+}
+[data-layout='narrow'] .end-state__holma {
+  width: 110px;
+  height: 120px;
+}
+
+/* long-form section heading */
+.sec-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: 12px;
+  margin-bottom: 18px;
+}
+.sec-head__num {
+  grid-row: span 2;
+  align-self: start;
+  padding: 3px 7px 2px;
+  font-size: 0.72rem;
+  color: var(--ink);
+  background: var(--formalin);
+  transform: skewX(var(--skew));
+}
+.sec-head__en {
+  font-family: var(--font-en);
+  font-size: 0.82rem;
+  letter-spacing: 0.28em;
+  color: var(--formalin);
+}
+.sec-head__jp {
+  grid-column: 2;
+  margin-top: 2px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.45rem, 1.1rem + 1vw, 2rem);
+  line-height: 1.3;
+  color: var(--bone);
+  text-wrap: balance;
+}
+[data-reduce-motion='true'] .end-state__spinner {
+  animation-duration: 2.4s;
+}
+
+/* big CTAs of the ending scenes: never wider than a 320px phone */
+.end-cta {
+  max-width: 100%;
+}
+[data-layout='narrow'] .end-cta {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  padding: 12px 64px 12px 16px;
+  font-size: 1.15rem;
+}
+[data-layout='narrow'] .end-cta .btn__label {
+  min-width: 0;
+}
+[data-layout='narrow'] .end-cta .btn__jp {
+  white-space: normal;
+}

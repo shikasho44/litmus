@@ -1,0 +1,546 @@
+/**
+ * InquestSession — the state machine behind the 死因審問 scene.
+ *
+ *   loading → opening → debate (rounds…) → verdict → reconstruction → finale → done
+ *                          └ composure 0 → suspended → back to investigation
+ *
+ * The server is authoritative for everything that matters (cleared rounds, solved,
+ * reconstructed) and returns a fresh signed token on every call. The UI keeps only what
+ * the bible assigns to it: composure (集中力), grant count, verdict attempts, the current
+ * phase and drafts — mirrored into the save (setInquest) so a reload resumes in place.
+ *
+ * Components read the signals; the scene drives the timed sequences (cut-ins, lines).
+ */
+import { batch, computed, signal } from '@preact/signals';
+import type {
+  CasePublic,
+  HolmaMood,
+  InquestRoundView,
+  ProgressSnapshot,
+  PublicFact,
+  ReconstructionView,
+  VerdictResult,
+} from '../../../shared/api';
+import { ApiError } from '../../../shared/api';
+import { api } from '../../api';
+import type { Speaker } from '../../audio';
+import { pickLine } from '../../lib/lines';
+import { addFacts, getCaseProgress, setInquest, setStage, setToken } from '../../state/save';
+import type { InquestPhase, InquestState } from '../../state/types';
+
+export type Phase = 'loading' | 'error' | 'debate' | 'suspended' | 'verdict' | 'reconstruction' | 'finale' | 'done';
+/** Sub-state of a debate round. */
+export type DebateStep = 'intro' | 'play' | 'firing' | 'success' | 'clear';
+/** Sub-state of the verdict. */
+export type VerdictStep = 'write' | 'judging' | 'result';
+
+export const MAX_COMPOSURE = 5;
+export const VERDICT_MAX = 600;
+
+export interface Say {
+  speaker: Speaker;
+  text: string;
+  mood?: HolmaMood;
+  /** Name plate override. */
+  name?: string;
+}
+
+export interface Target {
+  statementId: string;
+  seg: number;
+  text: string;
+}
+
+export interface VerdictView {
+  result: VerdictResult;
+  matched: string[];
+  labels: Record<string, string>;
+  lines: string[];
+  text: string;
+  /**
+   * The server's safety filter answered instead of judging (the text confided self-harm):
+   * not counted as an attempt. The UI shows no stamp — a calm line and a support card.
+   */
+  support?: boolean;
+}
+
+export const SUPPORT_URL = 'https://www.mhlw.go.jp/mamorouyokokoro/';
+
+/** Guess who speaks an authored success line (Jane talks plainly; Holma is polite / says あなた). */
+export function successSpeaker(line: string): 'jane' | 'holma' {
+  const t = line.trim();
+  if (/あなた|審問官|ですとも|ねェ|なさい/.test(t)) return 'holma';
+  if (/(です|ます|でした|ました|ません|でしょう)[。！？…」』]*$/.test(t)) return 'holma';
+  return 'jane';
+}
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+export class InquestSession {
+  readonly caseId: string;
+  disposed = false;
+
+  /* ---- data from the server ---- */
+  info = signal<CasePublic | null>(null);
+  rounds = signal<InquestRoundView[]>([]);
+  evidence = signal<PublicFact[]>([]);
+  progress = signal<ProgressSnapshot | null>(null);
+  recon = signal<ReconstructionView | null>(null);
+  finaleLines = signal<string[]>([]);
+
+  /* ---- flow ---- */
+  phase = signal<Phase>('loading');
+  error = signal<string | null>(null);
+  busy = signal(false);
+  /** true on the very first entry (plays Holma's full opening). */
+  firstEntry = true;
+
+  /* ---- debate ---- */
+  roundIndex = signal(0);
+  step = signal<DebateStep>('intro');
+  current = signal(0);
+  userPaused = signal(false);
+  target = signal<Target | null>(null);
+  selected = signal<string | null>(null);
+  hint = signal<string | null>(null);
+  roundMisses = signal(0);
+  composure = signal(MAX_COMPOSURE);
+  misses = signal(0);
+  grants = signal(0);
+  suspensions = signal(0);
+  /** The noise that was just broken (drawn shattered). */
+  broken = signal<Target | null>(null);
+  /** Fact ids that just joined the evidence (NEW badge). */
+  freshFacts = signal<Set<string>>(new Set());
+  /** Ricochet feedback: key increments on each wrong shot. */
+  missKey = signal(0);
+
+  /* ---- verdict ---- */
+  verdictStep = signal<VerdictStep>('write');
+  draft = signal('');
+  verdictAttempts = signal(0);
+  verdict = signal<VerdictView | null>(null);
+  /** Show the support card (see VerdictView.support). */
+  support = signal(false);
+
+  /* ---- reconstruction ---- */
+  picks = signal<Record<string, number>>({});
+  verified = signal<Record<string, boolean>>({});
+  wrongPanels = signal<Set<string>>(new Set());
+  activePanel = signal<string | null>(null);
+  finaleIndex = signal(-1);
+
+  /* ---- dialogue (blocking lines) & bark (non-blocking quip) ---- */
+  dialogue = signal<{ line: Say; key: number } | null>(null);
+  bark = signal<{ text: string; key: number; tone: 'holma' | 'hint' | 'warn' } | null>(null);
+  holmaMood = signal<HolmaMood>('normal');
+  speaking = signal<Speaker | null>(null);
+
+  private seq = 0;
+  private sayResolve: (() => void) | null = null;
+  private barkTimer: ReturnType<typeof setTimeout> | undefined;
+  private draftTimer: ReturnType<typeof setTimeout> | undefined;
+
+  round = computed(() => this.rounds.value[this.roundIndex.value] ?? null);
+  statements = computed(() => this.round.value?.statements ?? []);
+  selectedFact = computed(() => this.evidence.value.find((f) => f.id === this.selected.value) ?? null);
+  ready = computed(() => !!this.target.value && !!this.selected.value && this.step.value === 'play');
+  /** Rounds already cleared on the server. */
+  cleared = computed(() => this.progress.value?.debateCleared ?? []);
+  blanks = computed(() => (this.recon.value?.panels ?? []).filter((p) => p.choice));
+  allPicked = computed(() => this.blanks.value.every((p) => typeof this.picks.value[p.id] === 'number'));
+
+  constructor(caseId: string) {
+    this.caseId = caseId;
+  }
+
+  dispose() {
+    this.disposed = true;
+    this.sayResolve?.();
+    this.sayResolve = null;
+    clearTimeout(this.barkTimer);
+    if (this.draftTimer) {
+      clearTimeout(this.draftTimer);
+      this.persist({ verdictDraft: this.draft.peek() });
+    }
+  }
+
+  /** Waits unless the scene is gone (then resolves at once). */
+  wait(ms: number) {
+    return this.disposed ? Promise.resolve() : sleep(ms);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Token & save                                                         */
+  /* ------------------------------------------------------------------ */
+  private token(): string | undefined {
+    return getCaseProgress(this.caseId)?.token;
+  }
+
+  private apply(res: { token: string; progress: ProgressSnapshot }) {
+    setToken(this.caseId, res.token, res.progress);
+    this.progress.value = res.progress;
+  }
+
+  persist(patch: Partial<InquestState> = {}) {
+    if (this.disposed && !('verdictDraft' in patch)) return;
+    const ph = this.phase.peek();
+    const phase: InquestPhase = ph === 'verdict' ? 'verdict' : ph === 'reconstruction' || ph === 'finale' ? 'reconstruction' : ph === 'done' ? 'done' : 'debate';
+    setInquest(this.caseId, {
+      phase,
+      roundIndex: this.roundIndex.peek(),
+      composure: this.composure.peek(),
+      cleared: [...(this.progress.peek()?.debateCleared ?? [])],
+      misses: this.misses.peek(),
+      grants: this.grants.peek(),
+      verdictAttempts: this.verdictAttempts.peek(),
+      suspensions: this.suspensions.peek(),
+      reconstructionPicks: { ...this.picks.peek() },
+      reconstructionDone: !!this.progress.peek()?.reconstructed,
+      ...patch,
+    });
+  }
+
+  private fail(e: unknown, what: string) {
+    const code = e instanceof ApiError ? e.code : 'server';
+    const msg =
+      code === 'network' || code === 'timeout'
+        ? '通信できませんでした。電波の良いところで、もう一度お試しください。'
+        : code === 'rate_limited'
+          ? '少し間を置いてから、もう一度お試しください。'
+          : code === 'bad_token'
+            ? '進行データを確認できませんでした。捜査からやり直してください。'
+            : `${what}に失敗しました。もう一度お試しください。`;
+    return { code, msg };
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Load / resume                                                        */
+  /* ------------------------------------------------------------------ */
+  async load() {
+    this.phase.value = 'loading';
+    this.error.value = null;
+    const saved = getCaseProgress(this.caseId)?.inquest;
+    try {
+      const [info, token] = await Promise.all([
+        api.getCase(this.caseId).catch(() => null),
+        this.token() ? Promise.resolve(this.token()!) : api.newToken(this.caseId).then((r) => (this.apply(r), r.token)),
+      ]);
+      if (this.disposed) return;
+      this.info.value = info;
+      const start = await api.inquestStart({ caseId: this.caseId, token });
+      if (this.disposed) return;
+      batch(() => {
+        this.apply(start);
+        this.rounds.value = start.rounds;
+        this.evidence.value = start.evidence;
+        // UI-side counters from the save
+        this.composure.value = saved && saved.composure > 0 ? Math.min(MAX_COMPOSURE, saved.composure) : MAX_COMPOSURE;
+        this.misses.value = saved?.misses ?? start.progress.debateMisses;
+        this.grants.value = saved?.grants ?? 0;
+        this.suspensions.value = saved?.suspensions ?? 0;
+        this.verdictAttempts.value = Math.max(saved?.verdictAttempts ?? 0, start.progress.verdictAttempts);
+        this.draft.value = saved?.verdictDraft ?? '';
+        this.picks.value = saved?.reconstructionPicks ? { ...saved.reconstructionPicks } : {};
+        if (saved?.lastVerdict) this.verdict.value = { ...saved.lastVerdict, lines: [] };
+      });
+      this.firstEntry = !saved || (saved.cleared.length === 0 && saved.misses === 0 && saved.verdictAttempts === 0 && saved.suspensions === 0);
+      setStage(this.caseId, 'inquest');
+
+      const p = start.progress;
+      if (p.reconstructed) {
+        await this.loadRecon();
+        this.phase.value = 'done';
+      } else if (p.solved) {
+        await this.loadRecon();
+        this.phase.value = 'reconstruction';
+      } else {
+        const firstOpen = start.rounds.findIndex((r) => !p.debateCleared.includes(r.id));
+        if (firstOpen < 0 || !start.rounds.length) {
+          this.roundIndex.value = Math.max(0, start.rounds.length - 1);
+          this.phase.value = 'verdict';
+          this.verdictStep.value = 'write';
+        } else {
+          this.roundIndex.value = firstOpen;
+          this.phase.value = 'debate';
+          this.step.value = 'intro';
+        }
+      }
+      this.persist();
+    } catch (e) {
+      if (this.disposed) return;
+      this.error.value = this.fail(e, '審問の準備').msg;
+      this.phase.value = 'error';
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Dialogue                                                             */
+  /* ------------------------------------------------------------------ */
+  /** Show lines one by one; resolves when the player advances past the last. */
+  async say(lines: Say[], onLine?: (i: number) => void) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (this.disposed) return;
+      onLine?.(i);
+      if (line.speaker === 'holma') this.holmaMood.value = line.mood ?? this.holmaMood.peek();
+      this.speaking.value = line.speaker;
+      await new Promise<void>((resolve) => {
+        this.sayResolve = resolve;
+        this.dialogue.value = { line, key: ++this.seq };
+      });
+    }
+    this.dialogue.value = null;
+    this.speaking.value = null;
+  }
+
+  advance() {
+    const r = this.sayResolve;
+    this.sayResolve = null;
+    r?.();
+  }
+
+  /** Holma's non-blocking quip near his head. */
+  quip(text: string, tone: 'holma' | 'hint' | 'warn' = 'holma', mood?: HolmaMood) {
+    clearTimeout(this.barkTimer);
+    if (mood) this.holmaMood.value = mood;
+    this.bark.value = { text, key: ++this.seq, tone };
+    const ms = Math.max(3200, Math.min(7000, 1800 + [...text].length * 90));
+    this.barkTimer = setTimeout(() => (this.bark.value = null), ms);
+  }
+
+  holma(path: string, fallbackMood: HolmaMood = 'normal'): Say {
+    const l = pickLine(path, fallbackMood);
+    return { speaker: 'holma', text: l.text, mood: l.mood };
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Debate                                                               */
+  /* ------------------------------------------------------------------ */
+  resetRoundUi() {
+    batch(() => {
+      this.current.value = 0;
+      this.userPaused.value = false;
+      this.target.value = null;
+      this.hint.value = null;
+      this.roundMisses.value = 0;
+      this.broken.value = null;
+    });
+  }
+
+  setTarget(t: Target | null) {
+    if (this.step.peek() !== 'play') return;
+    this.target.value = t;
+  }
+
+  select(factId: string | null) {
+    if (this.step.peek() === 'firing') return;
+    this.selected.value = factId;
+    if (factId && this.freshFacts.peek().has(factId)) {
+      const s = new Set(this.freshFacts.peek());
+      s.delete(factId);
+      this.freshFacts.value = s;
+    }
+  }
+
+  /** Fire the loaded evidence at the locked noise. Returns null on transport failure. */
+  async shoot(): Promise<{ correct: boolean; lines: string[]; hint?: string } | null> {
+    const round = this.round.peek();
+    const t = this.target.peek();
+    const f = this.selected.peek();
+    const token = this.token();
+    if (!round || !t || !f || !token) return null;
+    try {
+      const res = await api.shot({ caseId: this.caseId, token, roundId: round.id, statementId: t.statementId, span: t.text, factId: f });
+      if (this.disposed) return null;
+      this.apply(res);
+      if (!res.correct) {
+        batch(() => {
+          this.misses.value++;
+          this.roundMisses.value++;
+          this.composure.value = Math.max(0, this.composure.peek() - 1);
+          if (res.hint) this.hint.value = res.hint;
+          this.missKey.value++;
+        });
+      }
+      this.persist();
+      return { correct: res.correct, lines: res.lines, hint: res.hint };
+    } catch (e) {
+      const { msg } = this.fail(e, '反証');
+      this.quip(msg, 'warn');
+      return null;
+    }
+  }
+
+  /** 「ホルマに泣きつく」. Returns the granted fact and whether it was new. */
+  async beg(): Promise<{ fact: PublicFact; isNew: boolean; line: string } | null> {
+    const round = this.round.peek();
+    const token = this.token();
+    if (!round || !token || this.busy.peek()) return null;
+    this.busy.value = true;
+    try {
+      const res = await api.grant({ caseId: this.caseId, token, roundId: round.id });
+      if (this.disposed) return null;
+      this.apply(res);
+      const fact = res.granted;
+      if (!fact) return null;
+      const isNew = !this.evidence.peek().some((x) => x.id === fact.id);
+      batch(() => {
+        if (isNew) {
+          this.evidence.value = [...this.evidence.peek(), fact];
+          this.grants.value++;
+          this.freshFacts.value = new Set([...this.freshFacts.peek(), fact.id]);
+        }
+        this.selected.value = fact.id;
+        if (!isNew && res.lines[0]) this.hint.value = res.lines[0];
+      });
+      if (isNew) addFacts(this.caseId, [fact]);
+      this.persist();
+      return { fact, isNew, line: res.lines[0] ?? '' };
+    } catch (e) {
+      this.quip(this.fail(e, '所見の受け取り').msg, 'warn');
+      return null;
+    } finally {
+      this.busy.value = false;
+    }
+  }
+
+  /** Mark the current round cleared locally and move on. Returns true when it was the last. */
+  nextRound(): boolean {
+    const next = this.rounds.peek().findIndex((r) => !this.cleared.peek().includes(r.id));
+    if (next < 0) return true;
+    this.roundIndex.value = next;
+    this.resetRoundUi();
+    this.step.value = 'intro';
+    this.persist();
+    return false;
+  }
+
+  suspend() {
+    batch(() => {
+      this.suspensions.value++;
+      this.phase.value = 'suspended';
+    });
+    // Come back fresh: composure refills when the inquest is reopened.
+    this.persist({ composure: MAX_COMPOSURE, phase: 'debate' });
+  }
+
+  leaveToInvestigation() {
+    setStage(this.caseId, 'investigation');
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Verdict                                                              */
+  /* ------------------------------------------------------------------ */
+  setDraft(text: string) {
+    this.draft.value = text;
+    clearTimeout(this.draftTimer);
+    this.draftTimer = setTimeout(() => {
+      this.draftTimer = undefined;
+      this.persist({ verdictDraft: this.draft.peek() });
+    }, 500);
+  }
+
+  async declare(): Promise<VerdictView | null> {
+    const text = this.draft.peek().trim();
+    const token = this.token();
+    if (!text || !token) return null;
+    const before = this.progress.peek()?.verdictAttempts ?? 0;
+    try {
+      const res = await api.verdict({ caseId: this.caseId, token, text });
+      if (this.disposed) return null;
+      this.apply(res);
+      // Every judged verdict increments the server's attempt count; the safety reply does not.
+      const support = res.notice === 'support' || (res.result !== 'correct' && res.matched.length === 0 && res.progress.verdictAttempts === before);
+      if (support) {
+        const view: VerdictView = { result: res.result, matched: [], labels: res.labels, lines: res.lines, text, support: true };
+        this.support.value = true;
+        return view;
+      }
+      this.support.value = false;
+      const view: VerdictView = { result: res.result, matched: res.matched, labels: res.labels, lines: res.lines, text };
+      batch(() => {
+        this.verdictAttempts.value = Math.max(this.verdictAttempts.peek() + 1, res.progress.verdictAttempts);
+        this.verdict.value = view;
+      });
+      this.persist({ lastVerdict: { result: view.result, matched: view.matched, labels: view.labels, text }, verdictDraft: text });
+      return view;
+    } catch (e) {
+      this.quip(this.fail(e, '宣告').msg, 'warn');
+      return null;
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Reconstruction                                                       */
+  /* ------------------------------------------------------------------ */
+  async loadRecon() {
+    const token = this.token();
+    if (!token) return;
+    const view = await api.reconstruction({ caseId: this.caseId, token });
+    if (this.disposed) return;
+    this.recon.value = view;
+    // drop saved picks that no longer fit
+    const valid: Record<string, number> = {};
+    for (const p of view.panels) {
+      const v = this.picks.peek()[p.id];
+      if (p.choice && typeof v === 'number' && v >= 0 && v < p.choice.options.length) valid[p.id] = v;
+    }
+    this.picks.value = valid;
+  }
+
+  pick(panelId: string, option: number) {
+    if (this.verified.peek()[panelId]) return;
+    this.picks.value = { ...this.picks.peek(), [panelId]: option };
+    const w = new Set(this.wrongPanels.peek());
+    w.delete(panelId);
+    this.wrongPanels.value = w;
+    this.persist();
+  }
+
+  async submitRecon(): Promise<{ allCorrect: boolean; wrong: string[] } | null> {
+    const token = this.token();
+    if (!token) return null;
+    try {
+      const res = await api.submitReconstruction({ caseId: this.caseId, token, picks: this.picks.peek() });
+      if (this.disposed) return null;
+      this.apply(res);
+      const wrong = Object.entries(res.correct).filter(([, ok]) => !ok).map(([id]) => id);
+      batch(() => {
+        const v: Record<string, boolean> = {};
+        for (const [id, ok] of Object.entries(res.correct)) if (ok) v[id] = true;
+        this.verified.value = v;
+        this.wrongPanels.value = new Set(wrong);
+        if (res.finale) this.finaleLines.value = res.finale;
+      });
+      if (res.allCorrect) {
+        // blanks now reveal their caption & art
+        const token2 = this.token();
+        if (token2) {
+          try {
+            this.recon.value = await api.reconstruction({ caseId: this.caseId, token: token2 });
+          } catch {
+            /* keep the blank view; captions come later */
+          }
+        }
+      }
+      this.persist({ reconstructionDone: res.allCorrect });
+      return { allCorrect: res.allCorrect, wrong };
+    } catch (e) {
+      this.quip(this.fail(e, '再構成の確認').msg, 'warn');
+      return null;
+    }
+  }
+
+  clearWrongPicks(ids: string[]) {
+    const p = { ...this.picks.peek() };
+    for (const id of ids) delete p[id];
+    this.picks.value = p;
+    this.persist();
+  }
+
+  finish() {
+    this.persist({ phase: 'done', reconstructionDone: true });
+    setStage(this.caseId, 'resolution');
+  }
+}

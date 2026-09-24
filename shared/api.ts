@@ -52,6 +52,8 @@ export interface CasePublic extends CaseSummary {
   totalFacts: number;          // for the progress display
   shardWeights: Record<string, number>; // fact id → shard count (only ids, no text)
   hintCount: number;
+  /** Case-specific Holma flavour lines the investigation UI may use (idle nudges, nearCore detection). No case facts. */
+  holmaLines?: { idle: string[]; nearCore: string[] };
 }
 
 /* ------------------------------------------------------------------ */
@@ -165,6 +167,11 @@ export interface VerdictResponse {
   matched: string[];             // answer element ids matched
   labels: Record<string, string>;// element id → label (直接死因 …) for the checklist UI
   lines: string[];               // Holma feedback (never reveals the answer)
+  /**
+   * 'support': the text confided self-harm, so it was not judged or counted. `lines` holds the
+   * calm serious line; the UI shows no stamp, only the support card (same as AskAnswer.notice).
+   */
+  notice?: 'support';
   token: ProgressToken;
   progress: ProgressSnapshot;
   trace?: TurnTrace;

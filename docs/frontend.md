@@ -238,6 +238,12 @@ is suspended while the tab is hidden. Tracks are 16-bar loops with a variation e
   exits 1 on page errors or horizontal overflow. `--dev` uses a running dev server (:5190).
   Note: **port 4190 is on the browsers' blocked-port list** (ManageSieve) — Chrome refuses to
   open it, so `npm run preview` on 4190 cannot be viewed in a browser.
+- `npm run qa` / `npm run qa:mobile` (`scripts/qa.mjs`) → end-to-end flow on its own dev server (:5198,
+  rules mode, virtual clock): title → prologue → files → intro → investigation (real probes until the
+  debate evidence is unlocked, a hint) → inquest → resolution → science → quiz → result → files rank,
+  with reload / 「続きから」 resume checks at every stage, plus a mint-token smoke of the other cases.
+  `--case c02|all`, `--no-smoke`, `--smoke-only`. Screenshots in `qa/flow/`; exit 1 on page/console
+  errors, failed checks, wrong scene order, broken images or horizontal overflow.
 - `?mute=1` starts muted, `?nofx=1` disables the backdrop shader.
 
 ## 8. Fonts

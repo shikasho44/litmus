@@ -1,0 +1,63 @@
+.gal {
+  display: grid;
+  gap: 30px;
+  padding-bottom: 40px;
+}
+.gal__sec {
+  display: grid;
+  gap: 14px;
+}
+.gal__h {
+  font-family: var(--font-en);
+  letter-spacing: 0.24em;
+  font-size: var(--fs-sm);
+  color: var(--formalin);
+  border-bottom: 1px solid var(--bone-a14);
+  padding-bottom: 6px;
+}
+.gal__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 18px;
+}
+.gal__row--stamps {
+  gap: 24px 20px;
+  padding: 10px 0;
+}
+.gal__col {
+  display: grid;
+  gap: 16px;
+}
+.gal__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+  padding-top: 8px;
+}
+.gal__cards--compact {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.gal__shard {
+  width: 180px;
+  height: 240px;
+}
+.gal__holma {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: 110px;
+}
+.gal__holma .holma {
+  height: 130px;
+}
+.gal__cutin {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+}
+.gal__holma--vector svg {
+  width: 110px;
+  height: 143px;
+}

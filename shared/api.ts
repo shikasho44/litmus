@@ -92,6 +92,14 @@ export interface AskAnswer {
   mood: HolmaMood;
   unlocked: PublicFact[];
   memos: ScienceMemoView[];
+  /**
+   * Optional notice the UI must surface next to this answer:
+   *  - 'support'  the question touched self-harm / harming others. The line is a calm, serious
+   *               refusal (not Holma joking). The UI shows a gentle support card with a link to
+   *               the MHLW consultation portal (https://www.mhlw.go.jp/mamorouyokokoro/).
+   *  - 'degraded' answered by the offline rules judge because the AI provider failed.
+   */
+  notice?: 'support' | 'degraded';
 }
 
 export interface AskResponse {

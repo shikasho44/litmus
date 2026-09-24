@@ -1,0 +1,118 @@
+/* ==========================================================================
+   App shell
+   ========================================================================== */
+.app-shell {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--ink);
+}
+.scene-host {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.scene-wrap {
+  position: absolute;
+  inset: 0;
+}
+.scene-wrap:focus {
+  outline: none;
+}
+.scene-error {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  text-align: center;
+  padding: 24px;
+}
+
+/* ---------------- shutter transition ---------------- */
+.shutter {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  visibility: hidden;
+  overflow: hidden;
+}
+.shutter__panel {
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  left: -60%;
+  width: 220%;
+  will-change: transform;
+}
+.shutter__panel--a {
+  background: var(--alarm);
+}
+.shutter__panel--b {
+  background: var(--tex-stripes);
+  margin-left: 26px;
+}
+.shutter__panel--c {
+  margin-left: 60px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(242, 239, 230, 0.08) 0 1px, transparent 1.4px) 0 0 / 7px 7px,
+    var(--ink);
+  display: grid;
+  place-items: center;
+}
+.shutter__label {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  transform: skewX(14deg);
+}
+.shutter__en {
+  font-family: var(--font-en);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.5em;
+  color: var(--formalin);
+}
+.shutter__jp {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 5vw, 56px);
+  color: var(--bone);
+}
+[data-reduce-motion='true'] .shutter__panel--a,
+[data-reduce-motion='true'] .shutter__panel--b {
+  display: none;
+}
+[data-reduce-motion='true'] .shutter__panel--c {
+  margin: 0;
+}
+
+/* ---------------- top bar (shared by many scenes) ---------------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  min-height: 64px;
+}
+.topbar__title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.topbar__en {
+  font-family: var(--font-en);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.3em;
+  color: var(--formalin);
+  white-space: nowrap;
+}
+.topbar__jp {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[data-layout='narrow'] .topbar {
+  padding: 8px 10px;
+  min-height: 56px;
+}

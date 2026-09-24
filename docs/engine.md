@@ -1,0 +1,272 @@
+# エンジン設計メモ（server / api / src/api）
+
+「ジェーンドゥの死因」の判定エンジン・HTTP 層・クライアントの説明書。
+正本は `docs/design-bible.md`（体験）と `shared/*.ts`（データ・API の約束）。ここは実装側の地図。
+
+---
+
+## 1. 全体図
+
+```
+ ブラウザ (src/**)
+   │  import { api } from 'src/api'        ← UI は GameApi だけを見る
+   ▼
+ src/api/index.ts ── __JANEDOE_EMBEDDED__（ビルド時定数）で分岐
+   ├─ http.ts      fetch('/api/…')  12秒タイムアウト・通信/5xx は1回再試行・ApiError へ変換
+   └─ embedded.ts  エンジンをブラウザ内で実行（rules 固定・事件データ同梱）※ static ビルドのみ
+                                   │
+ ─────────────── HTTP ─────────────┼──────────────────────────────────────────
+                                   ▼
+ Vite dev / preview : server/node/vite-plugin.ts ─┐
+ Vercel            : api/[...path].ts ────────────┤→ server/node/handler.ts  handleApi(request, env)
+                                                   │     ├ content-fs.ts   content/ を読む（dev は変更を自動再読込）
+                                                   │     ├ trace-file.ts   logs/trace-YYYY-MM-DD.jsonl（dev のみ）
+                                                   │     └ bench-reports.ts bench/reports/*.json 一覧
+                                                   ▼
+                              server/http/handler.ts  ルーティング・入力制限・レート制限・管理 API・エラー JSON
+                              server/http/runtime.ts  設定 + 部品の組み立て
+                                                   ▼
+                              server/engine/game.ts   GameService（GameApi の全メソッドの本体）
+                                                   ▼
+   ┌──────────────────────── server/engine（純粋 TS。Node API なし。ブラウザでも動く）─────────────────────┐
+   │ registry.ts   事件の読込・zod 検証・壊れた事件はスキップして報告        lines.ts / default-lines.ts 定型文 │
+   │ normalize.ts  正規化・分割・否定・疑問詞・メタ・命題の極性             case-index.ts 事件ごとの前計算       │
+   │ retrieve.ts   所見（キーワード＋bigram）と想定質問（Dice）の候補        rules-judge.ts オフライン判定        │
+   │ pipeline.ts   ask の流れ（判定→規則→返答→検査→トレース）             policy.ts  所見を開けてよいかの規則   │
+   │ verdict.ts    死因宣告の判定                                          token.ts / sha256.ts  進行トークン   │
+   │ public-view.ts ブラウザへ出す形（秘密はここを通らない）                 state.ts   進行状態・進捗・破片     │
+   │ factory.ts    env → 判定部品（Jev / LLM / 検査）                      budget.ts  1日の費用上限             │
+   │ judge-types.ts 差し替え可能な Judge / VerdictJudge / Renderer / PostChecker の約束                          │
+   │ ai/*, providers/*  ← 次の担当が実装（今はスタブ。factory が rules に落とす）                                │
+   │ validate.ts   事件の検査（npm run validate と /api/admin/cases で共用）  trace.ts  計測                   │
+   └──────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+import は `server/**` と `api/**` では **`.js` 拡張子付きの相対パス**（例 `'./normalize.js'`）。
+TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見つけ、Vercel の Node 関数（ESM）でも解決できる。
+
+---
+
+## 2. ask の流れ（design bible §5-2）
+
+```
+質問(≤200字)
+ → 分割（？ / ? / 。 / ！ / 改行 / 「それと」「あと」、最大3問。4問目以降は捨てて trace に dropped:n）
+ → 正規化（NFKC・小文字・カタカナ→ひらがな・記号/絵文字/空白を除去。表示用の原文は保持）
+ → 候補（所見: キーワード命中＋bigram 包含率 上位8 / 想定質問: Dice 類似 上位5）
+ → 判定（mode に応じて rules / Jev / LLM。モデル失敗は1回再試行 → rules に退避）
+ → 規則 policy.ts（開示してよいか: 回答種別・確信度・spoilerLevel・requires・1回2枚まで）
+ → 返答（定型文 FAST PATH / LLM 言い換え → 漏洩語チェック → mode C は Jev 検査・NG なら1回作り直し → 定型文）
+ → 状態更新（所見・科学メモ・nearCore・質問数）→ 新しいトークン → TurnTrace
+```
+
+### rules 判定の順番（rules-judge.ts）
+1. 空・長すぎ → `vague`（質問数に数えない）
+2. 想定質問とほぼ同文（類似 ≥ 0.9）→ その正解ラベル（作者のラベルが最優先）
+3. メタ: 答えを聞く・名前を聞く→`cannot` / ヒント→`cannot` / 雑談・ホルマ自身→`irrelevant` / 暴言→`cannot`
+4. 想定質問と類似 ≥ 0.6 → そのラベル。**命題が逆なら反転**（「なかったですよね」⇔「ありましたか」、「回って」⇔「止まって」）。
+   事件の内容語（キーワード）が片方にしか無い場合は類似度 ×0.65（「一酸化炭素」と「二酸化炭素」を取り違えない）
+5. 疑問詞だけの質問（何/なぜ/誰/どこ/いつ…。「何か」「誰か」「誰にも」は除く）→ `vague`（はい/いいえで訊いて）
+6. 「〜は関係ありますか」→ 指す所見が重要（importance ≥2）なら `yes`、否定済み（ifAsked=no）なら `no`、それ以外 `irrelevant`
+7. キーワード所見（最も具体的なもの。「〜のせい」系は原因の直前の語）→
+   質問の述語の極性（止まる/動く/ある/ない…）と、所見のそのキーワードを含む節の極性を比べる。比べられないときは `fact.ifAsked`（否定確認なら反転）
+8. 類似 0.45 以上の想定質問が `irrelevant` → `irrelevant`
+9. それ以外 → `vague`
+
+現在の汎化性能（想定質問を1問ずつ抜いて当てる leave-one-out）: c01 73% / c02 85% / c03 74%（ほぼ同文なら 100%）。
+キーワードの読み・言い換え・表記ゆれを事件データに足すほど上がる。
+
+### 開示の規則（policy.ts）
+| 条件 | 内容 |
+|---|---|
+| 回答 | `yes` / `no` / `partial` のみ開示。`irrelevant` `cannot` `vague` は開示しない |
+| 確信度 | 0.5 以上（spoilerLevel 2 は 0.6 以上かつ当て推量でない） |
+| spoilerLevel 3 | 確信度 0.75 以上 **かつ** その所見への一致の強さ 0.7 以上 |
+| spoilerLevel 4 | **カードにならない**。はい/いいえの答えは返す（正解の確認がゲーム）→ `nearCore` |
+| requires | 前提の所見がすべて開示済み |
+| 枚数 | 1回答で最大2枚 |
+| 科学メモ | `fact.scienceMemo`（scienceMemos の id）が所見と一緒に開く |
+
+進捗 = 開示済み所見の破片重み / 全体。重み: importance 0→0, 1→1, 2→2, 3→3, 4→0。解決後は 1。
+`nearCore` は「spoilerLevel 4 の話題にはい/いいえ」「closeness 3」「進捗 75% 以上」で点灯（以後ずっと点灯）。
+
+---
+
+## 3. モード（PIPELINE_MODE）
+
+| mode | 判定 | 返答 | 用途 |
+|---|---|---|---|
+| `rules` | rules-judge | 定型文 | オフライン・QA・退避先・静的版 |
+| `jev` | JevJudge | 定型文 | 本番の既定 |
+| `jev+llm` | JevJudge | LlmRenderer | 表現比較 |
+| `jev+llm+check` | JevJudge | LlmRenderer → JevPostChecker | MODE C |
+| `llm` | LlmJudge（行も返す） | 判定モデルの行 | MODE A（基準線） |
+
+- 組めない部品（キー無し・スタブ）は factory が外し、実際に組めたモードに**降格**（`warnings` と `/api/admin/status` に出る）。
+- 想定質問とほぼ同文（≥0.97）・空/長すぎ/暴言はモデルを呼ばない。
+- モデル失敗（timeout / 429 / 5xx / network）は1回再試行 → その問だけ rules（`error.degraded` の一言を前置、trace に `degraded`）。config / bad_request は即退避。
+- 1ターン 9 秒の締切（ブラウザ側は 12 秒）。締切が近いとモデルを呼ばない。
+- `DAILY_COST_LIMIT_USD` を超えたら当日（UTC）中は rules（前置きなし、trace に `budget`）。インスタンスごとのメモリ集計なので目安。
+
+### 次の担当（AI 実装）へ
+`server/engine/judge-types.ts` の冒頭コメントが契約。スタブを置き換えるファイルとシグネチャ:
+- `server/engine/providers/jev.ts` → `createJevProvider(env): DecisionProvider`
+- `server/engine/providers/openrouter-llm.ts` → `createOpenRouterLlm(env): LlmProvider`
+- `server/engine/providers/codex.ts` → `createCodexLlm(env): LlmProvider`（Node 専用処理は server/node/ に置き動的 import）
+- `server/engine/ai/jev-judge.ts` → `new JevJudge({ provider, model })`, `new JevVerdictJudge({ provider, model })`, `new JevPostChecker({ provider, model })`
+- `server/engine/ai/llm-renderer.ts` → `new LlmRenderer({ llm })`（`canned = false`）
+- `server/engine/ai/llm-judge.ts` → `new LlmJudge({ llm })`（`JudgeDecision.line` に一言を入れてよい）
+
+守ること: 失敗は `ProviderError` を投げる（握りつぶさない）/ `usage` を返す / `raw` に生の判断を入れる /
+`signal`・`timeoutMs` を尊重 / モデルに渡す所見は `candidates`（判定）か `allowedFacts`（言い換え）だけ。
+開示の可否は policy.ts が決めるので、Judge は「どの所見の話か・どれだけ確かか」を正直に返せばよい。
+テストでは `makeService({ components: { mode: 'jev', judge: <偽物>, warnings: [] } })` で差し込める（tests/engine/pipeline.test.ts 参照）。
+
+---
+
+## 4. 事件の追加（コード修正なし）
+
+1. `content/cases/<id>/case.json` を置く（`id` はフォルダ名と同じ。形式は `shared/case-schema.ts`）
+2. `npm run validate` — エラー 0 まで直す（警告は通る）
+3. `npm run dev` — dev サーバーは case.json の変更を次のリクエストで自動再読込
+4. `publish: false` の間は本番の一覧に出ない（dev と管理者には見える）
+
+読込経路:
+| 実行環境 | 読み方 |
+|---|---|
+| vite dev / preview、tsx スクリプト、テスト | `server/node/content-fs.ts`（fs。`CONTENT_ROOT` か自動検出） |
+| Vercel | 同上。`vercel.json` の `includeFiles: "content/**"` で関数に同梱 |
+| 静的版（`--mode static`） | `src/api/embedded.ts` の `import.meta.glob('../../content/cases/*/case.json')` |
+
+壊れた事件（JSON 不正・スキーマ違反・id 重複）は**その事件だけ**スキップし、`GET /api/admin/cases` の `issues`、
+サーバーのコンソール、`npm run validate` に出る。ほかの事件は動き続ける。
+`content/holma-lines.json` が無い・一部不正 → 使えない節だけ内蔵の既定セリフ（`default-lines.ts`）で補う。
+
+### validate の検査項目
+スキーマ / 真相・死因あり / 核心所見（importance ≥3）あり / ヒントちょうど3つ（1,2,3）/ 答えの要素と solveRule の id /
+出典 3件以上・https / id の重複 / 参照先の所見が存在（想定質問・requires・related・議論の答え・alsoAccept・伏線）/
+requires の循環 / 議論の答えの span が `[[...]]` の中にあり、その所見が証拠として使える（spoilerLevel ≤3・importance ≥1）/
+再構成の選択肢の正解がちょうど1つ / クイズの答え番号 / 公開欄（導入・ナレーション・例チップ・ジェーンとホルマの台詞・科学メモ・
+spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 想定質問の種類（yes/no/irrelevant/core/spoiler-bait/paraphrase/typo/negated）/
+**rules 自己一致率 ≥95%**（想定質問をそのまま rules に通して正解ラベルが出るか。外れは警告に列挙）/
+真相の文章そのものが死因宣告で `correct` になるか（警告）/ 想定質問が一つも触れない所見（警告）/ leave-one-out 汎化率（情報）。
+
+---
+
+## 5. HTTP API
+
+| メソッド | パス | 本体 → 応答 |
+|---|---|---|
+| GET | `/api/health` | 稼働状況（mode・事件数・秘密鍵設定済みか 等） |
+| GET | `/api/cases` | `CaseSummary[]` |
+| GET | `/api/cases/:id` | `CasePublic` |
+| POST | `/api/token` | `{caseId}` → `{token, progress}` |
+| POST | `/api/ask` | `AskRequest` → `AskResponse`（token 省略可 = 新規） |
+| POST | `/api/hint` | `HintRequest` → `HintResponse`（1→2→3、以後3） |
+| POST | `/api/inquest/start` | → `InquestStartResponse`（証拠 = 開示済み importance ≥1） |
+| POST | `/api/inquest/shot` | `ShotRequest` → `ShotResponse`（同ラウンド2回外すと `hint`） |
+| POST | `/api/inquest/grant` | `GrantRequest` → `ShotResponse`（`granted`。持っていれば減点なしでヒントだけ） |
+| POST | `/api/inquest/verdict` | `VerdictRequest`（≤600字）→ `VerdictResponse` |
+| POST | `/api/reconstruction` | 解決済みのみ。空白コマは caption/scene/image を隠し、選択肢は事件ごとに固定の並べ替え。再構成完了後は全部見せる |
+| POST | `/api/reconstruction/submit` | `picks`（表示順の番号）→ コマごとの正誤・`allCorrect`・`finale` |
+| POST | `/api/solution` | 解決済みのみ `SolutionResponse` |
+| GET | `/api/admin/status` | 実際の mode・警告・費用 |
+| GET | `/api/admin/cases` | 全データ＋検査結果＋読込エラー |
+| GET | `/api/admin/traces?limit=&caseId=` | 直近 300 ターン |
+| POST | `/api/admin/ask-debug` | `{caseId, question, token?, mode?}` → trace 付き（mode を一時上書き） |
+| GET | `/api/admin/bench` | `bench/reports/*.json` の一覧（無ければ `[]`） |
+
+- エラーは `{ "error": { "code", "message", "retryable" } }`。code は `ApiError` と同じ:
+  400/404/405/413/403 → `bad_request`、401 → `bad_token`、429 → `rate_limited`（`Retry-After` 付き）、5xx → `server`。
+- 管理 API は dev では常に開く。本番は `x-admin-token` ヘッダーが `ADMIN_TOKEN` と一致したときだけ（それ以外は 404）。
+- `trace` は dev か管理者のときだけ応答に入る。
+- `/api` より前にパスが付いていても動く（例 `/games/janedoe/api/cases`）。
+
+### 制限
+| 項目 | 値 |
+|---|---|
+| 質問 | 200 字（超えると 400。エンジン直呼びでは「長すぎ」の一言） |
+| 死因宣告 | 600 字 |
+| リクエスト本文 | 8 KB（413） |
+| ask | IP ごと 30回/分・600回/日 |
+| verdict | 12回/分・200回/日 |
+| その他の POST | 120回/分・3000回/日、GET 240回/分、管理 120回/分 |
+| 1トークンあたりの質問 | 400（`QUESTION_CAP`。超えると 429 `rate_limited`, retryable=false） |
+| IP | `x-vercel-forwarded-for` → `x-real-ip` → `x-forwarded-for` 先頭（ローカルはソケットのアドレス） |
+
+レート制限はインスタンスごとのメモリ（スライディングウィンドウ）。本気の乱用対策は Vercel WAF と OpenRouter キーの上限で。
+
+---
+
+## 6. 進行トークンと秘密の守り方
+
+- 形式 `j1.<payload base64url>.<HMAC-SHA256 base64url>`。payload は
+  `{v, c: 事件id, u: 開示所見, m: 科学メモ, n: [質問数, ヒント, 論破ミス, 泣きつき, 宣告回数], rm: ラウンド別ミス, r: 突破ラウンド, f: 解決1|再構成2|nearCore4, t: 発行秒}`。
+- 毎回の呼び出しで検証（改ざん・別事件・形式違い・未来/期限切れ 120日 → 401 `bad_token`）し、毎回新しいトークンを返す（使っている限り期限は延びる）。
+- 事件データが後から変わっても、存在しない id はトークン読込時に捨てる（エラーにしない）。
+- 署名は WebCrypto（Node 20+ / ブラウザ）。安全でない http の LAN などで `crypto.subtle` が無いブラウザでは純 JS の HMAC（テストで一致を確認）。
+- 鍵は `SESSION_SECRET`。未設定なら開発用の固定値（dev は警告、本番はエラーログ。**本番では必ず設定**。未設定だと解決済みトークンを偽造して真相を読める）。
+- ブラウザに出るのは `public-view.ts` を通ったものだけ: 事件の公開情報、開示済みの所見と科学メモ、解決済みトークンがあるときの真相・科学解説。
+  真相・全所見・想定質問・判定メモ・正解要素・再構成の正解・被害者の名前・leakTerms は出ない（テストで確認）。
+- LLM の言い換えは、まだ開示していない所見に含まれる `leakTerms` が混じったら捨てて定型文に戻す（mode C ではさらに Jev 検査）。
+- **静的版（`npm run build:static`）は秘密を守れない**。エンジン・全事件データ・固定鍵 `janedoe-embedded-insecure-key` を同梱する（オフライン・QA・静的ホスティング用）。
+  http 版のビルドには埋め込みエンジンは入らない（`__JANEDOE_EMBEDDED__` が false の分岐はビルド時に消える。確認済み: http 版 2KB / static 版は embedded チャンク約450KB）。
+
+---
+
+## 7. 環境変数
+
+| 変数 | 既定 | 説明 |
+|---|---|---|
+| `OPENROUTER_API_KEY` | — | サーバーだけが読む。ログにも応答にも出さない |
+| `SESSION_SECRET` | 開発用固定値 | トークンの HMAC 鍵。本番必須 |
+| `PIPELINE_MODE` | キーあり→`jev` / なし→`rules` | §3 |
+| `DECISION_PROVIDER` | `jev` | `rules` にすると判定モデルを呼ばない |
+| `JEV_MODEL` | `typesafe/jev-1.13` | |
+| `LLM_PROVIDER` | `none` | `openrouter` / `codex` / `none` |
+| `LLM_MODEL` | — | OpenRouter のモデル名 |
+| `DAILY_COST_LIMIT_USD` | `1` | 0 = 有料モデルを使わない、負 = 無制限 |
+| `ADMIN_TOKEN` | — | 本番の管理 API 用 |
+| `APP_ENV` | vite dev→`development`、preview/Vercel→`production` | dev は管理 API 開放・trace 返却・JSONL ログ・非公開事件表示 |
+| `QUESTION_CAP` | `400` | 1トークンの質問上限 |
+| `CONTENT_ROOT` | 自動 | content/ の場所 |
+| `TRACE_FILE` | — | `0` で dev の JSONL ログを止める |
+| `VITE_API_MODE` / `VITE_API_BASE` | — / `/api` | ブラウザ側（ビルド時） |
+
+`.env` / `.env.local` / `.env.[mode]` は Vite プラグインが `loadEnv(mode, root, '')` で読む（process.env が優先）。
+
+---
+
+## 8. 配備
+
+- **Vercel**: `vercel.json` — build `npm run build`、出力 `dist`、関数 `api/[...path].ts`（Node、15秒、1GB、`content/**` 同梱）、
+  拡張子の無いパスは `index.html` へ（`/api` 除く）、セキュリティヘッダー（CSP・HSTS・nosniff 等）、`/assets` は長期キャッシュ。
+  環境変数は §7 を Vercel の Project Settings に入れる（`SESSION_SECRET` 必須）。
+- **静的ホスティング**（fourthplace43.com/games/ など）: `npm run build:static` の `dist/` をそのまま置く（`base: './'`）。API 不要・rules 固定。
+- ローカル: `npm run dev`（5190、API 付き）/ `npm run preview`（4190、API 付き・本番相当）/ `npm run dev:static`（埋め込みエンジン）。
+  ※ Node の `fetch` は 4190 番を「危険ポート」として拒否する。Node から preview を叩くときは `http` モジュールか curl を使う（Playwright の Chromium は可）。
+
+---
+
+## 9. UI 実装者へ（src/**）
+
+- `import { api } from '../api'` だけを使う。失敗は `ApiError`（`code` で分岐: `network`/`timeout` → 再送ボタン、`rate_limited` → 少し待つ、`bad_token` → その事件のセーブをリセットして `newToken`）。
+- 返ってきた `token` は毎回保存し直す（localStorage、try/catch）。`progress` がそのまま画面の状態。
+- `AskAnswer.line` は複数の一言を `\n` で連結していることがある（前置き・本体・所見入手・核心接近）。`white-space: pre-line` で表示。
+- 複数質問は `answers[]` に分割された順で返る。`question` は分割後の原文（先頭の「それと」「あと」は除去済み）。
+- 質問数（`progress.asked`）は空入力・長すぎを数えない。
+- 集中力（5）とラウンド中の演出は UI 側で管理（サーバーは `correct` と `hint` を返すだけ）。泣きつき回数は `ProgressSnapshot` に無いので UI 側で数える（トークン内部には記録）。
+- 再構成の `picks` は**表示された順番の番号**。完了後に `reconstruction()` を呼び直すと空白コマの caption / image も返る。
+- 死因宣告が `correct` になるまで `reconstruction` / `solution` は 403（`bad_request`）。
+
+---
+
+## 10. 検証
+
+```
+npx tsc --noEmit            型
+npm run test:engine         エンジンのテスト（tests/engine/**。実事件の想定質問も rules で流す）
+npm run validate            事件の検査（エラーで exit 1）
+npm run build / build:static
+```
+計測: dev は `logs/trace-YYYY-MM-DD.jsonl`、本番は 1ターン1行の JSON をコンソールへ、管理 API で直近 300 件。

@@ -1,0 +1,94 @@
+/* ==========================================================================
+   Glitch text
+   ========================================================================== */
+.glitch {
+  position: relative;
+  display: inline-block;
+}
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  white-space: inherit;
+}
+.glitch::before {
+  color: var(--alarm);
+  animation: glitch-a var(--glitch-period, 6s) steps(1, end) infinite;
+}
+.glitch::after {
+  color: var(--cyan);
+  animation: glitch-b var(--glitch-period, 6s) steps(1, end) infinite;
+}
+@keyframes glitch-a {
+  0%, 93%, 100% { opacity: 0; transform: none; clip-path: inset(0 0 0 0); }
+  94% { opacity: 0.9; transform: translate(-4px, 1px); clip-path: inset(12% 0 58% 0); }
+  96% { opacity: 0.9; transform: translate(5px, -1px); clip-path: inset(62% 0 8% 0); }
+  98% { opacity: 0.8; transform: translate(-2px, 0); clip-path: inset(38% 0 40% 0); }
+}
+@keyframes glitch-b {
+  0%, 93%, 100% { opacity: 0; transform: none; clip-path: inset(0 0 0 0); }
+  94% { opacity: 0.85; transform: translate(4px, -1px); clip-path: inset(48% 0 22% 0); }
+  96% { opacity: 0.85; transform: translate(-5px, 1px); clip-path: inset(5% 0 72% 0); }
+  98% { opacity: 0.7; transform: translate(3px, 0); clip-path: inset(70% 0 5% 0); }
+}
+.glitch--strong::before {
+  animation-duration: calc(var(--glitch-period, 6s) * 0.6);
+}
+.glitch--strong::after {
+  animation-duration: calc(var(--glitch-period, 6s) * 0.6);
+}
+/* one-shot glitch triggered by fx.glitch(el) */
+.is-glitching {
+  animation: glitch-shot 0.36s steps(3, end) 1;
+}
+@keyframes glitch-shot {
+  0% { transform: translate(0); filter: none; }
+  33% { transform: translate(-3px, 1px) skewX(-4deg); filter: drop-shadow(3px 0 0 rgba(255, 46, 99, 0.8)) drop-shadow(-3px 0 0 rgba(61, 224, 255, 0.8)); }
+  66% { transform: translate(3px, -1px) skewX(3deg); filter: drop-shadow(-3px 0 0 rgba(255, 46, 99, 0.8)) drop-shadow(3px 0 0 rgba(61, 224, 255, 0.8)); }
+  100% { transform: translate(0); filter: none; }
+}
+[data-reduce-motion='true'] .glitch::before,
+[data-reduce-motion='true'] .glitch::after {
+  animation: none;
+  opacity: 0;
+}
+[data-reduce-motion='true'] .is-glitching {
+  animation: none;
+}
+
+/* ==========================================================================
+   Speed lines
+   ========================================================================== */
+.speedlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.speedlines--radial {
+  background: repeating-conic-gradient(from 0deg at 50% 50%, transparent 0deg 3.2deg, var(--sl-color) 3.2deg 3.6deg, transparent 3.6deg 7.4deg, var(--sl-color) 7.4deg 7.65deg);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 28%, #000 62%);
+  mask-image: radial-gradient(circle at 50% 50%, transparent 0 28%, #000 62%);
+  animation: sl-spin 0.9s linear infinite;
+}
+.speedlines--horizontal {
+  background: repeating-linear-gradient(0deg, transparent 0 14px, var(--sl-color) 14px 15px, transparent 15px 31px, var(--sl-color) 31px 33px, transparent 33px 52px);
+  -webkit-mask-image: linear-gradient(90deg, #000, transparent 30%, transparent 70%, #000);
+  mask-image: linear-gradient(90deg, #000, transparent 30%, transparent 70%, #000);
+  animation: sl-slide 0.3s linear infinite;
+}
+@keyframes sl-spin {
+  from { transform: scale(1.6) rotate(0deg); }
+  to { transform: scale(1.6) rotate(7.4deg); }
+}
+@keyframes sl-slide {
+  from { background-position: 0 0; }
+  to { background-position: 0 52px; }
+}
+[data-reduce-motion='true'] .speedlines {
+  animation: none;
+  opacity: 0.4;
+}

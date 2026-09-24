@@ -1,0 +1,113 @@
+/* ==========================================================================
+   Typography helpers
+   ========================================================================== */
+.t-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+}
+.t-en {
+  font-family: var(--font-en);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.t-mono {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.t-jane {
+  font-family: var(--font-jane);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+.t-body {
+  font-family: var(--font-body);
+}
+.t-muted {
+  color: var(--mute);
+}
+.t-bone2 {
+  color: var(--bone-2);
+}
+.t-formalin {
+  color: var(--formalin);
+}
+.t-alarm {
+  color: var(--alarm);
+}
+.t-cyan {
+  color: var(--cyan);
+}
+
+.t-2xs { font-size: var(--fs-2xs); }
+.t-xs { font-size: var(--fs-xs); }
+.t-sm { font-size: var(--fs-sm); }
+.t-md { font-size: var(--fs-md); }
+.t-lg { font-size: var(--fs-lg); }
+.t-xl { font-size: var(--fs-xl); }
+.t-2xl { font-size: var(--fs-2xl); }
+.t-3xl { font-size: var(--fs-3xl); }
+.t-4xl { font-size: var(--fs-4xl); }
+
+.t-bold { font-weight: 700; }
+.t-center { text-align: center; }
+.t-nowrap { white-space: nowrap; }
+.t-balance { text-wrap: balance; }
+.t-pretty { text-wrap: pretty; }
+
+/* Eyebrow: small mono label above headings — "CASE 01 // 零番安置室" */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bone-3);
+}
+.eyebrow::before {
+  content: '';
+  width: 18px;
+  height: 2px;
+  background: var(--formalin);
+}
+
+/* Section heading with EN kicker */
+.heading {
+  display: grid;
+  gap: 4px;
+}
+.heading__en {
+  font-family: var(--font-en);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.24em;
+  color: var(--formalin);
+}
+.heading__jp {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  line-height: 1.15;
+}
+
+/* Inline keyboard hint */
+kbd,
+.kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 0.4em;
+  border: 1px solid var(--bone-a24);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--bone-2);
+  background: var(--bone-a08);
+}

@@ -1,0 +1,10 @@
+[
+  {
+    "prompt": "Scene: a winter mountain ridge in the late afternoon just after a blizzard. The whiteout is fading: veils of wind-blown snow still drift across the frame, soft and hazy, in cold blue and teal light with bone-white snow. In the middle ground a cluster of dark, jagged boulders with a narrow shadowy gap between two rocks, a small low hollow just big enough to crawl into, partly drifted over with snow. On the gentle snow slope in the foreground and leading toward the rocks, several metres apart from each other, a few small pieces of outdoor clothing lie flat and obviously empty: a crumpled dark teal-grey down jacket lying open and flat, a single dark glove, and a small alarm-magenta (#FF2E63) knit cap. A faint trail of single footprints half-filled by new snow. NO crevasse, NO glacier, NO cliff drop. Lonely, silent, quietly unsettling. No person, no body, no figure-like shapes.\n\nWide 16:9 background illustration for a mystery adventure video game, no characters.\nArt style: bold graphic-novel illustration, confident black ink linework, flat cel shading with subtle halftone screentone dots in the shadows, limited palette (ink navy #0B0D12, bone white #F2EFE6, formalin green #C6FF3D accents, alarm magenta #FF2E63 accents, cold teal shadows #1B3A44), dramatic theatrical lighting, stylish, elegant, slightly unsettling, intelligent mystery mood. Polished key-visual quality for a premium mystery adventure video game.\nComposition: the key subjects are kept inside the central 60% of the width so the image can be\ncropped to a narrower frame, with clean readable depth and atmospheric perspective.\nStrict constraints: NO gore, NO blood, NO wounds, NO text, NO letters, NO numbers, NO numerals, NO writing of any kind, NO captions, NO speech bubbles, NO logos, NO watermark, NO signature, NO frame, NO border.",
+    "out": "C:/coding/workspace/GameCreate/projects/janedoe/art-src/bg/c03-bg.png",
+    "size": "2048x1152",
+    "quality": "high",
+    "note": "background c03-bg (retry: no body-like jacket, narrow rock gap)",
+    "manifest": "C:/Users/sikas/AppData/Local/Temp/janedoe-art-manifests/c03-bg.manifest.json"
+  }
+]

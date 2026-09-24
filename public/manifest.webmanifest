@@ -1,0 +1,15 @@
+{
+  "name": "ジェーンドゥの死因",
+  "short_name": "死因",
+  "description": "名前を失った魂の死因を、はい／いいえの質問で暴く科学ミステリーADV。",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0B0D12",
+  "theme_color": "#0B0D12",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

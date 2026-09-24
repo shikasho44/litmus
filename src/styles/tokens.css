@@ -1,0 +1,110 @@
+/* ==========================================================================
+   Design tokens — docs/design-bible.md §4-2 is the source of truth.
+   Never hard-code these colours in components; use the variables.
+   ========================================================================== */
+:root {
+  /* ink (backgrounds) */
+  --ink: #0B0D12;
+  --ink-2: #141821;
+  --ink-3: #1E2430;
+  --ink-4: #2A3242;
+  --ink-a60: rgba(11, 13, 18, 0.6);
+  --ink-a85: rgba(11, 13, 18, 0.85);
+
+  /* bone (paper & text) */
+  --bone: #F2EFE6;
+  --bone-2: #D8D3C4;
+  --bone-3: #A7A08F;
+  --bone-a08: rgba(242, 239, 230, 0.08);
+  --bone-a14: rgba(242, 239, 230, 0.14);
+  --bone-a24: rgba(242, 239, 230, 0.24);
+  --bone-a60: rgba(242, 239, 230, 0.6);
+  --paper-ink: #1A1712;          /* printed text on bone paper */
+
+  /* signal colours */
+  --formalin: #C6FF3D;
+  --formalin-deep: #6E9A0C;
+  --formalin-glow: rgba(198, 255, 61, 0.35);
+  --alarm: #FF2E63;
+  --alarm-deep: #A80E3A;
+  --alarm-glow: rgba(255, 46, 99, 0.4);
+  --cyan: #3DE0FF;
+  --cyan-deep: #0B7C99;
+  --cyan-glow: rgba(61, 224, 255, 0.35);
+  --amber: #FFB020;
+  --violet: #9B6BFF;
+  --mute: #8A93A6;
+  --teal-shadow: #1B3A44;
+
+  /* answer-class colours (bible §4-3) */
+  --c-yes: var(--formalin);
+  --c-no: var(--alarm);
+  --c-partial: var(--amber);
+  --c-irrelevant: var(--mute);
+  --c-cannot: var(--violet);
+  --c-vague: var(--bone);
+
+  /* type */
+  --font-display: 'Dela Gothic One', 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  --font-body: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
+  --font-jane: 'Shippori Mincho B1', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+  --font-en: 'Anton', 'Impact', 'Haettenschweiler', 'Arial Narrow Bold', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
+
+  /* type scale (rem — scales with the font-size setting on <html>) */
+  --fs-2xs: 0.6875rem;  /* 11 */
+  --fs-xs: 0.75rem;     /* 12 */
+  --fs-sm: 0.875rem;    /* 14 */
+  --fs-md: 1rem;        /* 16 */
+  --fs-lg: 1.1875rem;   /* 19 */
+  --fs-xl: 1.5rem;      /* 24 */
+  --fs-2xl: 2rem;       /* 32 */
+  --fs-3xl: 2.75rem;    /* 44 */
+  --fs-4xl: 3.75rem;    /* 60 */
+
+  /* geometry */
+  --tilt: -8deg;
+  --tilt-soft: -4deg;
+  --skew: -12deg;
+  --r-1: 2px;
+  --r-2: 4px;
+  --r-3: 10px;
+  --gap-1: 4px;
+  --gap-2: 8px;
+  --gap-3: 12px;
+  --gap-4: 16px;
+  --gap-5: 24px;
+  --gap-6: 32px;
+  --gap-7: 48px;
+  --side-w: 340px;
+
+  /* motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-snap: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-1: 120ms;
+  --dur-2: 220ms;
+  --dur-3: 380ms;
+
+  /* shadows */
+  --shadow-hard: 4px 4px 0 var(--ink);
+  --shadow-float: 0 18px 40px -12px rgba(0, 0, 0, 0.7);
+
+  /* safe areas & viewport (JS keeps --vvh / --vv-top / --kb in sync with visualViewport) */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --vvh: 100dvh;
+  --vv-top: 0px;
+  --kb: 0px;
+
+  /* textures (inline SVG, no network) */
+  --tex-halftone: radial-gradient(circle at 50% 50%, rgba(242, 239, 230, 0.16) 0 1px, transparent 1.4px);
+  --tex-halftone-ink: radial-gradient(circle at 50% 50%, rgba(11, 13, 18, 0.28) 0 1.1px, transparent 1.5px);
+  --tex-stripes: repeating-linear-gradient(-45deg, var(--formalin) 0 10px, var(--ink) 10px 20px);
+  --tex-stripes-alarm: repeating-linear-gradient(-45deg, var(--alarm) 0 10px, var(--ink) 10px 20px);
+  --tex-scan: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px);
+
+  color-scheme: dark;
+}

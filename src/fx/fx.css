@@ -1,0 +1,62 @@
+.backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  background: radial-gradient(ellipse at 50% 40%, #16201C 0%, var(--ink) 70%);
+  image-rendering: auto;
+}
+.fx-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  overflow: hidden;
+}
+.fx-flash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: #fff;
+  mix-blend-mode: screen;
+}
+.fx-pulse {
+  --pulse: rgba(255, 46, 99, 0.55);
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 35%, var(--pulse) 100%);
+}
+.fx-pulse[data-tone='cyan'] {
+  --pulse: rgba(61, 224, 255, 0.5);
+}
+.fx-pulse[data-tone='formalin'] {
+  --pulse: rgba(198, 255, 61, 0.45);
+}
+.fx-shatter {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.fx-stamp {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+.fx-cutin {
+  position: absolute;
+  inset: 0;
+}
+
+/* Global grain + scanline overlay above scenes (very subtle) */
+.grain {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.09) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+}

@@ -1,0 +1,153 @@
+/* ==========================================================================
+   Base: reset, document, focus, scrollbars, selection
+   ========================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: calc(16px * var(--fs-scale, 1));
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: var(--ink);
+  color: var(--bone);
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: var(--font-body);
+  font-weight: 500;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+  background: var(--ink);
+  color: var(--bone);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+#app {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--vv-top);
+  height: var(--vvh);
+  overflow: hidden;
+}
+
+img,
+svg,
+canvas,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+a {
+  color: var(--cyan);
+  text-underline-offset: 3px;
+}
+
+p {
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+::selection {
+  background: var(--formalin);
+  color: var(--ink);
+}
+
+/* Focus — never removed. Keyboard users always see where they are. */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: 3px;
+  border-radius: var(--r-1);
+}
+.focus-inset:focus-visible {
+  outline-offset: -3px;
+}
+
+/* Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-4) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--ink-4);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Reduced motion (OS or in-game setting → [data-reduce-motion] on <html>) */
+[data-reduce-motion='true'] *,
+[data-reduce-motion='true'] *::before,
+[data-reduce-motion='true'] *::after {
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+}
+[data-reduce-motion='true'] .rm-hide {
+  display: none !important;
+}
+[data-reduce-motion='true'] .rm-still {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Boot splash is in index.html; hidden once the app mounts */
+html.app-ready #boot {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s var(--ease-out), visibility 0s 0.5s;
+}

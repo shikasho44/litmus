@@ -1,0 +1,252 @@
+{
+  "id": "c90-fixture-tent",
+  "number": 90,
+  "title": "テスト用 雨の夜のテント",
+  "titleEn": "FIXTURE: THE TENT IN THE RAIN",
+  "difficulty": 1,
+  "categories": ["化学"],
+  "estimatedMinutes": 10,
+  "publish": true,
+  "reviewStatus": "draft-ai",
+  "intro": {
+    "summary": "雨の夜が明けたキャンプ場で、女性が寝袋に入ったまま亡くなっていた。争った跡はない。彼女はなぜ死んだのか？",
+    "location": "山あいのキャンプ場",
+    "time": "朝7時",
+    "narration": ["夜通し降った雨がやんだ朝。", "小さなテントの入口は閉じられていた。", "中の女性は、眠っているように見えた。"],
+    "jane": ["……さむかった。", "あたたかくして、ねむったの。"],
+    "holma": ["さァ、解剖を始めましょう。", "テスト用の魂ですが、手は抜きませんよ。"],
+    "starterQuestions": ["テントの中で見つかりましたか？", "外傷はありましたか？", "雨が降っていましたか？"]
+  },
+  "victim": {
+    "codename": "ジェーン・ドゥ #90",
+    "name": "試験 花子",
+    "nameKana": "しけん はなこ",
+    "age": 30,
+    "occupation": "会社員",
+    "portrait": "cases/c90/portrait.webp",
+    "lookBrief": "肩までの黒髪、落ち着いた表情の女性",
+    "farewell": ["教えてくれてありがとう。", "次の誰かは、窓を開けてね。"]
+  },
+  "assets": { "background": "cases/c90/bg.webp", "accent": "#3DE0FF" },
+  "truth": {
+    "summary": "雨の夜、寒さをしのぐためにテントの中で炭火のコンロを使い、入口も換気口も閉じたまま眠った。空気の入れ替えがない中で不完全燃焼が起き、一酸化炭素が溜まった。",
+    "causeOfDeath": "一酸化炭素中毒",
+    "mechanism": "一酸化炭素は酸素よりはるかに強くヘモグロビンと結びつき、血液が酸素を運べなくなる。眠気のように進むため、本人は気づきにくい。",
+    "timeline": [
+      { "time": "20:00", "event": "雨が強くなり、テントに入る" },
+      { "time": "22:00", "event": "寒さ対策に炭火のコンロをテント内へ" },
+      { "time": "23:00", "event": "入口と換気口を閉じて眠る" },
+      { "time": "02:00", "event": "意識を失う" }
+    ]
+  },
+  "facts": [
+    { "id": "F01", "text": "テントの中で寝袋に入ったまま見つかった", "category": "場所", "importance": 1, "spoilerLevel": 0, "visibleFromStart": true, "keywords": ["テント", "寝袋"], "ifAsked": "yes" },
+    { "id": "F02", "text": "外傷はなかった", "category": "身体", "importance": 1, "spoilerLevel": 0, "keywords": ["外傷", "怪我", "ケガ", "傷", "殴"], "ifAsked": "no" },
+    { "id": "F03", "text": "毒物は検出されなかった", "category": "証拠", "importance": 1, "spoilerLevel": 1, "keywords": ["毒物", "毒", "薬物"], "ifAsked": "no" },
+    { "id": "F04", "text": "その夜は大雨だった", "category": "環境", "importance": 2, "spoilerLevel": 0, "keywords": ["大雨", "雨", "天気"], "ifAsked": "yes", "cardTitle": "大雨の夜", "icon": "rain" },
+    { "id": "F05", "text": "テントの入口は内側から閉じられていた", "category": "場所", "importance": 2, "spoilerLevel": 1, "keywords": ["入口", "出入口", "閉じ", "ファスナー", "閉め切"], "ifAsked": "yes", "cardTitle": "閉じた入口" },
+    { "id": "F06", "text": "テントの中に炭火のコンロがあった", "category": "物品", "importance": 3, "spoilerLevel": 2, "keywords": ["コンロ", "炭火", "七輪", "炭"], "ifAsked": "yes", "cardTitle": "テント内のコンロ", "scienceMemo": "M01" },
+    { "id": "F07", "text": "コンロの炭は燃え尽きていた", "category": "物品", "importance": 2, "spoilerLevel": 2, "keywords": ["燃え尽き", "灰"], "ifAsked": "yes", "requires": ["F06"], "cardTitle": "燃え尽きた炭" },
+    { "id": "F08", "text": "彼女は一人でキャンプに来ていた", "category": "人物", "importance": 1, "spoilerLevel": 1, "keywords": ["一人", "ひとり", "単独", "同行"], "ifAsked": "yes" },
+    { "id": "F09", "text": "争った跡はなかった", "category": "証拠", "importance": 1, "spoilerLevel": 0, "keywords": ["争", "喧嘩", "襲", "殺"], "ifAsked": "no" },
+    { "id": "F10", "text": "皮膚が鮮やかな赤みを帯びていた", "category": "身体", "importance": 3, "spoilerLevel": 3, "keywords": ["赤み", "赤く", "皮膚", "顔色"], "ifAsked": "yes", "cardTitle": "鮮やかな赤み", "scienceMemo": "M02" },
+    { "id": "F11", "text": "寒さをしのぐために火をテントの中へ入れた", "category": "環境", "importance": 2, "spoilerLevel": 2, "keywords": ["寒", "暖", "温め"], "ifAsked": "yes", "requires": ["F06"], "cardTitle": "寒さ対策" },
+    { "id": "F12", "text": "飲みかけのお茶は死とは無関係だった", "category": "物品", "importance": 0, "spoilerLevel": 1, "keywords": ["お茶", "水筒", "飲み物"], "ifAsked": "no" },
+    { "id": "F13", "text": "亡くなったのは深夜だった", "category": "時間", "importance": 1, "spoilerLevel": 1, "keywords": ["深夜", "夜中", "真夜中"], "ifAsked": "yes" },
+    { "id": "F14", "text": "換気口も閉じられ、空気の入れ替えはなかった", "category": "環境", "importance": 2, "spoilerLevel": 2, "keywords": ["換気", "通気", "空気の入れ替え"], "ifAsked": "no", "cardTitle": "閉じた換気口" },
+    { "id": "F15", "text": "一酸化炭素中毒で亡くなった", "category": "科学", "importance": 4, "spoilerLevel": 4, "keywords": ["一酸化炭素", "中毒", "ガス"], "ifAsked": "yes", "judgeNote": "the answer itself" },
+    { "id": "F16", "text": "苦しさを感じる前に意識を失った", "category": "身体", "importance": 3, "spoilerLevel": 3, "keywords": ["苦しさ", "息苦し", "意識", "眠るように"], "ifAsked": "yes", "cardTitle": "気づけない眠気" },
+    { "id": "F17", "text": "彼女に持病はなかった", "category": "人物", "importance": 1, "spoilerLevel": 1, "keywords": ["持病", "病気"], "ifAsked": "no" },
+    { "id": "F18", "text": "野生動物の仕業ではない", "category": "環境", "importance": 0, "spoilerLevel": 1, "keywords": ["動物", "熊", "クマ", "獣"], "ifAsked": "no" }
+  ],
+  "probes": [
+    { "q": "テントの中で見つかりましたか", "answer": "yes", "facts": ["F01"], "kind": "yes" },
+    { "q": "雨が降っていましたか", "answer": "yes", "facts": ["F04"], "kind": "yes" },
+    { "q": "入口は閉じていましたか", "answer": "yes", "facts": ["F05"], "kind": "yes" },
+    { "q": "テントの中にコンロがありましたか", "answer": "yes", "facts": ["F06"], "kind": "yes" },
+    { "q": "炭は燃え尽きていましたか", "answer": "yes", "facts": ["F07"], "kind": "yes" },
+    { "q": "一人で来ていましたか", "answer": "yes", "facts": ["F08"], "kind": "yes" },
+    { "q": "寒かったから火を中に入れたのですか", "answer": "yes", "facts": ["F11"], "kind": "yes" },
+    { "q": "深夜に亡くなりましたか", "answer": "yes", "facts": ["F13"], "kind": "yes" },
+    { "q": "皮膚が赤くなっていましたか", "answer": "yes", "facts": ["F10"], "kind": "yes" },
+    { "q": "外傷はありましたか", "answer": "no", "facts": ["F02"], "kind": "no" },
+    { "q": "毒を盛られましたか", "answer": "no", "facts": ["F03"], "kind": "no" },
+    { "q": "誰かと争いましたか", "answer": "no", "facts": ["F09"], "kind": "no" },
+    { "q": "持病がありましたか", "answer": "no", "facts": ["F17"], "kind": "no" },
+    { "q": "換気されていましたか", "answer": "no", "facts": ["F14"], "kind": "no" },
+    { "q": "熊に襲われましたか", "answer": "no", "facts": ["F18"], "kind": "no" },
+    { "q": "殺されましたか", "answer": "no", "facts": ["F09", "F02"], "kind": "no" },
+    { "q": "二酸化炭素のせいですか", "answer": "no", "facts": ["F15"], "kind": "no" },
+    { "q": "彼女の好きな食べ物は何ですか", "answer": "irrelevant", "facts": [], "kind": "irrelevant" },
+    { "q": "お茶は関係ありますか", "answer": "irrelevant", "facts": ["F12"], "kind": "irrelevant" },
+    { "q": "彼女の星座は関係ありますか", "answer": "irrelevant", "facts": [], "kind": "irrelevant" },
+    { "q": "テントの色は関係ありますか", "answer": "irrelevant", "facts": [], "kind": "irrelevant" },
+    { "q": "キャンプ場の名前は重要ですか", "answer": "irrelevant", "facts": [], "kind": "irrelevant" },
+    { "q": "コンロの火が原因ですか", "answer": "yes", "facts": ["F06"], "kind": "core" },
+    { "q": "テントの中で炭を燃やしたせいですか", "answer": "yes", "facts": ["F06", "F11"], "kind": "core" },
+    { "q": "ガスが原因ですか", "answer": "yes", "facts": ["F15"], "kind": "core" },
+    { "q": "中毒死ですか", "answer": "yes", "facts": ["F15"], "kind": "core" },
+    { "q": "死因を教えてください", "answer": "cannot", "facts": [], "kind": "spoiler-bait" },
+    { "q": "答えは何ですか", "answer": "cannot", "facts": [], "kind": "spoiler-bait" },
+    { "q": "犯人は誰ですか", "answer": "cannot", "facts": [], "kind": "spoiler-bait" },
+    { "q": "真相をズバリ言って", "answer": "cannot", "facts": [], "kind": "spoiler-bait" },
+    { "q": "雨の夜でしたか", "answer": "yes", "facts": ["F04"], "kind": "paraphrase" },
+    { "q": "炭火を使っていましたか", "answer": "yes", "facts": ["F06"], "kind": "paraphrase" },
+    { "q": "出入口はふさがっていましたか", "answer": "yes", "facts": ["F05"], "kind": "paraphrase" },
+    { "q": "ケガをしていましたか", "answer": "no", "facts": ["F02"], "kind": "paraphrase" },
+    { "q": "暖をとるために火を使いましたか", "answer": "yes", "facts": ["F11"], "kind": "paraphrase" },
+    { "q": "てんとの中でみつかった？", "answer": "yes", "facts": ["F01"], "kind": "typo" },
+    { "q": "こんろがありましたか", "answer": "yes", "facts": ["F06"], "kind": "typo" },
+    { "q": "どくをもられた？", "answer": "no", "facts": ["F03"], "kind": "typo" },
+    { "q": "あめがふっていた？", "answer": "yes", "facts": ["F04"], "kind": "typo" },
+    { "q": "毒ではないですよね", "answer": "yes", "facts": ["F03"], "kind": "negated" },
+    { "q": "外傷はなかったですよね", "answer": "yes", "facts": ["F02"], "kind": "negated" },
+    { "q": "一人じゃなかったですよね", "answer": "no", "facts": ["F08"], "kind": "negated" },
+    { "q": "換気はされていなかったですよね", "answer": "yes", "facts": ["F14"], "kind": "negated" },
+    { "q": "何か変なところはありましたか", "answer": "vague", "facts": [], "kind": "ambiguous" },
+    { "q": "普通の死に方ですか", "answer": "vague", "facts": [], "kind": "ambiguous" },
+    { "q": "息苦しさに気づけましたか", "answer": "no", "facts": ["F16"], "kind": "indirect" },
+    { "q": "眠るように亡くなったのですか", "answer": "yes", "facts": ["F16"], "kind": "indirect" },
+    { "q": "明日の天気はどうですか", "answer": "irrelevant", "facts": [], "kind": "out-of-scope" },
+    { "q": "あなたはウサギですか", "answer": "irrelevant", "facts": [], "kind": "out-of-scope" },
+    { "q": "雨でしたか？入口は閉じていましたか？", "answer": "yes", "facts": ["F04", "F05"], "kind": "multi" },
+    { "q": "ヒントをください", "answer": "cannot", "facts": [], "kind": "meta" },
+    { "q": "こんにちは", "answer": "irrelevant", "facts": [], "kind": "meta" },
+    { "q": "コンロは炭火でしたか", "answer": "yes", "facts": ["F06"], "kind": "yes" },
+    { "q": "寝袋の中にいましたか", "answer": "yes", "facts": ["F01"], "kind": "yes" },
+    { "q": "夜中でしたか", "answer": "yes", "facts": ["F13"], "kind": "yes" },
+    { "q": "テントは閉め切られていましたか", "answer": "yes", "facts": ["F05"], "kind": "paraphrase" }
+  ],
+  "hints": [
+    { "level": 1, "text": "その夜、彼女は寒さとどう戦ったのでしょうねェ。" },
+    { "level": 2, "text": "テントの中にあったものを思い出してご覧なさい。" },
+    { "level": 3, "text": "閉じた空間で火を燃やすと、空気はどうなるでしょう。" }
+  ],
+  "answerElements": [
+    { "id": "A", "label": "直接死因", "description": "一酸化炭素中毒", "required": true, "keywordGroups": [["一酸化炭素"], ["co", "中毒"]], "judgeClaim": "推理文は死因が一酸化炭素中毒だと述べている", "missingFeedback": "身体の中で、何が酸素の邪魔をしたのでしょうねェ。" },
+    { "id": "B", "label": "原因となった出来事", "description": "テントの中で炭火を燃やした", "required": true, "keywordGroups": [["炭", "テント"], ["コンロ", "テント"], ["炭火"], ["七輪"]], "judgeClaim": "推理文はテント内で炭火を使ったことが原因だと述べている", "missingFeedback": "その気体は、どこから来たのでしょう？" },
+    { "id": "C", "label": "科学的な仕組み", "description": "換気のない場所での不完全燃焼", "required": false, "keywordGroups": [["不完全燃焼"], ["換気"], ["ヘモグロビン"], ["密閉"], ["閉め切"]], "judgeClaim": "推理文は換気がない中での不完全燃焼に触れている", "missingFeedback": "なぜ、あの夜に限って溜まったのでしょうねェ。" }
+  ],
+  "wrongClaims": [
+    { "id": "W1", "keywordGroups": [["毒殺"], ["毒を盛"], ["毒物"]], "judgeClaim": "推理文は毒物によって殺されたと述べている", "feedback": "毒？　検出されなかったはずですがねェ。" },
+    { "id": "W2", "keywordGroups": [["殺され"], ["殺人"], ["犯人"]], "judgeClaim": "推理文は誰かに殺されたと述べている", "feedback": "争った跡がないことを、お忘れですか。" }
+  ],
+  "solveRule": { "required": ["A", "B"], "almost": ["A"] },
+  "debate": [
+    {
+      "id": "R1",
+      "title": "記憶のノイズ ①",
+      "intro": ["ジェーン「……あの夜のこと、少しだけ思い出せる」"],
+      "statements": [
+        { "id": "S1", "speaker": "jane", "text": "きっと[[誰かに襲われた]]のよ。" },
+        { "id": "S2", "speaker": "jane", "text": "だって、[[外は晴れていた]]もの。" },
+        { "id": "S3", "speaker": "holma", "text": "ふむ、[[毒]]という線もありますねェ。" }
+      ],
+      "answer": { "statement": "S2", "span": "晴れていた", "fact": "F04" },
+      "alsoAccept": [],
+      "success": ["ジェーン「……そう、雨の音がしていた」"],
+      "wrongShot": ["クックック、そこではありませんねェ。"],
+      "hint": "天気の所見を見直してご覧なさい。"
+    },
+    {
+      "id": "R2",
+      "title": "記憶のノイズ ②",
+      "intro": ["ジェーン「空気は、きれいだったはず」"],
+      "statements": [
+        { "id": "S1", "speaker": "jane", "text": "[[入口は開けていた]]から、空気はきれいだったはず。" },
+        { "id": "S2", "speaker": "jane", "text": "[[火なんて使っていない]]わ。" },
+        { "id": "S3", "speaker": "holma", "text": "クックック、[[熊]]の仕業かもしれませんよ？" }
+      ],
+      "answer": { "statement": "S1", "span": "入口は開けていた", "fact": "F05" },
+      "alsoAccept": ["F14"],
+      "success": ["ジェーン「……閉じていた。雨が入らないように」"],
+      "wrongShot": ["おや、外れですねェ。"],
+      "hint": "入口の所見を思い出して。"
+    }
+  ],
+  "reconstruction": {
+    "intro": "では、あの夜を組み直しましょう。",
+    "panels": [
+      { "id": "P1", "scene": "雨の中、テントに入る女性のシルエット", "caption": "雨が強くなり、彼女はテントに入った。" },
+      {
+        "id": "P2",
+        "scene": "テントの中に置かれたコンロ",
+        "caption": "寒さに耐えかね、炭火のコンロを中へ入れた。",
+        "choice": {
+          "prompt": "寒さに耐えかねた彼女がしたことは？",
+          "options": [
+            { "text": "炭火のコンロを中へ入れた", "correct": true },
+            { "text": "車へ避難した", "correct": false },
+            { "text": "焚き火を外で続けた", "correct": false }
+          ]
+        }
+      },
+      { "id": "P3", "scene": "閉じられた入口と換気口", "caption": "雨が入らないよう、入口も換気口も閉じた。" },
+      {
+        "id": "P4",
+        "scene": "眠る女性と燃えるコンロ",
+        "caption": "気づかないまま、彼女は眠りに落ちた。",
+        "choice": {
+          "prompt": "最後のコマは？",
+          "options": [
+            { "text": "苦しんで外へ出ようとした", "correct": false },
+            { "text": "気づかないまま眠りに落ちた", "correct": true },
+            { "text": "誰かがテントを訪れた", "correct": false },
+            { "text": "火が燃え広がった", "correct": false }
+          ]
+        }
+      }
+    ],
+    "finale": ["雨の夜、閉じたテント。", "暖かさの代わりに、見えない気体が満ちていった。"]
+  },
+  "science": {
+    "title": "この事件の科学: 見えない気体",
+    "causeName": "一酸化炭素中毒",
+    "lead": "炭や燃料は、空気が足りないと不完全燃焼を起こし、無色無臭の一酸化炭素を出す。",
+    "chain": [
+      { "stage": "原因", "title": "閉じた空間で炭火", "detail": "換気のないテントで炭を燃やした。" },
+      { "stage": "科学現象", "title": "不完全燃焼", "detail": "酸素が足りず一酸化炭素が生まれた。" },
+      { "stage": "人体への影響", "title": "酸素が運べない", "detail": "ヘモグロビンが一酸化炭素と結びついた。" },
+      { "stage": "結果", "title": "気づかないまま", "detail": "眠るように意識を失った。" }
+    ],
+    "body": "血液中のヘモグロビンが一酸化炭素と結びつき、全身へ酸素を運べなくなった。",
+    "whyHere": "雨で入口と換気口を閉じ、空気が入れ替わらなかった。",
+    "foreshadowing": [
+      { "fact": "F06", "meaning": "燃焼源がテントの中にあった" },
+      { "fact": "F10", "meaning": "一酸化炭素中毒で見られることがある皮膚の色" }
+    ],
+    "mechanism": [
+      { "heading": "不完全燃焼", "text": "酸素が足りない燃焼では一酸化炭素が生じる。" },
+      { "heading": "ヘモグロビン", "text": "一酸化炭素は酸素よりずっと強く結びつく。" }
+    ],
+    "diagrams": [
+      { "kind": "ratio", "title": "結びつきやすさ", "from": { "value": "1", "label": "酸素" }, "to": { "value": "200倍以上", "label": "一酸化炭素" }, "detail": "ヘモグロビンへの結びつきやすさの比較", "source": "S1" }
+    ],
+    "misconceptions": [
+      { "myth": "においで気づける", "truth": "一酸化炭素は無色無臭。" },
+      { "myth": "少しの時間なら大丈夫", "truth": "閉じた空間では短時間でも危険。" }
+    ],
+    "everyday": ["冬の車内でのエンジンのかけっぱなし", "換気しない室内でのストーブ"],
+    "takeaways": ["閉じた空間で火を使わない", "一酸化炭素警報器を使う"],
+    "safetyNote": "屋内やテント内で炭火を使わない。頭痛や眠気を感じたらすぐ外気を入れて離れ、119番へ。"
+  },
+  "scienceMemos": [
+    { "id": "M01", "title": "炭が燃えるとき", "text": "炭は酸素が十分なら二酸化炭素に、足りないと別の気体になりながら燃える。" },
+    { "id": "M02", "title": "血の色", "text": "血液中で酸素を運ぶヘモグロビンは、結びつく相手によって色が変わる。" }
+  ],
+  "quiz": [
+    { "q": "一酸化炭素の特徴は？", "choices": ["無色無臭", "強い刺激臭", "黄色い煙"], "answer": 0, "explain": "においでは気づけない。" },
+    { "q": "テント内で炭火を使うと？", "choices": ["安全", "不完全燃焼の危険", "何も起きない"], "answer": 1, "explain": "換気がないと不完全燃焼が起きる。" }
+  ],
+  "sources": [
+    { "id": "S1", "title": "一酸化炭素中毒に注意", "organization": "消費者庁", "url": "https://www.caa.go.jp/", "accessedDate": "2026-09-24", "type": "government", "supports": "fixture" },
+    { "id": "S2", "title": "一酸化炭素中毒の防止", "organization": "東京消防庁", "url": "https://www.tfd.metro.tokyo.lg.jp/", "accessedDate": "2026-09-24", "type": "government", "supports": "fixture" },
+    { "id": "S3", "title": "一酸化炭素", "organization": "厚生労働省", "url": "https://www.mhlw.go.jp/", "accessedDate": "2026-09-24", "type": "government", "supports": "fixture" }
+  ],
+  "holmaLines": {
+    "nearCore": ["……ほう、その先に答えがありますよ。"],
+    "idle": ["雨の音でも聞いていますか？"],
+    "solved": ["見えないものほど、恐ろしいのですよ。"]
+  },
+  "leakTerms": ["一酸化炭素", "CO中毒"]
+}

@@ -1,0 +1,118 @@
+.cutin {
+  --cut-color: var(--formalin);
+  --cut-ink: var(--ink);
+  --cut-back: var(--alarm);
+  --cut-h: clamp(150px, 30vh, 280px);
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: var(--cut-h);
+  margin-top: calc(var(--cut-h) / -2);
+  pointer-events: none;
+}
+.cutin--alarm { --cut-color: var(--alarm); --cut-ink: var(--bone); --cut-back: var(--ink); }
+.cutin--cyan { --cut-color: var(--cyan); --cut-ink: var(--ink); --cut-back: var(--alarm); }
+.cutin--amber { --cut-color: var(--amber); --cut-ink: var(--ink); --cut-back: var(--ink); }
+.cutin--violet { --cut-color: var(--violet); --cut-ink: var(--bone); --cut-back: var(--ink); }
+.cutin--bone { --cut-color: var(--bone); --cut-ink: var(--ink); --cut-back: var(--alarm); }
+
+.cutin__back,
+.cutin__band {
+  position: absolute;
+  left: -12%;
+  right: -12%;
+  transform: rotate(var(--cut-tilt));
+  transform-origin: 50% 50%;
+}
+.cutin__back {
+  top: -10%;
+  bottom: -10%;
+  background: var(--cut-back);
+  box-shadow: 0 0 0 4px var(--ink);
+}
+.cutin__band {
+  top: 6%;
+  bottom: 6%;
+  background: var(--cut-color);
+  overflow: hidden;
+  box-shadow: 0 0 0 5px var(--ink), 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.cutin__lines {
+  position: absolute;
+  inset: -20% 0;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 9px, rgba(11, 13, 18, 0.16) 9px 11px, transparent 11px 23px, rgba(255, 255, 255, 0.25) 23px 24px, transparent 24px 37px);
+  animation: cut-lines 0.28s linear infinite;
+  mix-blend-mode: multiply;
+}
+@keyframes cut-lines {
+  from { transform: translateX(0); background-position: 0 0; }
+  to { transform: translateX(-60px); background-position: 0 37px; }
+}
+.cutin__halftone {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(11, 13, 18, 0.35) 0 1.4px, transparent 1.8px);
+  background-size: 8px 8px;
+  -webkit-mask-image: linear-gradient(90deg, #000, transparent 45%, transparent 60%, #000);
+  mask-image: linear-gradient(90deg, #000, transparent 45%, transparent 60%, #000);
+}
+.cutin__char {
+  position: absolute;
+  left: 12%;
+  bottom: 0;
+  top: -30%;
+  width: min(34vw, 420px);
+}
+.cutin__copy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14%;
+  gap: 4px;
+}
+.cutin__copy.has-char {
+  padding-left: calc(12% + min(30vw, 360px));
+  align-items: flex-start;
+}
+.cutin__text {
+  font-family: var(--font-display);
+  font-size: calc(clamp(56px, 10vw, 168px) * var(--cut-scale, 1));
+  line-height: 1;
+  color: var(--cut-ink);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-shadow: 6px 6px 0 var(--cut-back);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+}
+.cutin--alarm .cutin__text,
+.cutin--violet .cutin__text {
+  -webkit-text-stroke: 0;
+}
+.cutin__en {
+  font-family: var(--font-en);
+  font-size: clamp(14px, 1.8vw, 28px);
+  letter-spacing: 0.5em;
+  color: var(--cut-ink);
+  opacity: 0.85;
+  padding-left: 0.5em;
+}
+[data-layout='narrow'] .cutin {
+  --cut-h: clamp(120px, 24vh, 200px);
+}
+[data-layout='narrow'] .cutin__char {
+  left: 2%;
+  width: 40vw;
+}
+[data-layout='narrow'] .cutin__copy.has-char {
+  padding-left: 40vw;
+  padding-right: 6%;
+}
+[data-layout='narrow'] .cutin__text {
+  font-size: calc(clamp(40px, 13vw, 84px) * var(--cut-scale, 1));
+}

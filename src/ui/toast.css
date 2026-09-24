@@ -1,0 +1,58 @@
+.toasts {
+  position: fixed;
+  z-index: 70;
+  top: calc(var(--vv-top) + var(--safe-t) + 14px);
+  right: calc(var(--safe-r) + 14px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+  max-width: min(420px, calc(100vw - 28px));
+}
+.toast {
+  --t-accent: var(--cyan);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px 9px 12px;
+  background: rgba(20, 24, 33, 0.94);
+  border: 1px solid var(--bone-a14);
+  border-left: 4px solid var(--t-accent);
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.5);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: 1.5;
+  transform: skewX(-6deg);
+  animation: toast-in 0.34s var(--ease-out) both;
+}
+.toast > * {
+  transform: skewX(6deg);
+}
+.toast__icon {
+  display: grid;
+  place-items: center;
+  color: var(--t-accent);
+  flex: none;
+}
+.toast--success { --t-accent: var(--formalin); }
+.toast--warn { --t-accent: var(--amber); }
+.toast--error { --t-accent: var(--alarm); }
+.toast--finding { --t-accent: var(--formalin); }
+.toast.is-leaving {
+  animation: toast-out 0.24s var(--ease-in) both;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: skewX(-6deg) translateX(40px); }
+  to { opacity: 1; transform: skewX(-6deg); }
+}
+@keyframes toast-out {
+  to { opacity: 0; transform: skewX(-6deg) translateX(30px); }
+}
+[data-layout='narrow'] .toasts {
+  left: 14px;
+  right: 14px;
+  align-items: center;
+  max-width: none;
+}

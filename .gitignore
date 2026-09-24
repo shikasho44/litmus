@@ -7,3 +7,4 @@ bench/reports/*.json
 !.env.example
 qa/*.png
 .vercel
+qa/

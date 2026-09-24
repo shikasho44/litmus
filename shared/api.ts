@@ -102,6 +102,8 @@ export interface AskAnswer {
    *  - 'degraded' answered by the offline rules judge because the AI provider failed.
    */
   notice?: 'support' | 'degraded';
+  /** True when this answer shows the player is circling the core truth (drives Holma's reaction). */
+  nearCore?: boolean;
 }
 
 export interface AskResponse {
@@ -151,6 +153,8 @@ export interface ShotRequest {
 export interface ShotResponse {
   correct: boolean;
   lines: string[];
+  /** Who speaks `lines`: success lines are Jane's corrected memory, miss lines are Holma's tease. */
+  speaker?: 'jane' | 'holma';
   /** After 2 misses on the same round the server attaches the round hint. */
   hint?: string;
   /** If the needed evidence was never unlocked, the server may grant it (rank penalty). */
@@ -204,6 +208,8 @@ export interface SolutionResponse {
   quiz: import('./case-schema').Case['quiz'];
   sources: import('./case-schema').Case['sources'];
   holmaSolved: string[];
+  /** Expert-review state of the science content (UI shows an "AI draft" badge unless human-reviewed). */
+  reviewStatus?: 'draft-ai' | 'ai-reviewed' | 'human-reviewed';
 }
 
 /* ------------------------------------------------------------------ */

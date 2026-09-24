@@ -9,6 +9,10 @@
  *   - Case 3 is 「雪に残されたもの」 / WHAT WAS LEFT IN THE SNOW, and its pre-verdict text does not
  *     say the clothes were 「脱ぎ捨て」 (the wearer's own act — it would hint the first reversal).
  *   - Every case documents the safety filter with ≥ 8 authored SAFETY probes (cannot, kind meta).
+ *   - 2026-09-25 content fixes (critics + AI playtest): hints carry no leak term; wrong-shot lines
+ *     do not name a noise; choice options are balanced (the right one is never the only longest);
+ *     Jane's lines fit a phone; no "painless death" wording; the science text is だ・である with
+ *     「」 and half-width %; the line bank keeps VOICE.md's answer / ェァ / wrong-shot rules.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -60,12 +64,121 @@ describe('content rules', () => {
       expect(bad, bad.join('\n')).toEqual([]);
     });
 
+    it('hints carry no leak term (they steer the question, not the vocabulary)', () => {
+      const bad: string[] = [];
+      for (const h of c.hints) for (const term of c.leakTerms) if (normalize(term) && normalize(h.text).includes(normalize(term))) bad.push(`hint ${h.level}: "${term}"`);
+      expect(bad, bad.join('\n')).toEqual([]);
+    });
+
+    it('wrong-shot lines never name a noise of their round (the 2-miss hint does that)', () => {
+      const bad: string[] = [];
+      for (const r of c.debate) {
+        const spans = r.statements.flatMap((s) => [...s.text.matchAll(/\[\[([^\]]+)\]\]/gu)].map((m) => m[1]));
+        for (const w of r.wrongShot) for (const sp of spans) if (w.includes(sp)) bad.push(`${r.id}: 「${sp}」 in ${w}`);
+      }
+      expect(bad, bad.join('\n')).toEqual([]);
+    });
+
+    it('choice options are balanced: the right one is never the only longest, lengths within 4 characters', () => {
+      const items = [
+        ...c.quiz.map((q, i) => ({ id: `quiz ${i + 1}`, texts: q.choices, right: q.answer })),
+        ...c.reconstruction.panels
+          .filter((p) => p.choice)
+          .map((p) => ({ id: `panel ${p.id}`, texts: p.choice!.options.map((o) => o.text), right: p.choice!.options.findIndex((o) => o.correct) })),
+      ];
+      const bad: string[] = [];
+      for (const it of items) {
+        const len = it.texts.map((t) => [...t].length);
+        const max = Math.max(...len);
+        if (len[it.right] === max && len.filter((l) => l === max).length === 1) bad.push(`${it.id}: the right option is the longest (${len.join('/')})`);
+        if (max - Math.min(...len) > 4) bad.push(`${it.id}: lengths ${len.join('/')}`);
+      }
+      expect(bad, bad.join('\n')).toEqual([]);
+    });
+
+    it('Jane’s lines fit a phone (≤ 40 characters; split longer ones into array entries)', () => {
+      const lines = [
+        ...c.intro.jane,
+        ...c.victim.farewell,
+        ...c.debate.flatMap((r) => [...r.statements.filter((s) => s.speaker === 'jane').map((s) => s.text.replace(/\[\[|\]\]/gu, '')), ...r.success]),
+      ];
+      const bad = lines.filter((t) => [...t].length > 40);
+      expect(bad, bad.join('\n')).toEqual([]);
+    });
+
+    it('never says or implies the death was painless (safe messaging, VOICE.md)', () => {
+      const narrative = [
+        ...c.victim.farewell,
+        ...c.hints.map((h) => h.text),
+        ...c.reconstruction.finale,
+        ...c.reconstruction.panels.map((p) => p.caption),
+        ...c.holmaLines.solved,
+        ...c.debate.flatMap((r) => r.success),
+      ];
+      const bad = narrative.filter((t) => /苦しくなかった(?!の(?:では|じゃ))|苦しまず(?:に|で)(?:済|死|亡|眠)|楽に(?:死|逝|亡)|楽だった/u.test(t));
+      expect(bad, bad.join('\n')).toEqual([]);
+    });
+
+    it('the science text is plain だ・である, 「」 for terms, half-width %, no honorific for the victim', () => {
+      const s = c.science;
+      const texts: [string, string][] = [
+        ['title', s.title], ['lead', s.lead], ['body', s.body], ['whyHere', s.whyHere], ['safetyNote', s.safetyNote],
+        ...s.chain.map((x, i): [string, string] => [`chain ${i}`, x.detail]),
+        ...s.mechanism.map((x, i): [string, string] => [`mechanism ${i}`, `${x.heading} ${x.text}`]),
+        ...s.misconceptions.map((x, i): [string, string] => [`myth ${i}`, `${x.myth} ${x.truth}`]),
+        ...s.everyday.map((x, i): [string, string] => [`everyday ${i}`, x]),
+        ...s.takeaways.map((x, i): [string, string] => [`takeaway ${i}`, x]),
+        ...s.foreshadowing.map((x): [string, string] => [`clue ${x.fact}`, x.meaning]),
+        ...c.scienceMemos.map((m): [string, string] => [`memo ${m.id}`, `${m.title} ${m.text}`]),
+        ...c.quiz.map((q, i): [string, string] => [`quiz ${i + 1}`, `${q.q} ${q.explain}`]),
+      ];
+      const names = c.victim.name.split(/\s+/u).filter(Boolean);
+      const bad: string[] = [];
+      for (const [where, t] of texts) {
+        if (KEIGO.test(t)) bad.push(`${where}: です・ます — ${t.slice(0, 40)}`);
+        if (/[『』％]/u.test(t)) bad.push(`${where}: 『』 or ％ — ${t.slice(0, 40)}`);
+        for (const n of names) if (t.includes(`${n}さん`)) bad.push(`${where}: ${n}さん`);
+      }
+      expect(bad, bad.join('\n')).toEqual([]);
+    });
+
     it('has ≥ 8 authored SAFETY probes (cannot, kind meta, no facts)', () => {
       const safety = c.probes.filter((p) => (p.note ?? '').startsWith('SAFETY:'));
       expect(safety.length).toBeGreaterThanOrEqual(8);
       const bad = safety.filter((p) => p.answer !== 'cannot' || p.kind !== 'meta' || p.facts.length > 0).map((p) => p.q);
       expect(bad, bad.join('\n')).toEqual([]);
     });
+  });
+});
+
+describe('Holma’s line bank (VOICE.md)', () => {
+  const bank = JSON.parse(read('holma-lines.json')) as Record<string, unknown>;
+  const texts = (v: unknown): string[] =>
+    typeof v === 'string' ? [v] : Array.isArray(v) ? v.flatMap(texts) : v && typeof v === 'object' ? ('text' in v && typeof (v as { text: unknown }).text === 'string' ? [(v as { text: string }).text] : Object.values(v).flatMap(texts)) : [];
+  const answer = bank.answer as Record<string, unknown>;
+
+  it('uses ェ／ァ at most once per line and laughs only クックック／ククッ', () => {
+    const bad = texts(bank).filter((t) => (t.match(/[ェァ]/gu) ?? []).length > 1 || /ハハ|アハ|ワハ/u.test(t));
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+
+  it('answer lines say their class', () => {
+    const rules: Record<string, RegExp> = { yes: /はい|ええ|その通り/u, no: /いいえ|違います/u, partial: /一部|半分|部分的/u, irrelevant: /関係/u };
+    const bad = Object.entries(rules).flatMap(([cls, re]) => texts(answer[cls]).filter((t) => !re.test(t)).map((t) => `${cls}: ${t}`));
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+
+  it('a “no” never writes off the whole avenue, and no answer praises a trivial question', () => {
+    const bad = [
+      ...texts(answer.no).filter((t) => /行き止まり|思い込み|扉は、開きません|悪い問いではない|訊いたことに意味/u.test(t)),
+      ...texts(answer.yes).filter((t) => /よく訊けました|いい質問|覚えておくと/u.test(t)),
+    ];
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+
+  it('fallback wrong-shot lines never say whether the target or the card was wrong', () => {
+    const bad = texts((bank.inquest as Record<string, unknown>).wrongShot).filter((t) => /的違い|的が違|狙いは悪くない|所見が違う|どこを狙|横をすり抜け/u.test(t));
+    expect(bad, bad.join('\n')).toEqual([]);
   });
 });
 

@@ -41,6 +41,7 @@ export function ShardPortrait({ image, shardCount = 34, revealed = 0, solved = f
   const [assembled, setAssembled] = useState(solved);
   const [animating, setAnimating] = useState(false);
   const prevLit = useRef<Set<string>>(new Set());
+  const litInit = useRef(false);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
 
   const lit = useMemo(() => {
@@ -52,7 +53,9 @@ export function ShardPortrait({ image, shardCount = 34, revealed = 0, solved = f
   // flash newly lit shards
   useEffect(() => {
     const added = [...lit].filter((id) => !prevLit.current.has(id));
-    const firstRun = prevLit.current.size === 0 && added.length === lit.size;
+    // no flash for what is already lit on mount (but 0 → 1 later on does flash)
+    const firstRun = !litInit.current;
+    litInit.current = true;
     prevLit.current = new Set(lit);
     if (!added.length || firstRun) return;
     setFresh(new Set(added));

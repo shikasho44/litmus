@@ -65,6 +65,17 @@ export interface JudgeDecision {
    * question specifically targets that fact.
    */
   factStrength?: Record<string, number>;
+  /**
+   * A deterministic guard decided this part (rules judge): no model is consulted.
+   * 'secretName' = the question names the victim (identity is secret until solved).
+   */
+  guard?: 'secretName';
+  /**
+   * Rules: a qualifier of the question (「毒」 in 「毒ガスが出ていた？」) that a ruled-out fact
+   * denies, so a はい was lowered to 一部そう (rules-judge.ts). Model judges keep a はい from
+   * confirming it too (jev-judge.ts).
+   */
+  qualifier?: string;
   /** Best authored probe match (rules), for traces. */
   probe?: { q: string; score: number; kind: string; flipped: boolean };
   /**
@@ -98,6 +109,11 @@ export interface JudgeInput {
 export interface Judge {
   readonly name: string;
   judge(input: JudgeInput): Promise<JudgeDecision>;
+  /**
+   * Optional: a tiny request that wakes the provider up (GameService calls it, throttled, when a
+   * player starts a case — the intro gives it time to finish). Must never throw.
+   */
+  warm?(signal?: AbortSignal): Promise<Usage | undefined>;
 }
 
 /* ------------------------------------------------------------------ */

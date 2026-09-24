@@ -131,9 +131,9 @@
   padding: 0 5px;
   border-radius: 9px;
   background: var(--alarm);
-  color: var(--bone);
+  color: var(--on-alarm);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   line-height: 18px;
   text-align: center;
 }

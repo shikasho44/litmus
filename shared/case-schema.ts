@@ -10,17 +10,12 @@
  * unlocked, and the solution after the verdict is accepted, ever leave the server.
  */
 import { z } from 'zod';
+import { ANSWER_CLASSES, FACT_CATEGORIES, PROBE_KINDS } from './constants';
 
-export const FACT_CATEGORIES = ['人物', '場所', '時間', '物品', '身体', '環境', '証拠', '科学'] as const;
-export const ANSWER_CLASSES = ['yes', 'no', 'partial', 'irrelevant', 'cannot', 'vague'] as const;
-export const PROBE_KINDS = [
-  'yes', 'no', 'irrelevant', 'ambiguous', 'indirect', 'core', 'spoiler-bait',
-  'out-of-scope', 'paraphrase', 'typo', 'negated', 'multi', 'meta',
-] as const;
-
-export type FactCategory = (typeof FACT_CATEGORIES)[number];
-export type AnswerClass = (typeof ANSWER_CLASSES)[number];
-export type ProbeKind = (typeof PROBE_KINDS)[number];
+// The enum constants live in the zod-free ./constants (the browser imports them from there);
+// re-exported here so server code and scripts can keep a single import site.
+export { ANSWER_CLASSES, FACT_CATEGORIES, PROBE_KINDS };
+export type { AnswerClass, FactCategory, ProbeKind } from './constants';
 
 const id = z.string().regex(/^[A-Za-z0-9_-]+$/);
 
@@ -158,6 +153,10 @@ export const DiagramSchema = z.discriminatedUnion('kind', [
     title: z.string(),
     windowLabel: z.string(),
     windowDetail: z.string(),
+    /** Name + one-line explanation of the rhythm after the impact (case data, so the answer
+     *  never sits in the Science JS chunk; the diagram falls back to neutral wording). */
+    rhythmLabel: z.string().optional(),
+    rhythmDetail: z.string().optional(),
     source: z.string(),
   }),
   z.object({

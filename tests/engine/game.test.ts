@@ -65,7 +65,39 @@ describe('ask', () => {
     expect(r.answers[0].answerClass).toBe('yes');
     expect(r.answers[0].unlocked).toEqual([]);
     expect(r.progress.nearCore).toBe(true);
+    expect(r.answers[0].nearCore).toBe(true);
     expect(r.answers[0].mood).toBe('surprised');
+    // the flag is per answer: an ordinary question afterwards is not a nearCore answer
+    const next = await svc.ask({ caseId, question: '雨が降っていましたか', token: r.token });
+    expect(next.progress.nearCore).toBe(true);
+    expect(next.answers[0].nearCore).toBeUndefined();
+    // confirming the same core fact again is not a new moment (no 「近い」 line, no flag)
+    const repeat = await svc.ask({ caseId, question: '中毒死ですか', token: next.token });
+    expect(repeat.answers[0].answerClass).toBe('yes');
+    expect(repeat.answers[0].nearCore).toBeUndefined();
+  });
+
+  it('marks nearCore only on the part of a multi-question that touched the core', async () => {
+    const { svc } = makeService();
+    const r = await svc.ask({ caseId, question: '雨でしたか？中毒死ですか？' });
+    expect(r.answers.map((a) => a.answerClass)).toEqual(['yes', 'yes']);
+    expect(r.answers.map((a) => !!a.nearCore)).toEqual([false, true]);
+  });
+
+  it('a model judge: closeness 3 on "no" is not nearCore, on "yes" it is', async () => {
+    const judgeWith = (answerClass: 'yes' | 'no', closeness: 0 | 3) => ({
+      name: 'stub',
+      async judge() {
+        return { answerClass, factIds: [], confidence: 0.9, closeness, qtype: 'yesno' as const, source: 'model' as const, usage: { inputTokens: 1, outputTokens: 1, costUsd: 0 }, latencyMs: 1 };
+      },
+    });
+    for (const [cls, expected] of [['no', undefined], ['yes', true]] as const) {
+      const { svc } = makeService({ components: { mode: 'jev', judge: judgeWith(cls, 3), warnings: [] } });
+      const r = await svc.ask({ caseId, question: 'ゼリーは好きでしたか' });
+      expect(r.answers[0].answerClass).toBe(cls);
+      expect(r.answers[0].nearCore).toBe(expected);
+      expect(r.progress.nearCore).toBe(expected === true);
+    }
   });
 
   it('does not count empty / over-long input and enforces the per-token cap', async () => {
@@ -130,19 +162,23 @@ describe('inquest', () => {
     const { svc, t } = await withFacts(['雨が降っていましたか']);
     const miss1 = await svc.shot({ caseId, token: t, roundId: 'R1', statementId: 'S1', span: '誰かに襲われた', factId: 'F04' });
     expect(miss1.correct).toBe(false);
+    expect(miss1.speaker).toBe('holma');
     expect(miss1.hint).toBeUndefined();
     const miss2 = await svc.shot({ caseId, token: miss1.token, roundId: 'R1', statementId: 'S2', span: '外は晴れていた', factId: 'F01' });
     expect(miss2.correct).toBe(false);
     expect(miss2.hint).toBe('天気の所見を見直してご覧なさい。');
+    expect(miss2.speaker).toBe('holma');
     expect(miss2.progress.debateMisses).toBe(2);
     // the full noise segment and the exact answer span are both accepted
     const hit = await svc.shot({ caseId, token: miss2.token, roundId: 'R1', statementId: 'S2', span: '外は晴れていた', factId: 'F04' });
     expect(hit.correct).toBe(true);
+    expect(hit.speaker).toBe('jane');
     expect(hit.progress.debateCleared).toEqual(['R1']);
     const hit2 = await svc.shot({ caseId, token: miss2.token, roundId: 'R1', statementId: 'S2', span: '晴れていた', factId: 'F04' });
     expect(hit2.correct).toBe(true);
     const again = await svc.shot({ caseId, token: hit.token, roundId: 'R1', statementId: 'S1', span: 'x', factId: 'F04' });
     expect(again.correct).toBe(true);
+    expect(again.speaker).toBe('jane');
     expect(again.progress.debateMisses).toBe(2);
     // evidence not held → bad request
     expect(await code(svc.shot({ caseId, token: t, roundId: 'R2', statementId: 'S1', span: '入口は開けていた', factId: 'F05' }))).toBe('bad_request');
@@ -152,9 +188,11 @@ describe('inquest', () => {
     const { svc, t } = await withFacts([]);
     const g = await svc.grant({ caseId, token: t, roundId: 'R2' });
     expect(g.granted?.id).toBe('F05');
+    expect(g.speaker).toBe('holma');
     expect(g.progress.unlocked).toContain('F05');
     const g2 = await svc.grant({ caseId, token: g.token, roundId: 'R2' });
     expect(g2.granted?.id).toBe('F05');
+    expect(g2.speaker).toBe('holma');
     const shot = await svc.shot({ caseId, token: g2.token, roundId: 'R2', statementId: 'S1', span: '入口は開けていた', factId: 'F05' });
     expect(shot.correct).toBe(true);
   });
@@ -216,5 +254,6 @@ describe('inquest', () => {
     expect(sol.truth.causeOfDeath).toBe('一酸化炭素中毒');
     expect(sol.allFacts.find((f) => f.id === 'F15')?.unlocked).toBe(false);
     expect(sol.quiz).toHaveLength(2);
+    expect(sol.reviewStatus).toBe('draft-ai'); // from the case (UI shows the draft badge)
   });
 });

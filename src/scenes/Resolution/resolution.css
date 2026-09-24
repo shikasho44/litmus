@@ -86,6 +86,7 @@
   position: absolute;
   inset: 0;
   z-index: 1;
+  overflow: hidden;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
@@ -247,16 +248,24 @@
   position: relative;
   z-index: 2;
 }
+/*
+ * Holma: a bust standing behind the right end of the dialogue box (the box covers his lower
+ * body, like the intro), anchored to the scene's bottom edge. Dimmed so Jane stays the focus.
+ * --dock-r is the dialogue box's right edge (the dock is centred, min(1000px, 100% - 32px)).
+ */
 .res-cer__holma {
+  --holma-h: clamp(300px, 48vh, 520px);
+  --dock-r: calc(50% + min(500px, 50% - 16px));
   position: absolute;
   z-index: 1;
-  right: 18px;
-  bottom: calc(100% - 46px);
-  width: clamp(170px, 16vw, 250px);
-  height: clamp(220px, 30vh, 330px);
+  left: calc(var(--dock-r) - var(--holma-h) * 0.34);
+  bottom: 0;
+  width: calc(var(--holma-h) * 0.8);
+  height: var(--holma-h);
   opacity: 0;
-  transform: translateY(14px);
-  transition: opacity 0.6s, transform 0.7s var(--ease-out);
+  filter: brightness(0.85);
+  transform: translateX(40px);
+  transition: opacity 0.6s var(--ease-out), transform 0.7s var(--ease-out);
   pointer-events: none;
 }
 .res-cer__holma.is-on {
@@ -264,12 +273,34 @@
   transform: none;
 }
 .res-cer__hush {
-  padding-top: 52px;
-  text-align: center;
+  display: grid;
+  place-items: center;
+  min-height: 142px;
+  margin: 0;
+}
+.res-cer__hush span {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  font-family: var(--font-jane);
   font-size: var(--fs-sm);
   letter-spacing: 0.5em;
   color: var(--bone-3);
   animation: res-fade 1.2s ease both;
+}
+.res-cer__hush span::before,
+.res-cer__hush span::after {
+  content: '';
+  width: 42px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, currentColor);
+  opacity: 0.6;
+}
+.res-cer__hush span::after {
+  transform: scaleX(-1);
+}
+.res-cer.is-warm .res-cer__hush span {
+  color: var(--warm);
 }
 
 /* Jane, restored: clear and warm (no glitch) */
@@ -349,11 +380,18 @@
   min-height: 150px;
   padding-bottom: 14px;
 }
+/* phone: a small bust peeking over the right end of the box */
 [data-layout='narrow'] .res-cer__holma {
-  right: 0;
-  bottom: calc(100% - 22px);
-  width: 104px;
-  height: 128px;
+  --holma-h: 150px;
+  left: auto;
+  right: 4px;
+  bottom: calc(var(--safe-b) + 108px);
+  width: 128px;
+}
+[data-layout='narrow'] .res-cer__hush {
+  place-items: start center;
+  min-height: 136px;
+  padding-top: 22px;
 }
 [data-layout='narrow'] .res-cer.is-named .res-cer__holma {
   opacity: 0;
@@ -570,6 +608,16 @@
   letter-spacing: 0.04em;
   line-height: 1.3;
   transition: color var(--dur-2);
+}
+.disc__note {
+  display: inline-block;
+  margin-left: 12px;
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--bone-3);
+  vertical-align: 0.15em;
 }
 .disc__chev {
   color: var(--bone-3);
@@ -806,17 +854,56 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 26px;
 }
+/* phone: portrait and identity side by side, so name · cause · farewell · next fit the first screens */
 [data-layout='narrow'] .res-rec__hero {
   position: static;
-  justify-items: center;
-  text-align: center;
+  grid-template-columns: min(38vw, 168px) minmax(0, 1fr);
+  align-items: end;
+  gap: 16px;
 }
 [data-layout='narrow'] .res-rec__portrait {
-  width: min(70vw, 300px);
+  width: 100%;
+  box-shadow: 0 0 0 1px rgba(243, 210, 162, 0.38), 8px 8px 0 rgba(0, 0, 0, 0.45), 0 0 50px rgba(255, 200, 130, 0.14);
+}
+[data-layout='narrow'] .res-rec__tag {
+  bottom: 10px;
+  padding: 2px 8px 2px 7px;
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+}
+[data-layout='narrow'] .res-rec__was {
+  font-size: 0.78rem;
+}
+[data-layout='narrow'] .res-rec__name {
+  font-size: clamp(1.7rem, 8.4vw, 2.3rem);
+  letter-spacing: 0.08em;
+}
+[data-layout='narrow'] .res-rec__kana {
+  font-size: 0.78rem;
+  letter-spacing: 0.3em;
+}
+[data-layout='narrow'] .res-rec__meta {
+  margin-top: 10px;
 }
 [data-layout='narrow'] .res-rec__meta div {
-  grid-template-columns: auto auto;
-  justify-content: center;
+  grid-template-columns: 2.8em minmax(0, 1fr);
+  gap: 6px;
+}
+[data-layout='narrow'] .res-rec__meta dd {
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+/* the next step comes before the (collapsed) reference sections on phones */
+[data-layout='narrow'] .res-rec__main {
+  display: flex;
+  flex-direction: column;
+}
+[data-layout='narrow'] .res-rec__next {
+  order: 1;
+  margin-top: 26px;
+}
+[data-layout='narrow'] .res-rec__main .disc {
+  order: 2;
 }
 [data-layout='narrow'] .res-rec__cause {
   padding: 16px 16px 18px;
@@ -825,7 +912,23 @@
   font-size: 1.02rem;
 }
 [data-layout='narrow'] .res-rec__epitaph {
+  margin: 26px 0 4px;
   padding-left: 16px;
+}
+[data-layout='narrow'] .res-rec__epitaph blockquote {
+  line-height: 1.85;
+}
+[data-layout='narrow'] .res-rec__holma {
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 12px;
+}
+[data-layout='narrow'] .res-rec__holma-face {
+  width: 52px;
+  height: 52px;
+}
+[data-layout='narrow'] .res-rec__holma-line {
+  font-size: 0.92rem;
+  line-height: 1.7;
 }
 [data-layout='narrow'] .timeline::before {
   left: 76px;
@@ -846,7 +949,8 @@
 }
 [data-layout='narrow'] .res-rec__next {
   grid-template-columns: minmax(0, 1fr);
-  padding: 18px 16px 20px;
+  gap: 14px;
+  padding: 14px 14px 16px;
   justify-items: stretch;
 }
 
@@ -854,6 +958,7 @@
 [data-reduce-motion='true'] .res-cer__portrait,
 [data-reduce-motion='true'] .res-cer__halo,
 [data-reduce-motion='true'] .nameplate__name,
+[data-reduce-motion='true'] .res-cer__hush span,
 [data-reduce-motion='true'] .res-rec__inner {
   animation: none !important;
 }

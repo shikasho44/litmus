@@ -5,8 +5,8 @@
 import type { AnswerClass } from '../../shared/case-schema.js';
 import type { HolmaMood } from '../../shared/api.js';
 import { HolmaLinesSchema, LineSchema, type HolmaLines, type Line } from '../../shared/lines-schema.js';
-import { DEFAULT_LINES } from './default-lines.js';
-import type { MetaKind } from './normalize.js';
+import { DEFAULT_LINES, OPEN_LINES } from './default-lines.js';
+import type { MetaKind, WhKind } from './normalize.js';
 
 export interface LineBankInfo {
   source: 'content' | 'merged' | 'default';
@@ -114,6 +114,16 @@ export interface ComposeInput {
   seed: number;
   /** Case-specific nearCore flavour lines (case.holmaLines.nearCore). */
   caseNearCore?: readonly string[];
+  /** meta 'open': which wh-word the question used (picks the rephrasing advice). */
+  whKind?: WhKind;
+}
+
+/** Rephrasing advice for a question that cannot be answered はい／いいえ (meta 'open'). */
+export function openLines(bank: LineBank, kind: WhKind = 'what'): readonly Line[] {
+  // Forward-compatible: a content bank that carries meta.open.<kind> wins over the built-in lines.
+  const content = (bank.lines.meta as unknown as Record<string, unknown>).open as Record<string, readonly Line[] | undefined> | undefined;
+  const fromContent = content?.[kind];
+  return fromContent && fromContent.length > 0 ? fromContent : OPEN_LINES[kind];
 }
 
 export interface ComposedLine {
@@ -131,9 +141,11 @@ export function composeLine(bank: LineBank, x: ComposeInput): ComposedLine {
   if (x.part === 0 && x.parts > 1) pieces.push(bank.pick(L.multi, x.seed, 'multi').text);
 
   const base =
-    x.meta && x.meta !== 'open'
-      ? bank.pick(L.meta[x.meta], x.seed, `meta.${x.meta}`)
-      : bank.pick(L.answer[x.answerClass], x.seed, `answer.${x.answerClass}`);
+    x.meta === 'open'
+      ? bank.pick(openLines(bank, x.whKind), x.seed, `open.${x.whKind ?? 'what'}`)
+      : x.meta
+        ? bank.pick(L.meta[x.meta], x.seed, `meta.${x.meta}`)
+        : bank.pick(L.answer[x.answerClass], x.seed, `answer.${x.answerClass}`);
   pieces.push(base.text);
   mood = base.mood ?? (x.meta ? META_MOOD[x.meta] : undefined) ?? CLASS_MOOD[x.answerClass];
 

@@ -7,7 +7,7 @@ import { audio } from '../../audio';
 import { APP_CONFIG } from '../../config/app';
 import { fx } from '../../fx';
 import { motionReduced } from '../../fx/motion';
-import { ART, fetchJson, useImage } from '../../lib/asset';
+import { ART, fetchJson, useImage, useImageMissing } from '../../lib/asset';
 import { layout } from '../../lib/viewport';
 import { caseList, loadCases } from '../../lib/cases';
 import { pickLine } from '../../lib/lines';
@@ -21,6 +21,15 @@ import './title.css';
 
 /** The press-to-enter gate is shown once per page load (it also unlocks audio). */
 let entered = false;
+
+/** Touch-first device (phones / tablets): the gate says "tap", not "click / press any key". */
+function isCoarsePointer(): boolean {
+  try {
+    return window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(pointer: fine)').matches;
+  } catch {
+    return false;
+  }
+}
 
 interface MenuItem {
   id: string;
@@ -145,11 +154,15 @@ function HolmaBadge({ anchor }: { anchor?: { x: number; y: number; s: number } |
 
 export function TitleScene(_: SceneProps) {
   const keyArt = useImage(ART.keyArt);
+  // Holma stands in only when the key art is really missing — not while it is still loading
+  // (on a slow link that stand-in would pull 1 MB of sprites and swap the picture twice).
+  const keyArtMissing = useImageMissing(ART.keyArt);
   const [gate, setGate] = useState(!entered);
   const viaKeyboard = useRef(false);
   const menuRef = useRef<HTMLElement>(null);
   const [sectionEl, setSectionEl] = useState<HTMLElement | null>(null);
   const wide = layout.value === 'wide';
+  const touch = isCoarsePointer();
   const anchor = useKeyArtAnchor(sectionEl, !!keyArt && wide);
   const resumeId = resumableCaseId.value;
   const s = settings.value;
@@ -195,11 +208,22 @@ export function TitleScene(_: SceneProps) {
   };
 
   const resumeTitle = resumeId ? caseList.value?.find((c) => c.id === resumeId)?.title : undefined;
+  // A returning player with a case in progress: 続きから is the primary (and first-focused) action.
   const items: MenuItem[] = [
-    { id: 'start', jp: '審問を始める', en: 'START INQUEST', icon: 'gavel', primary: true, action: start },
     ...(resumeId
-      ? [{ id: 'continue', jp: '続きから', en: 'CONTINUE', sub: resumeTitle ? `「${resumeTitle}」` : undefined, icon: 'play' as IconName, action: () => openCase(resumeId) }]
+      ? [
+          {
+            id: 'continue',
+            jp: '続きから',
+            en: 'CONTINUE',
+            sub: resumeTitle ? `「${resumeTitle}」` : undefined,
+            icon: 'play' as IconName,
+            primary: true,
+            action: () => openCase(resumeId),
+          },
+        ]
       : []),
+    { id: 'start', jp: '審問を始める', en: 'START INQUEST', icon: 'gavel', primary: !resumeId, action: start },
     { id: 'files', jp: '事件ファイル', en: 'CASE FILES', icon: 'tag', action: () => goto('files') },
     { id: 'howto', jp: '遊び方', en: 'HOW TO PLAY', icon: 'help', action: () => openOverlay('howto') },
     { id: 'settings', jp: '設定', en: 'SETTINGS', icon: 'settings', action: () => openOverlay('settings') },
@@ -207,7 +231,7 @@ export function TitleScene(_: SceneProps) {
   ];
 
   return (
-    <section ref={setSectionEl} class={`scene title ${gate ? 'is-gate' : 'is-menu'} ${keyArt ? 'has-art' : 'no-art'}`} onClick={gate ? enter : undefined}>
+    <section ref={setSectionEl} class={`scene title ${gate ? 'is-gate' : 'is-menu'} ${keyArt ? 'has-art' : keyArtMissing ? 'no-art' : 'art-loading'}`} onClick={gate ? enter : undefined}>
       <div class="title__art" aria-hidden="true">
         {keyArt ? <img src={keyArt} alt="" style={wide ? { objectPosition: `${KEYART.pos[0] * 100}% ${KEYART.pos[1] * 100}%` } : undefined} /> : <div class="title__art-fallback" />}
       </div>
@@ -219,7 +243,7 @@ export function TitleScene(_: SceneProps) {
         <span class="title__reg title__reg--br" />
         <span class="title__clock t-mono">00:00:00 — ROOM ZERO OPEN</span>
       </div>
-      {!keyArt && (
+      {!keyArt && keyArtMissing && (
         <div class="title__hero" aria-hidden="true">
           <HolmaSprite mood="normal" framing="knee" rim="rgba(198,255,61,0.35)" />
         </div>
@@ -249,8 +273,8 @@ export function TitleScene(_: SceneProps) {
         <Logo />
         {gate ? (
           <button type="button" class="title__enter" onClick={enter}>
-            <span class="title__enter-jp">クリックして入室</span>
-            <span class="title__enter-en">PRESS ANY KEY — ENTER ROOM ZERO</span>
+            <span class="title__enter-jp">{touch ? 'タップして入室' : 'クリックして入室'}</span>
+            <span class="title__enter-en">{touch ? 'TAP TO ENTER ROOM ZERO' : 'CLICK OR PRESS ANY KEY'}</span>
           </button>
         ) : (
           <nav class="menu" ref={menuRef} aria-label="メインメニュー">
@@ -259,6 +283,7 @@ export function TitleScene(_: SceneProps) {
                 key={it.id}
                 type="button"
                 class={`menu__item ${it.primary ? 'is-primary' : ''}`}
+                data-id={it.id}
                 onPointerEnter={(e) => e.pointerType === 'mouse' && audio.sfx('hover')}
                 onFocus={() => audio.sfx('hover')}
                 onClick={() => {

@@ -2,8 +2,9 @@
 //
 //   node scripts/shots-ending.mjs                       all 3 cases × pc + sp
 //   node scripts/shots-ending.mjs --case c02            one case (prefix match)
-//   node scripts/shots-ending.mjs --only science        one part: resolution | science | quiz | result
-//   node scripts/shots-ending.mjs --size sp             one size: pc | sp | xs (320×640, not in the default run)
+//   node scripts/shots-ending.mjs --only science        one part: resolution | science | quiz | result | badtoken
+//   node scripts/shots-ending.mjs --size sp             one size: pc | sp | xs (320×640) | hd (1280×720) | fhd (1920×1080) | wd (1680×900)
+//                                                       (xs / hd / fhd / wd are not in the default run; a comma list works)
 //   node scripts/shots-ending.mjs --reduced             reduced motion
 //
 // Uses a dev server on :5193 (started here with HMR off if nothing answers; closed at the end).
@@ -35,7 +36,10 @@ const SIZES = [
   { tag: 'pc', viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },
   { tag: 'sp', viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
   { tag: 'xs', viewport: { width: 320, height: 640 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
-].filter((s) => (SIZE ? s.tag === SIZE : s.tag !== 'xs'));
+  { tag: 'hd', viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 },
+  { tag: 'fhd', viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 },
+  { tag: 'wd', viewport: { width: 1680, height: 900 }, deviceScaleFactor: 1 },
+].filter((s) => (SIZE ? SIZE.split(',').includes(s.tag) : s.tag === 'pc' || s.tag === 'sp'));
 const want = (part) => !ONLY || ONLY.split(',').includes(part);
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -166,8 +170,9 @@ try {
       const ctx = await browser.newContext({ ...ctxOpts, locale: 'ja-JP', reducedMotion: REDUCED ? 'reduce' : 'no-preference' });
       const page = await ctx.newPage();
       page.on('pageerror', (e) => problems.push(`${P} pageerror: ${e.message}`));
+      let expect401 = false; // the bad-token check provokes a 401 on purpose
       page.on('console', (m) => {
-        if (m.type() === 'error') problems.push(`${P} console: ${m.text()}`);
+        if (m.type() === 'error' && !(expect401 && /status of 401/.test(m.text()))) problems.push(`${P} console: ${m.text()}`);
       });
       await page.goto(`${BASE}?debug=1&mute=1`, { waitUntil: 'load' });
       await page.waitForFunction(() => window.__JD && document.documentElement.classList.contains('app-ready'), null, { timeout: 30000 });
@@ -197,18 +202,30 @@ try {
         await page.evaluate(() => window.__JD.skipText());
         await wait(900);
         await shot(page, `${P}-res-4-farewell`);
+        let sendoff = false;
         for (let i = 0; i < 10; i++) {
           if (await page.$('.res-rec')) break;
+          if (!sendoff && (await page.$('.res-cer__holma.is-on')) && (await page.$('.nameplate.is-done'))) {
+            // Holma's send-off line: the full name plate + Holma staged behind the box
+            sendoff = true;
+            await page.evaluate(() => window.__JD.skipText());
+            await wait(900);
+            await shot(page, `${P}-res-4b-sendoff`);
+          }
           await advanceDialogue(page, 1, 300);
         }
         await page.waitForSelector('.res-rec', { timeout: 10000 });
         await wait(1000);
         await overflow(page, `${P} resolution record`);
         await shot(page, `${P}-res-5-record`);
+        const recH = await page.evaluate(() => document.querySelector('.res-rec')?.closest('.page')?.scrollHeight ?? 0);
+        console.log(`  record page height (collapsed): ${recH}px`);
+        await page.evaluate(() => document.querySelectorAll('.disc__btn')[0]?.click());
+        await wait(300);
         await scrollPageTo(page, '.disc');
         await wait(400);
         await shot(page, `${P}-res-6-story`);
-        await page.click('.disc:nth-of-type(2) .disc__btn').catch(() => {});
+        await page.evaluate(() => document.querySelectorAll('.disc__btn')[0]?.click());
         await page.evaluate(() => document.querySelectorAll('.disc__btn')[1]?.click());
         await wait(300);
         await scrollPageTo(page, '.facts');
@@ -230,9 +247,28 @@ try {
         await wait(900);
         await overflow(page, `${P} science`);
         await shot(page, `${P}-sci-00-top`);
+        const sciH = await page.evaluate(() => ({ h: document.querySelector('.sci-page')?.scrollHeight ?? 0, open: document.querySelectorAll('.sci-sec--deep.is-open').length, deep: document.querySelectorAll('.sci-sec--deep').length }));
+        console.log(`  science page height on entry: ${sciH.h}px (deep sections open ${sciH.open}/${sciH.deep})`);
+        if (await page.$('.sci-quick--inline:not([hidden])')) {
+          const quickVisible = await page.evaluate(() => getComputedStyle(document.querySelector('.sci-quick--inline')).display !== 'none');
+          if (quickVisible) {
+            await scrollPageTo(page, '.sci-quick--inline', tag === 'sp' || tag === 'xs' ? 60 : 16);
+            await wait(400);
+            await shot(page, `${P}-sci-00b-quick`);
+            const ctaTop = await page.evaluate(() => document.querySelector('.sci-quick--inline .sci-quick__cta')?.getBoundingClientRect().bottom ?? 0);
+            if (ctaTop > (await page.evaluate(() => window.innerHeight)) + 2) problems.push(`${P}: quick-read CTA is below the fold when the quick read is scrolled to (${Math.round(ctaTop)}px)`);
+          }
+        }
+        if (sciH.open < sciH.deep) {
+          await scrollPageTo(page, '.sci-sec--deep:not(.is-open)', 200);
+          await wait(400);
+          await shot(page, `${P}-sci-00c-collapsed`);
+        }
+        await page.evaluate(() => document.querySelectorAll('.sci-toggle[aria-expanded="false"]').forEach((b) => b.click()));
+        await wait(500);
         const ids = await page.evaluate(() => [...document.querySelectorAll('.sci-sec')].map((e) => e.id));
         for (const [i, id] of ids.entries()) {
-          await scrollPageTo(page, `#${id}`, tag === 'sp' ? 60 : 16);
+          await scrollPageTo(page, `#${id}`, tag === 'sp' || tag === 'xs' ? 60 : 16);
           await wait(id === 'sci-chain' ? 2200 : 700);
           await shot(page, `${P}-sci-${String(i + 1).padStart(2, '0')}-${id.slice(4)}`);
         }
@@ -261,10 +297,10 @@ try {
         }
         // myths flipped
         await page.evaluate(() => document.querySelectorAll('.flip')[0]?.click());
-        await scrollPageTo(page, '#sci-myths', tag === 'sp' ? 60 : 16);
+        await scrollPageTo(page, '#sci-myths', tag === 'sp' || tag === 'xs' ? 60 : 16);
         await wait(1000);
         await shot(page, `${P}-sci-myth-flipped`);
-        if (tag === 'sp') {
+        if (tag === 'sp' || tag === 'xs') {
           await page.click('.sci-mnav__cur');
           await wait(300);
           await shot(page, `${P}-sci-menu`);
@@ -317,6 +353,18 @@ try {
           await wait(400);
           await shot(page, `${P}-result-2-actions`);
           if (c === 'c01') {
+            // replay look: pretend the previous best was C (shows 「C → X 記録更新」)
+            await page.evaluate((caseId) => {
+              window.__JD.updateCase(caseId, (x) => ({ ...x, lastResult: { ...x.lastResult, prevBest: 'C' } }));
+            }, caseId);
+            await wait(300);
+            await scrollPageTo(page, '.rs-rank', 40);
+            await wait(300);
+            await shot(page, `${P}-result-4-replay`);
+            await page.evaluate((caseId) => {
+              window.__JD.updateCase(caseId, (x) => ({ ...x, lastResult: { ...x.lastResult, prevBest: undefined } }));
+            }, caseId);
+            await scrollPageTo(page, '.rs-actions', 300);
             await page.click('.rs-actions__row .btn:nth-child(2)');
             await wait(600);
             await shot(page, `${P}-result-3-confirm`);
@@ -333,6 +381,38 @@ try {
           }, caseId);
           console.log(`  save: ${JSON.stringify(saved)}`);
           if (!saved.completed || !saved.bestRank || saved.stage !== 'complete') problems.push(`${P}: case not marked complete (${JSON.stringify(saved)})`);
+        }
+      }
+
+      /* ---------------- bad token (c01 only) ---------------- */
+      if (want('badtoken') && c === 'c01') {
+        expect401 = true;
+        await page.evaluate((caseId) => {
+          const cur = window.__JD.getState().save.cases[caseId];
+          const t = cur.token;
+          const bad = t.slice(0, -4) + (t.endsWith('AAAA') ? 'BBBB' : 'AAAA');
+          window.__JD.updateCase(caseId, (x) => ({ ...x, stage: 'science', token: bad, completed: true, clears: Math.max(1, x.clears), bestRank: x.bestRank ?? 'A' }));
+          window.__JD.flushSave();
+          window.__JD.goto('science', { caseId });
+        }, caseId);
+        await page.waitForSelector('.end-state__box--error', { timeout: 15000 });
+        await wait(600);
+        await shot(page, `${P}-badtoken-1-error`);
+        const btn = page.locator('.end-state button', { hasText: 'この事件を最初からやり直す' });
+        if (!(await btn.count())) problems.push(`${P}: bad_token panel has no restart button`);
+        else {
+          const before = await page.evaluate((caseId) => window.__JD.getState().save.cases[caseId], caseId);
+          await btn.click();
+          await page.waitForFunction(() => window.__JD.getState().route.scene === 'investigation', null, { timeout: 15000 });
+          await page.waitForFunction((caseId) => {
+            const c = window.__JD.getState().save.cases[caseId];
+            return !!c.token;
+          }, caseId, { timeout: 15000 });
+          await wait(1500);
+          const after = await page.evaluate((caseId) => window.__JD.getState().save.cases[caseId], caseId);
+          console.log(`  bad token → ${JSON.stringify({ stage: after.stage, newToken: after.token !== before.token, bestRank: after.bestRank, clears: after.clears, restored: after.restored?.name })}`);
+          if (after.stage !== 'investigation' || after.token === before.token || after.bestRank !== before.bestRank || after.clears !== before.clears) problems.push(`${P}: bad_token restart did not leave the loop cleanly`);
+          await shot(page, `${P}-badtoken-2-restarted`);
         }
       }
 

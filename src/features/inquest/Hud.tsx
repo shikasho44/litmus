@@ -1,11 +1,13 @@
-/** Small HUD pieces of the inquest: fire button, instruction strip, hint, Holma's quip, phase rail. */
+/** Small HUD pieces of the inquest: fire button, instruction strip, hint, Holma's quip, phase rail, status panel. */
+import type { ComponentChildren } from 'preact';
+import { HolmaSprite } from '../../ui/HolmaSprite';
 import { Icon } from '../../ui/Icon';
 import type { InquestSession, Phase } from './session';
 
 export function FireButton({ session: s, onFire, compact }: { session: InquestSession; onFire: () => void; compact?: boolean }) {
   const hasT = !!s.target.value;
   const hasC = !!s.selected.value;
-  const ready = s.ready.value && !s.busy.value && !s.dialogue.value;
+  const ready = s.ready.value && !s.busy.value && !s.dialogue.value && !s.tokenDead.value;
   const label = !hasT ? 'ノイズを選ぶ' : !hasC ? '所見を選ぶ' : '反証する！';
   return (
     <button type="button" class={`fire ${compact ? 'fire--compact' : ''} ${ready ? 'is-ready' : ''}`} disabled={!ready} onClick={onFire} data-fire aria-label={ready ? '反証する（撃つ）' : `撃てません：${label}`}>
@@ -96,5 +98,39 @@ export function PhaseRail({ phase }: { phase: Phase }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+/**
+ * Loading / error panel of the inquest: an ink card on a scrim with Holma's bust (surprised when
+ * something went wrong), a kicker, the message and the actions. Never floats text over the art.
+ */
+export function InquestStatus({ kind, kicker, title, body, children }: { kind: 'loading' | 'error'; kicker: string; title: string; body?: string; children?: ComponentChildren }) {
+  return (
+    <div class={`iqstat iqstat--${kind}`} role={kind === 'error' ? 'alert' : 'status'} aria-busy={kind === 'loading' ? 'true' : undefined}>
+      <div class="iqstat__holma" aria-hidden="true">
+        <HolmaSprite mood={kind === 'error' ? 'surprised' : 'normal'} framing="bust" />
+      </div>
+      <div class="iqstat__body">
+        <p class="iqstat__k">
+          {kind === 'loading' ? (
+            <span class="iqstat__gavel" aria-hidden="true">
+              <Icon name="gavel" size={16} />
+            </span>
+          ) : (
+            <Icon name="alert" size={16} />
+          )}
+          {kicker}
+        </p>
+        <h2 class="iqstat__t">{title}</h2>
+        {body && <p class="iqstat__p">{body}</p>}
+        {kind === 'loading' && (
+          <span class="iqstat__bar" aria-hidden="true">
+            <i />
+          </span>
+        )}
+        {children && <div class="iqstat__actions">{children}</div>}
+      </div>
+    </div>
   );
 }

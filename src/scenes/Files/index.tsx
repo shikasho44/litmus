@@ -9,11 +9,30 @@ import { CaseTag } from '../../ui/CaseTag';
 import { Icon } from '../../ui/Icon';
 import './files.css';
 
+/**
+ * Mounted on the first hover/focus of its case (not for every case on entry: that was ~830 KB
+ * of backgrounds for one visible layer). It fades in after it has loaded, and doubles as a
+ * prefetch of the background the case intro opens on.
+ */
 function CaseBackdrop({ path, active }: { path: string; active: boolean }) {
   const url = useImage(path);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (!url) return;
+    // two frames: let the image paint at opacity 0 first so .is-on transitions
+    let b = 0;
+    const a = requestAnimationFrame(() => (b = requestAnimationFrame(() => setShown(true))));
+    return () => {
+      cancelAnimationFrame(a);
+      cancelAnimationFrame(b);
+    };
+  }, [url]);
   if (!url) return null;
-  return <img class={`files__case-bg ${active ? 'is-on' : ''}`} src={url} alt="" aria-hidden="true" />;
+  return <img class={`files__case-bg ${active && shown ? 'is-on' : ''}`} src={url} alt="" aria-hidden="true" />;
 }
+
+/** The first-visit tip chip can be dismissed for the rest of the session. */
+let tipDismissed = false;
 
 function SkeletonTag({ i }: { i: number }) {
   return (
@@ -34,6 +53,10 @@ function SkeletonTag({ i }: { i: number }) {
 export function FilesScene(_: SceneProps) {
   const roomBg = useImage(ART.roomZero);
   const [focus, setFocus] = useState<string | null>(null);
+  const [tipOff, setTipOff] = useState(tipDismissed);
+  // case backgrounds are mounted lazily: once hovered/focused, kept for the cross-fade
+  const [touched] = useState(() => new Set<string>());
+  if (focus) touched.add(focus);
   const list = caseList.value;
   const state = caseListState.value;
   const save = saveData.value;
@@ -51,7 +74,7 @@ export function FilesScene(_: SceneProps) {
     <section class="scene files" style={focused ? { '--files-accent': focused.accent } : undefined}>
       <div class="files__bg" aria-hidden="true">
         {roomBg ? <img class="files__room" src={roomBg} alt="" /> : <div class="files__room-fallback" />}
-        {list?.map((c) => <CaseBackdrop key={c.id} path={c.background} active={focus === c.id} />)}
+        {list?.map((c) => (touched.has(c.id) ? <CaseBackdrop key={c.id} path={c.background} active={focus === c.id} /> : null))}
         <div class="files__bg-shade" />
       </div>
 
@@ -96,15 +119,28 @@ export function FilesScene(_: SceneProps) {
             </div>
           </header>
 
-          {!anyStarted && state !== 'error' && (
-            <aside class="files__tip">
-              <Icon name="info" size={18} />
+          {!anyStarted && !tipOff && state !== 'error' && (
+            <aside class="files__tip" aria-label="はじめての方へ">
+              <Icon name="info" size={16} />
               <p>
-                はじめての方は <strong>CASE 01</strong> からどうぞ。質問のしかたは「遊び方」でいつでも確認できます。
+                はじめてなら <strong>CASE 01</strong> から。質問のコツは
               </p>
-              <Button variant="ghost" size="sm" icon="help" onClick={() => openOverlay('howto')} sfx={false}>
+              <button type="button" class="files__tip-link" onClick={() => openOverlay('howto')}>
+                <Icon name="help" size={16} />
                 遊び方
-              </Button>
+              </button>
+              <IconButton
+                icon="close"
+                label="このヒントを閉じる"
+                size="sm"
+                variant="plain"
+                sfx="close"
+                class="files__tip-close"
+                onClick={() => {
+                  tipDismissed = true;
+                  setTipOff(true);
+                }}
+              />
             </aside>
           )}
 
@@ -140,6 +176,7 @@ export function FilesScene(_: SceneProps) {
                   onFocusCase={() => setFocus(c.id)}
                   onSecondary={p?.lastResult ? () => goto('result', { caseId: c.id }) : undefined}
                   secondaryLabel="記録"
+                  restored={p?.restored}
                 />
               );
             })}

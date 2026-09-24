@@ -4,7 +4,7 @@
  * server/node/handler.ts (which injects the file-system content source).
  *
  * Routes (JSON in / JSON out):
- *   GET  /api/health
+ *   GET  /api/health                    public: {ok, version} · dev / admin: full server state
  *   GET  /api/cases                     → CaseSummary[]
  *   GET  /api/cases/:id                 → CasePublic
  *   POST /api/token                     {caseId} → {token, progress}
@@ -17,12 +17,17 @@
  *   POST /api/reconstruction            ReconstructionRequest → ReconstructionView
  *   POST /api/reconstruction/submit     ReconstructionSubmit → ReconstructionResult
  *   POST /api/solution                  {caseId, token} → SolutionResponse
- *   Admin (dev, or production with header x-admin-token === ADMIN_TOKEN; else 404):
+ *   Admin (dev, or production with header x-admin-token === ADMIN_TOKEN (≥ 32 chars); else 404;
+ *   wrong tokens are rate-limited per IP — over the limit every token attempt is 429):
  *   GET  /api/admin/status | /api/admin/cases | /api/admin/traces | /api/admin/bench
  *   POST /api/admin/ask-debug           {caseId, question, token?, mode?}
  *   POST /api/admin/mint-token          {caseId, stage: fresh|investigated|debated|solved|reconstructed}  (QA shortcut)
  *
  * Errors: { error: { code, message, retryable } } with code ∈ ApiError codes.
+ *
+ * Fail closed: in production without a usable SESSION_SECRET (runtime.config.misconfigured)
+ * every POST route (they all sign or verify a progress token) answers
+ * 503 { code: 'server', message: 'server misconfigured', retryable: false }.
  */
 import { ApiError, type PipelineMode } from '../../shared/api.js';
 import { EngineError, statusOf } from '../engine/errors.js';
@@ -30,6 +35,7 @@ import { MAX_QUESTION_CHARS } from '../engine/normalize.js';
 import { detectSafety } from '../engine/safety.js';
 import { MAX_VERDICT_CHARS } from '../engine/game.js';
 import { PIPELINE_MODES } from '../engine/env.js';
+import { hmacSha256 } from '../engine/sha256.js';
 import type { ContentRegistry } from '../engine/registry.js';
 import { validateParsedCase, type CaseValidation } from '../engine/validate.js';
 import type { ApiRuntime } from './runtime.js';
@@ -69,11 +75,24 @@ function clientIp(req: Request): string {
   return first(h.get('x-vercel-forwarded-for')) || first(h.get('x-real-ip')) || first(h.get('x-forwarded-for')) || 'local';
 }
 
-function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
+/** Per-process key: both strings are compared as fixed-length HMAC digests (no length leak). */
+const EQ_KEY: Uint8Array = (() => {
+  const b = new Uint8Array(32);
+  const c = (globalThis as { crypto?: Crypto }).crypto;
+  if (c && typeof c.getRandomValues === 'function') c.getRandomValues(b);
+  else for (let i = 0; i < b.length; i++) b[i] = Math.floor(Math.random() * 256);
+  return b;
+})();
+const utf8 = new TextEncoder();
+/** Longer headers are never a valid token (and are not worth hashing). */
+const MAX_ADMIN_HEADER = 512;
+
+export function safeEqual(a: string, b: string): boolean {
+  const da = hmacSha256(EQ_KEY, utf8.encode(a));
+  const db = hmacSha256(EQ_KEY, utf8.encode(b));
   let d = 0;
-  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return d === 0;
+  for (let i = 0; i < da.length; i++) d |= da[i] ^ db[i];
+  return d === 0 && da.length === db.length;
 }
 
 async function readJson(req: Request): Promise<Record<string, unknown>> {
@@ -126,17 +145,25 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
   };
 
   const get: Record<string, Route> = {
-    health: async () => {
+    health: async ({ admin, ip }) => {
+      // Public: liveness only (503 while the server is misconfigured). Internal state is for
+      // dev / admin (and /api/admin/status) — it used to tell anyone the key was the default.
+      if (!admin) {
+        limit('read', ip);
+        const ok = !rt.config.misconfigured;
+        return json(ok ? 200 : 503, { ok, version: API_VERSION });
+      }
       const reg = await rt.content();
       return json(200, {
-        ok: true,
+        ok: !rt.config.misconfigured,
         version: API_VERSION,
         mode: rt.components.mode,
         requestedMode: rt.config.mode,
         cases: reg.list(dev).length,
         contentIssues: reg.issues.filter((i) => i.level === 'error').length,
         dev,
-        secretConfigured: !rt.config.secretIsDefault,
+        secretConfigured: !rt.config.secretIsDefault && !rt.config.secretTooShort,
+        misconfigured: rt.config.misconfigured ?? null,
         budgetExceeded: rt.budget.exceeded(),
         uptimeSec: Math.round((Date.now() - rt.startedAt) / 1000),
       });
@@ -217,7 +244,8 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
         llmModel: rt.config.llmModel ?? null,
         jevModel: rt.config.jevModel,
         hasOpenRouterKey: rt.config.hasOpenRouterKey,
-        secretConfigured: !rt.config.secretIsDefault,
+        secretConfigured: !rt.config.secretIsDefault && !rt.config.secretTooShort,
+        misconfigured: rt.config.misconfigured ?? null,
         budget: rt.budget.status(),
         warnings: rt.warnings,
         rateLimiterKeys: rt.limiter.size(),
@@ -264,10 +292,22 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
       if (method === 'OPTIONS') return json(204, null, { allow: 'GET, POST, OPTIONS' });
       const ip = clientIp(req);
       const tokenHeader = req.headers.get('x-admin-token') ?? '';
-      const adminByToken = !!rt.config.adminToken && tokenHeader.length > 0 && safeEqual(tokenHeader, rt.config.adminToken);
+      let adminByToken = false;
+      if (!dev && tokenHeader.length > 0) {
+        // Brute-force guard: over the wrong-guess limit, every token attempt from this IP is
+        // refused — a correct guess included, or the limit would only slow wrong ones down.
+        const locked = rt.limiter.peek('adminFail', ip);
+        if (!locked.ok) limit('adminFail', ip);
+        adminByToken = !!rt.config.adminToken && tokenHeader.length <= MAX_ADMIN_HEADER && safeEqual(tokenHeader, rt.config.adminToken);
+        if (!adminByToken) limit('adminFail', ip);
+      }
       const admin = dev || adminByToken;
       let parsed: Promise<Record<string, unknown>> | undefined;
       const body = () => (parsed ??= readJson(req));
+      // Fail closed: nothing that signs or verifies a progress token runs with an unusable secret.
+      const refuseMisconfigured = () => {
+        if (rt.config.misconfigured) throw new EngineError('server', 'server misconfigured', 503, false);
+      };
 
       if (segs[0] === 'admin') {
         if (!admin) throw new EngineError('bad_request', 'not found', 404);
@@ -276,6 +316,7 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
         const table = method === 'GET' ? adminGet : method === 'POST' ? adminPost : undefined;
         const route = table?.[name];
         if (!route) throw new EngineError('bad_request', (adminGet[name] || adminPost[name]) ? 'method not allowed' : 'not found', adminGet[name] || adminPost[name] ? 405 : 404);
+        if (method === 'POST') refuseMisconfigured(); // mint-token / ask-debug sign tokens
         return await route({ req, url, params: [], admin: true, ip, body });
       }
 
@@ -288,6 +329,7 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
       if (method === 'POST') {
         const route = post[segs.join('/')];
         if (!route) throw new EngineError('bad_request', get[segs[0]] ? 'method not allowed' : 'not found', get[segs[0]] ? 405 : 404);
+        refuseMisconfigured(); // every POST route signs or verifies a progress token
         return await route({ req, url, params: [], admin, ip, body });
       }
       throw new EngineError('bad_request', 'method not allowed', 405);

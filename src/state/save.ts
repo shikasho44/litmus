@@ -131,6 +131,10 @@ function sanitizeCase(id: string, c: unknown): CaseProgress | null {
     clears: num(c.clears, 0, 0),
     bestRank: RANKS.includes(c.bestRank) ? c.bestRank : undefined,
     lastResult: isObj(c.lastResult) ? (c.lastResult as CaseResult) : undefined,
+    restored:
+      isObj(c.restored) && typeof c.restored.name === 'string' && c.restored.name
+        ? { name: c.restored.name.slice(0, 40), kana: str(c.restored.kana).slice(0, 60) }
+        : undefined,
   };
 }
 
@@ -342,13 +346,20 @@ export function completeCase(caseId: string, result: CaseResult) {
     completed: true,
     clears: c.clears + 1,
     bestRank: betterRank(c.bestRank, result.rank),
-    lastResult: result,
+    lastResult: { ...result, prevBest: c.bestRank },
   }));
 }
 
-/** Start the case over (keeps best rank & clear count). */
+/** Remember the restored victim identity (the ceremony has revealed it). */
+export function setRestored(caseId: string, name: string, kana: string) {
+  const cur = saveData.value.cases[caseId]?.restored;
+  if (cur && cur.name === name && cur.kana === kana) return;
+  updateCase(caseId, (c) => ({ ...c, restored: { name, kana } }));
+}
+
+/** Start the case over (keeps best rank, clear count and the restored name). */
 export function resetCase(caseId: string) {
-  updateCase(caseId, (c) => ({ ...freshCase(caseId), bestRank: c.bestRank, clears: c.clears, completed: c.completed, lastResult: c.lastResult }));
+  updateCase(caseId, (c) => ({ ...freshCase(caseId), bestRank: c.bestRank, clears: c.clears, completed: c.completed, lastResult: c.lastResult, restored: c.restored }));
 }
 
 export function addElapsed(caseId: string, ms: number) {

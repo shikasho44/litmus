@@ -63,6 +63,7 @@ export function buildCaseResult(p: CaseProgress | undefined, meta: CaseMeta, now
       suspensions: input.suspensions ?? 0,
       quizMisses: quizMisses(p),
       difficulty: meta.difficulty,
+      ...(meta.estimatedMinutes ? { estimatedMinutes: meta.estimatedMinutes } : {}),
     },
   };
   return { result, rank, input };

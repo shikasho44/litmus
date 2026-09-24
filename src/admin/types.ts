@@ -12,17 +12,23 @@ import type { EngineTrace, PartTrace, TraceRecord } from '../../server/engine/tr
 
 export type { Case, CaseValidation, ProbeMismatch, LoadIssue, EngineTrace, PartTrace, TraceRecord, PipelineMode, ProgressSnapshot, ProgressToken };
 
+/**
+ * GET /api/health. The public answer is liveness only ({ok, version}; 503 while the production
+ * server is misconfigured) — the rest is filled only for dev / a valid admin token.
+ */
 export interface Health {
   ok: boolean;
   version: string;
-  mode: PipelineMode;
-  requestedMode: PipelineMode;
-  cases: number;
-  contentIssues: number;
-  dev: boolean;
-  secretConfigured: boolean;
-  budgetExceeded: boolean;
-  uptimeSec: number;
+  mode?: PipelineMode;
+  requestedMode?: PipelineMode;
+  cases?: number;
+  contentIssues?: number;
+  dev?: boolean;
+  secretConfigured?: boolean;
+  /** Why production refuses to sign tokens (e.g. SESSION_SECRET missing / too short); null when fine. */
+  misconfigured?: string | null;
+  budgetExceeded?: boolean;
+  uptimeSec?: number;
 }
 
 export interface BudgetStatus {

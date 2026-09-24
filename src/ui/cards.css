@@ -132,7 +132,7 @@ button.ev:disabled {
   font-family: var(--font-en);
   font-size: var(--fs-xs);
   letter-spacing: 0.24em;
-  color: var(--bone);
+  color: var(--on-alarm);
   background: var(--alarm);
   transform: rotate(-3deg);
 }
@@ -203,10 +203,10 @@ button.ev:disabled {
 }
 .tag__string {
   position: absolute;
-  top: -54px;
+  top: -30px;
   left: 50%;
   width: 3px;
-  height: 116px;
+  height: 92px;
   margin-left: -1.5px;
   background: linear-gradient(180deg, transparent, #8E8672 20%, #B8AE95 80%, #8E8672);
   border-radius: 2px;
@@ -281,7 +281,7 @@ button.ev:disabled {
   letter-spacing: 0.2em;
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  color: #6A624F;
+  color: var(--paper-ink-2);
 }
 .tag__num {
   font-family: var(--font-en);
@@ -314,13 +314,24 @@ button.ev:disabled {
   margin-top: -6px;
 }
 .tag__summary {
+  display: grid;
+  gap: 4px;
   font-size: var(--fs-sm);
   line-height: 1.75;
   color: #342F27;
+}
+/* the set-up may be clamped; the hook question never is */
+.tag__summary-body {
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+.tag__hook {
+  font-weight: 700;
+  color: var(--paper-ink);
+  padding-left: 10px;
+  border-left: 3px solid var(--tag-accent);
 }
 .tag__facts {
   display: grid;
@@ -338,7 +349,7 @@ button.ev:disabled {
   font-family: var(--font-mono);
   font-size: var(--fs-2xs);
   letter-spacing: 0.14em;
-  color: #6A624F;
+  color: var(--paper-ink-2);
 }
 .tag__facts dd {
   margin: 0;
@@ -450,7 +461,7 @@ button.ev:disabled {
   font-size: var(--fs-sm);
   letter-spacing: 0.14em;
   transform: rotate(8deg);
-  color: #7A7260;
+  color: var(--paper-ink-2);
   background: rgba(238, 231, 213, 0.8);
 }
 .tag__status--active {
@@ -459,48 +470,92 @@ button.ev:disabled {
 .tag__status--solved {
   color: var(--cyan-deep);
 }
+/* complete: a sealed band along the bottom edge (it used to sit on the punch hole) */
 .tag__status--complete {
+  position: relative;
+  top: auto;
+  right: auto;
+  z-index: 0;
+  margin: 6px -24px -20px;
+  padding: 7px 12px 8px;
+  border: 0;
+  text-align: center;
+  font-family: var(--font-en);
+  font-weight: 400;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.4em;
   color: var(--formalin);
-  background: var(--ink);
-  border-color: var(--ink);
-  box-shadow: 3px 3px 0 var(--alarm);
+  background:
+    repeating-linear-gradient(-45deg, rgba(198, 255, 61, 0.14) 0 8px, transparent 8px 16px),
+    var(--ink);
+  transform: none;
+  box-shadow: none;
+}
+/* best-rank stamp: its own cell at the end of the facts row (clear of the hole, the codename
+   and the restored name) */
+.tag__facts:has(.tag__facts-rank) {
+  grid-template-columns: auto 1fr auto auto;
+}
+.tag__facts .tag__facts-rank {
+  align-self: center;
+}
+.tag__facts dd.tag__rank {
+  margin: -6px 0 -6px 2px;
 }
 .tag__rank {
-  position: absolute;
-  top: 60px;
-  right: 22px;
+  position: relative;
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
-  border: 3px double var(--alarm);
+  width: 64px;
+  height: 64px;
+  border: 3px double var(--alarm-deep);
   border-radius: 50%;
-  color: var(--alarm);
-  /* the stamp sits over the codename line: a paper-toned disc keeps the rank legible */
-  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  color: var(--alarm-deep);
+  background: color-mix(in srgb, var(--paper) 90%, transparent);
   transform: rotate(-10deg);
 }
 .tag__rank-label {
   position: absolute;
   top: 6px;
   font-family: var(--font-mono);
-  font-size: 8px;
-  letter-spacing: 0.2em;
+  font-weight: 700;
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.08em;
 }
 .tag__rank-value {
   font-family: var(--font-en);
-  font-size: 30px;
+  font-size: 28px;
   line-height: 1;
-  margin-top: 8px;
+  margin-top: 16px;
 }
-.tag--complete .tag__meta-mono span:last-child {
-  color: var(--alarm-deep);
+/* restored identity replaces the codename once solved (as the Resolution record does) */
+.tag__meta-mono--identified {
+  gap: 1px;
+}
+.tag__was {
+  color: var(--paper-ink-2);
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: var(--alarm-deep);
+}
+.tag__name {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--fs-md);
+  letter-spacing: 0.08em;
+  color: var(--paper-ink);
+}
+.tag__identified {
+  color: var(--cyan-deep);
+  font-weight: 700;
 }
 [data-reduce-motion='true'] .tag {
   animation: none;
 }
 [data-layout='narrow'] .tag__card {
   padding: 54px 18px 18px;
+}
+[data-layout='narrow'] .tag__status--complete {
+  margin: 6px -18px -18px;
 }
 [data-layout='narrow'] .tag__num {
   font-size: 3.6rem;

@@ -242,7 +242,7 @@
     {"q": "血は出ましたか？", "expect": ["no"], "critical": true},
     {"q": "苦しみましたか？", "expect": ["no", "vague"]},
     {"q": "弟は助けを呼びましたか？", "expect": ["irrelevant", "vague"]},
-    {"q": "犯人は誰ですか？", "expect": ["no", "cannot"]},
+    {"q": "犯人は誰ですか？", "expect": ["vague"], "note": "c01・c03 と同じく、犯人がいる前提の開いた問いは二択への言い直し（エンジンの疑問詞ルールと一致）。"},
     {"q": "AEDは使われましたか？", "expect": ["partial"], "critical": true},
     {"q": "救急車が来る前に、AEDは使われましたか？", "expect": ["no"], "critical": true},
     {"q": "救急車が来る前に誰かAEDを使いましたか？", "expect": ["no"]},
@@ -335,7 +335,18 @@
     {"q": "その場にいた人のせいですか？", "expect": ["no", "vague"], "critical": true, "group": "blame", "note": "「はい」にならないことが要点。"},
     {"q": "両親のせいですか？", "expect": ["no", "vague"], "critical": true, "group": "blame"},
     {"q": "救急車のせいで死んだのですか？", "expect": ["no", "partial"], "pending": "cause-routing", "group": "blame", "note": "人を指す「〜のせい／〜が悪い」は、責めを否定する所見（または vague）へ回す目標。 今は F25（12分＝はい）。"},
-    {"q": "通りがかりの人のせいですか？", "expect": ["no"], "pending": "cause-routing", "group": "blame", "note": "人を指す「〜のせい／〜が悪い」は、責めを否定する所見（または vague）へ回す目標。 今は vague（許容範囲だが、目標は F42「誰も悪くない」）。"}
+    {"q": "通りがかりの人のせいですか？", "expect": ["no"], "pending": "cause-routing", "group": "blame", "note": "人を指す「〜のせい／〜が悪い」は、責めを否定する所見（または vague）へ回す目標。 今は vague（許容範囲だが、目標は F42「誰も悪くない」）。"},
+    {"q": "彼女は、ボールを目で追うことで何か反射が起きて、それが原因で死んだのですか？", "expect": ["no"], "noNearCore": true, "critical": true, "group": "playtest false trail", "note": "AIプレイテスト 2026-09-25 で はい が返った作り話（docs/playtest-report.md §3-1）。想定質問で規則の道も塞ぐ。"},
+    {"q": "彼女の死因は、夕日の強い光が目に入ったことで起きた反射が関係していますか？", "expect": ["no"], "noNearCore": true, "critical": true, "group": "playtest false trail", "note": "AIプレイテスト 2026-09-25 で はい が返った作り話（docs/playtest-report.md §3-1）。想定質問で規則の道も塞ぐ。"},
+    {"q": "まぶしさで心臓が止まったのですか？", "expect": ["no"], "forbid": ["F21"], "noNearCore": true, "critical": true, "group": "playtest false trail", "note": "以前は F21（震える心臓）に はい で当たり、核心の所見が開いた。"},
+    {"q": "光の刺激で反射が起きて死んだのですか？", "expect": ["no"], "noNearCore": true, "group": "playtest false trail"},
+    {"q": "その音って、心臓の鼓動をまねた音だったんすか？", "expect": ["no"], "forbid": ["F21"], "noNearCore": true, "critical": true, "group": "playtest false trail", "note": "AIプレイテスト 2026-09-25 で はい が返った作り話（docs/playtest-report.md §3-1）。想定質問で規則の道も塞ぐ。"},
+    {"q": "そのボールって、ひかりであつくなってとけたりしたんですか？", "expect": ["no", "vague"], "noNearCore": true, "group": "playtest false trail"},
+    {"q": "夕日がまぶしかったですか？", "expect": ["yes"], "fact": "F08", "group": "playtest false trail", "note": "F08 のキーワードを絞っても、逆光の問いには はい。"},
+    {"q": "光は関係ありますか？", "expect": ["yes"], "fact": "F08", "group": "playtest false trail"},
+    {"q": "心臓が縮み終わった直後にボールが当たったのですか？", "expect": ["partial"], "group": "lay vulnerable window", "note": "受攻期は心室が電気的に戻る途中。素人の言い方は一部そう（docs/playtest-report.md §4）。"},
+    {"q": "不応期でしたか？", "expect": ["partial"], "group": "lay vulnerable window"},
+    {"q": "何を質問すればいいですか？", "expect": ["cannot"], "group": "game help", "note": "ゲームの進め方の質問はヒントの窓口へ（cannot）。"}
   ],
   "verdicts": [
     {"text": "逆光で弟のボールを捕り損ね、左胸に当たった。その衝撃が心臓の鼓動の悪いタイミングに重なって心室細動が起き、心臓が止まった。", "expect": ["correct"]},
@@ -385,6 +396,18 @@
     {"text": "もともと心臓の病気があり、胸にボールが当たって、鼓動のタイミングが悪くて心臓が動かなくなった。", "expect": ["almost", "missing", "wrong"], "pending": "clause-negation", "note": "「なくなって／足りなく／動けなく」を文全体の否定と見なすため誤った主張が無視され correct になる（verdict.ts NEGATED_SENTENCE）。否定を節単位で見る修正の目標。"},
     {"text": "熱中症で体がもたなくなり、胸にボールが当たって鼓動の悪い瞬間に心臓が止まった。", "expect": ["almost", "missing", "wrong"], "pending": "clause-negation", "note": "「なくなって／足りなく／動けなく」を文全体の否定と見なすため誤った主張が無視され correct になる（verdict.ts NEGATED_SENTENCE）。否定を節単位で見る修正の目標。"},
     {"text": "胸の骨が折れて、ボールが当たった鼓動の悪い瞬間に心臓が動かなくなった。", "expect": ["almost", "missing", "wrong"], "pending": "clause-negation", "note": "「なくなって／足りなく／動けなく」を文全体の否定と見なすため誤った主張が無視され correct になる（verdict.ts NEGATED_SENTENCE）。否定を節単位で見る修正の目標。"},
-    {"text": "熱中症で倒れた。胸にボールも当たっていて、鼓動の悪い瞬間だったので心臓が止まった。", "expect": ["almost", "missing", "wrong"], "note": "同じ誤りでも否定の目印が無い文では、今も correct にならない（対照）。"}
+    {"text": "熱中症で倒れた。胸にボールも当たっていて、鼓動の悪い瞬間だったので心臓が止まった。", "expect": ["almost", "missing", "wrong"], "note": "同じ誤りでも否定の目印が無い文では、今も correct にならない（対照）。"},
+    {"text": "夕日でボールの表面が溶けて、心臓の鼓動をまねる音が出た。その音は彼女の鼓動と反対のタイミングで左胸に当たったボールから体の中に響いて、心臓の電気を乱して心臓を止めてしまったんだ。", "expect": ["missing", "wrong"], "note": "AIプレイテストで正解／ほぼ正解になった作り話の宣告（docs/playtest-report.md §5-2）。要素 B・C は同じ句の中の語でだけ当たり、光・反射・音の主張は誤主張。"},
+    {"text": "おいホルマ、簡単な話だ。こいつは夕日の逆光で瞳孔がバーンと開きっぱなしになって、その状態でボールをギラギラと凝視し続けた。強い光が迷走神経をドカンと刺激して、反射で心臓の血流がパッと止まって、そのまま糸が切れて死んだんだ。左胸のボールは飾りだ。死因は光による反射性心停止だよ。", "expect": ["missing", "wrong"], "note": "AIプレイテストで正解／ほぼ正解になった作り話の宣告（docs/playtest-report.md §5-2）。要素 B・C は同じ句の中の語でだけ当たり、光・反射・音の主張は誤主張。"},
+    {"text": "こいつはな、夕日の強い光が目に入ったことで起きた反射が、心臓の血流を急に止めちまったんだ。つまり、まぶしい光が心臓を止めた。死因は、光による反射性心停止ってところだな。", "expect": ["missing", "wrong"], "note": "AIプレイテストで正解／ほぼ正解になった作り話の宣告（docs/playtest-report.md §5-2）。要素 B・C は同じ句の中の語でだけ当たり、光・反射・音の主張は誤主張。"},
+    {"text": "致死性不整脈です。左胸へのボール衝突そのものは軽微でも、衝突直後に彼女が投げ返そうと一瞬息を止めて力を入れたため、胸腔内圧が急上昇し迷走神経が過剰に興奮した。健康な心臓は起きた電気活動を乱され、数秒で止まりました。", "expect": ["missing", "wrong"], "note": "AIプレイテストで正解／ほぼ正解になった作り話の宣告（docs/playtest-report.md §5-2）。要素 B・C は同じ句の中の語でだけ当たり、光・反射・音の主張は誤主張。"},
+    {"text": "夕日でボールがあつくなって、心臓の鼓動と反対のタイミングで心臓の音をまねた音が出て…その音が心臓をとめちゃったんだ。", "expect": ["missing", "wrong"], "note": "AIプレイテストで正解／ほぼ正解になった作り話の宣告（docs/playtest-report.md §5-2）。要素 B・C は同じ句の中の語でだけ当たり、光・反射・音の主張は誤主張。"},
+    {"text": "迷走神経反射で心停止した。ボールが胸に当たったタイミングが悪かった。", "expect": ["missing", "wrong"], "note": "誤った仕組み（反射）を言い切っている。"},
+    {"text": "迷走神経反射ではなく心臓震盪。ボールが胸に当たって、鼓動の悪いタイミングに重なった。", "expect": ["correct"], "note": "誤主張の語も、否定されていれば誤主張にならない（対照）。"},
+    {"text": "弟の投げたボールが、彼女が油断して構えたときの体勢で心臓のどまんなかに当たったんだ。当たったタイミングは心臓が縮み終わった直後、電気的に一番不安定な瞬間で、その一撃が心臓のリズムを乱して止めちゃったんだよ。", "expect": ["correct"], "note": "AIプレイテストの正しい宣告（素人の言い方）。同じ句の語だけで要素 B・C に当たること。"},
+    {"text": "夕暮れの逆光でボールが見えにくくなり、彼女は捕り損ねた一球を心臓の上にある太い血管に受けてしまった。その衝撃が、心臓の拍動の中で外からの衝撃にひどく弱い一瞬に重なり、健康な心臓の動きを止めてしまった。そして、その後の数分間に何も処置が行われず、心臓が震えるだけで血液を送り出せない状態になって、彼女は死んだのです。", "expect": ["correct"], "note": "AIプレイテストの正しい宣告。"},
+    {"text": "彼女は逆光でボールを正確に見失い、捕球を誤って、左胸に心臓震盪を誘発する一撃を受けた。心臓は止まり、数秒後に崩れ落ちた。", "expect": ["correct"], "note": "AIプレイテストの正しい宣告。"},
+    {"text": "夕暮れの逆光でボールが見えにくくなり、その一球が心臓のちょうど上の場所に当たってしまった。その衝撃で、心臓が一瞬止まってしまったのです。", "expect": ["almost"], "note": "仕組み（要素 C）が無い宣告は ほぼ正解。"},
+    {"text": "ぼーるがむねにあたって、しんぞうのこどうのわるいたいみんぐで、しんぞうがとまった", "expect": ["correct"], "note": "ひらがなだけの宣告。"}
   ]
 }

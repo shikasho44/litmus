@@ -52,7 +52,8 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
 
 ```
 質問(≤200字)
- → 分割（？ / ? / 。 / ！ / 改行 / 「それと」「あと」、最大3問。4問目以降は捨てて trace に dropped:n）
+ → 分割（？ / ? / 。 / ！ / 改行 / 「それと」「あと」、最大3問。4問目以降は捨てて trace に dropped:n。
+    「はい/いいえで答えてください。」「正直に答えて。」のような答え方の指示だけのパートは、ほかに質問があれば捨てる）
  → 安全フィルター safety.ts（メッセージ全体と各パート。当たればターン全体を下の「安全フィルター」の返答にして終了）
  → 正規化（NFKC・小文字・カタカナ→ひらがな・記号/絵文字/空白を除去。表示用の原文は保持）
  → 候補（所見: キーワード命中＋bigram 包含率 上位8 / 想定質問: Dice 類似 上位5）
@@ -75,21 +76,35 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
 
 ### 通信失敗の印
 - モデルの失敗で rules に退避したパートは `notice: 'degraded'`（従来どおり `error.degraded` の一言も前置）。
+- **判定モデルの目覚まし**（2026-09-25）: 約25分アクセスが無いと Jev の最初の数回が 4.5 秒の締切を超えた（AI プレイテストで最初の3問が連続タイムアウト → 1問目が簡易判定）。
+  `GameService.newToken`（事件を始めたとき）で `judge.warm()`（約60トークン・約$0.000003）を裏で1回投げる。サーバーごとに2分に1回まで、費用は予算に加算、失敗しても何もしない。導入の演出の間に温まる。
+  Vercel では応答後の処理が止められることがあり、その場合は効かない（害もない）。
 
 ### rules 判定の順番（rules-judge.ts）
 0. 安全フィルター（pipeline が先に処理。上記）
 1. 空・長すぎ → `vague`（質問数に数えない）
+1b. **被害者の本名**（漢字・かなの姓名、漢字の姓、姓名＋さん/ちゃん/くん/氏…）を含む質問 → `cannot`（askAnswer の台詞）。モデルも呼ばない（`guard: 'secretName'`、trace は `skipped:secretName`）。
+   Jev は真相の要約で名前を知っているので「白石さんですか？」に「はい」と答えていた（ベンチで確認）。かなだけの名（しいな・はるか）は普通の語に紛れるので敬称つきだけ見る
 2. 想定質問とほぼ同文（類似 ≥ 0.9）→ その正解ラベル（作者のラベルが最優先）
-3. メタ: 答えを聞く・名前を聞く→`cannot` / ヒント（「ヒント」、または全文が「わからん」「わからない」「もう無理」「詰んだ」「降参」「何を聞けばいい？」など）→`cannot` / 雑談・ホルマ自身→`irrelevant` / 暴言→`cannot`。
+3. メタ: 答えを聞く・名前を聞く→`cannot` / ヒント（「ヒント」、または全文が「わからん」「わからない」「もう無理」「詰んだ」「降参」「何を聞けばいい？」など）→`cannot` /
+   **ゲームの進め方**（「あと何問で解ける？」「あといくつ所見がある？」「審問はいつ開けばいい？」「遊び方を教えて」「質問の仕方は？」、30字以内。「ルール」「やり方」は事件の語が無いときだけ）→ ヒントと同じ `cannot`（『ホルマの囁き』へ案内。以前は「具体的に」だった） /
+   雑談・ホルマ自身→`irrelevant` / 暴言→`cannot`。
    **「犯人は誰？」「誰が殺した？」「犯人を教えて」は `cannot` にしない**（犯人がいると匂わせるため）→ 5 の `vague`
 4. 想定質問と類似 ≥ 0.6 → そのラベル。**命題が逆なら反転**（「なかったですよね」⇔「ありましたか」、「回って」⇔「止まって」）。
    軸が違う述語（「壊れていた」と「止まっていた」）は反転せず類似度 ×0.85。
    事件の内容語（キーワード）が片方にしか無い場合は類似度 ×0.65（「一酸化炭素」と「二酸化炭素」を取り違えない）
 5. 疑問詞だけの質問（何/なぜ/誰/どこ/いつ…。「何か」「誰か」「誰にも」「何者か」は除く）と、
    **値を問う名詞だけの「〜は？」**（死亡推定時刻は？／気温は？／死因は？／犯人は？／〜とは？）→ `vague`（はい/いいえで訊いて）。
-   「毒は？」「外傷は？」のような有無の省略形は はい/いいえ の質問のまま
+   「毒は？」「外傷は？」のような有無の省略形は はい/いいえ の質問のまま。
+   **はい／いいえで答えようのない質問**（`isWhQuestion`: 「犯人は誰ですか」「なぜ〜」に加えて、疑問詞が述語の項になっている「どこで見つかったの？」「いつ倒れた？」「何を吸ったの？」「誰がやったの？」「どんな音？」「どうなっていた？」。
+   「何か・誰も・どこにも・いつも・何分も・何となく・誰のせい・〜かどうか」は除く）は、**2 や 4 の想定質問に はい/いいえ/一部 のラベルがあっても** `vague`＋meta `open`（2026-09-25。c02 の「犯人は誰ですか？」→いいえ、c03「どこで見つかったの？」→「裸で見つかった？」の いいえ を拾っていた）。Jev の答えにも同じガード。
+   返答は `answer.vague` の「具体的に」ではなく、**疑問詞ごとの言い直し方**（`default-lines.ts` の `OPEN_LINES`: なぜ→『〜のせいですか？』、どこ→『〜でしたか？』、いつ→『〜より前ですか？』、誰→『〜はそこにいましたか？』、何・どう→『それは〜ですか？』など。事件の中身は書かない。line bank に `meta.open.<種類>` があればそちらを使う）
 6. 「〜は関係ありますか」→ 指す所見が重要（importance ≥2）なら `yes`、否定済み（ifAsked=no）なら `no`、それ以外 `irrelevant`
-7. キーワード所見。どの所見の話かは次の順で決める（routing）:
+7. キーワード所見。どの所見の話かは次の順で決める（routing）。
+   キーワードの当たり方（`retrieve.ts`、2026-09-25）: 漢字＋カタカナの複合語は「の」を挟んだ言い方にも当たる（「酸素メーター」→「酸素のメーター」）。
+   別の所見の**2文字以上長い**キーワードの中に丸ごと入っている当たりは捨てる（「酸素のメーター」の中の「メーター」は供給容器の残量計の語ではない。1文字差は助詞のことが多いので捨てない: 「暑さが原因」の「暑さ」）。
+   想定質問の類似度は、片方だけが状態の述語（動いていた・止まっていた・鳴った）を持つとき ×0.85（「酸素のメーターはありましたか」≠「動いていましたか」）。
+   どの所見の話か:
    1. **因果・責め**（「Xのせい／Xが原因／Xのため／Xによって」「Xが悪い／Xは悪くない」）:
       因果そのものを含むキーワード（「弟のせい」「暑さが原因」）があればそれ。X が**人**（弟・家族・友人・大人・同僚・警備員・捜索隊・通行人…）なら
       その事件の「誰のせいでもない」所見（キーワードに 誰のせい／誰かのせい／誰も悪／責め／責任／過失 を持つ否定所見）、無ければ「事件性なし」所見。
@@ -98,6 +113,13 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
       無ければ（殺・犯人・事件・何者か・第三者 などの行為者語があるとき）「事件性なし」所見（ifAsked≠yes でキーワードに 殺され/殺人/他殺/犯人/事件/襲われ/故意/わざと… を2つ以上持つもの）
    3. それ以外は得点1位。**1位と同点（差 ≤0.02）の上位3件**では、質問の状態と比べられる所見 → まだ開いていない所見（visibleFromStart でない）→ キーワードの長さ の順で選ぶ
    答え: 質問の述語の極性と、所見のそのキーワードを含む節の極性を**同じ軸で**比べる。比べられないときは `fact.ifAsked`（否定確認・責めの否定なら反転）。
+   - **状態の兄弟所見**（2026-09-25）: 状態を問う質問（動いていた？）が「物がある」だけの所見（「酸素濃度計が取り付けられていた」）に当たり比べられないとき、
+     その所見の物の名前（所見のキーワードで本文にもある3字以上の語）を含み、その節の状態がはっきりしている別の所見（「酸素濃度計は電池が切れて…」）で答える（全部が同じ向きのときだけ）。
+     以前は「酸素の計器は動いていましたか？」→ ifAsked の はい（嘘）。今は いいえ＋その所見のカード。
+   - **打ち消された修飾語**（2026-09-25）: 「はい」になった質問に、事件が否定している性質の語（毒・有毒・毒性・有害・劇物・可燃・燃え・引火・放射…）が別の否定所見（ifAsked=no）のキーワードとして当たっていて、
+     その語が肯定の形なら、修飾（「毒ガスが出ていましたか？」＝ガスは出た・毒ではない）→ `partial`、述語（「窒素ガスは有毒ですか？」）→ `no`。否定所見のカードを先に付ける（trace の `qualifier`）。
+     以前は「毒ガスが出ていましたか？」「何か有毒なガスが出ていましたか？」→ はい（ガスの所見）で、科学解説・誤解リスト・クイズと矛盾していた（ホルマは嘘をつかない、が崩れる）。
+     「危険なガス」は対象外（窒素ガスは実際に危険。毒ではないだけ）。Jev が はい と答えても同じ答えに下げる（`raw.qualifierGuard`）
    - 軸: 動く/止まる・鳴る・点く・電池が切れる・足りる/減る・ある/ない（state）と 開く/閉まる（open）は互いに比べる。**壊れる/故障（broken）は別の軸**。
    - 「壊れていた？」に対し所見に壊れた話が無いとき: 所見が「動いていない（止まっていた・電池切れ）」なら `partial`、それ以外は `no`（壊れていない）
    - 「閉め忘れ／止め忘れ／消し忘れ」は逆の状態（閉め忘れた＝開いたまま）。「鳴らなかった」「動かなくなった」は止まった側の状態語として読む
@@ -105,11 +127,13 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
 9. それ以外 → `vague`
 
 汎化性能（想定質問を1問ずつ抜いて当てる leave-one-out。2026-09-24、同じ事件データで比較）:
-| 事件 | 自己一致 | leave-one-out（修正前 → 修正後） |
-|---|---|---|
-| c01 | 100% | 61.8% → 67.5% |
-| c02 | 100% | 56.7% → 59.7% |
-| c03 | 100% | 75.4% → 76.8% |
+| 事件 | 自己一致 | leave-one-out（修正前 → 修正後） | 2026-09-25（上の追加後） |
+|---|---|---|---|
+| c01 | 100% | 61.8% → 67.5% | 68.1% → **68.4%** |
+| c02 | 100% | 56.7% → 59.7% | 60.1% → 60.1%（自己一致 99.6%: 「犯人は誰ですか？」のラベル いいえ を疑問詞ガードが vague にする。ラベルを vague に直すのが正しい） |
+| c03 | 100% | 75.4% → 76.8% | 76.8% → **77.3%** |
+
+全 823 問のベンチ（leave-one-out、rules）: 73.2% → **73.4%**、所見一致 77.5 → 77.7%、質問の型 87.9 → 88.0%。
 
 （ほぼ同文なら 100%。レビューで足した想定質問の多くは rules が一般化できない言い回しを個別に塞ぐものなので、LOO は低めに出る。）
 キーワードの読み・言い換え・表記ゆれを事件データに足すほど上がる。
@@ -126,7 +150,15 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
 | 科学メモ | `fact.scienceMemo`（scienceMemos の id）が所見と一緒に開く |
 
 進捗 = 開示済み所見の破片重み / 全体。重み: importance 0→0, 1→1, 2→2, 3→3, 4→0。解決後は 1。
-`nearCore` は「spoilerLevel 4 の話題にはい/いいえ」「closeness 3」「進捗 75% 以上」で点灯（以後ずっと点灯）。
+`progress.nearCore`（状態・以後ずっと点灯）は「spoilerLevel 4 の話題を**正しく確認**した」「closeness 3 で はい/一部そう（否定確認への いいえ）」「進捗 75% 以上」で点灯。
+「正しく確認」= 答えがその所見の向き（`ifAsked`、否定確認なら反転、一部そう≒はい）と合うこと。**「毒ですか？」→いいえ に判定モデルが死因の所見を付けても、核心には近くない**（以前はこれでも点灯して「近い」と言っていた）。
+
+`AskAnswer.nearCore`（この答えが核心に迫った瞬間。ホルマの反応・破片の明滅の合図）は、次のどれか:
+- まだ確認していない spoilerLevel 4 の所見を**初めて**正しく確認した（確認済みはトークンの `k` に記録）
+- 状態がまだ消えているときに closeness 3 で はい/一部そう
+- この答えで状態が点灯した（進捗 75% を超えた など）
+同じ核心を何度確認しても2回目以降は立たない。AI プレイテストで Jev は話題に乗った質問の最大 25/40 問に closeness 3 を付けたので、毎回だとホルマが毎ターン「近い」と言うことになる。
+**定型文の「核心接近」の一言も同じ条件**で付く（旗と台詞が必ず一致する）。trace の各パートにも `nearCore`。
 
 ---
 
@@ -153,7 +185,9 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
   **「酸素がなくなった」「足りなくなった」「少なくなる」は否定ではない**（答えそのものの描写）。「暑いと思い込んで」のような本人の錯覚も否定ではない。
 - 答えの要素（answerElements）も誤主張（wrongClaims）も、**否定されていない言及**だけで一致する（「液体窒素は関係ない」は要素 B にならない）。
 - **誤主張が1つでも肯定されたら、結果は最良でも `missing`**（要素が1つも無ければ `wrong`）。返答は `verdictWrong` の一言＋その誤主張の `feedback`（最大2つ）。要素の不足ヒントは添えない。
-- VerdictJudge（モデル）: 要素の確率 ≥0.7 は一致を**足せる**。誤主張の確率 ≥0.7 は**それだけで止める**。rules が肯定した誤主張は、モデルが 0.4 未満と言ったときだけ取り消す。
+- VerdictJudge（モデル）: 要素の確率 **≥0.85**（2026-09-25 に 0.7 から変更）は一致を**足せる**。誤主張の確率 ≥0.7 は**それだけで止める**。rules が肯定した誤主張は、モデルが 0.4 未満と言ったときだけ取り消す。
+  0.85 の根拠: 回帰の宣告 144 文＋AI プレイテストの宣告 20 文（手でラベル付け）で、Jev の 0.7〜0.85 は誤った仕組み（「力んで迷走神経反射」「錯乱して脱いだ」）を `correct` にしただけで、正しい宣告を救った例は無かった（回帰 141→142/144、プレイテスト 15→17/20、正解の取りこぼし 0）。
+  rules の一致をモデルの低確率で取り消す案（veto）は正解を落とすので採らない（veto 0.2 で回帰 137/144）。
 - 回帰: `tests/engine/verdict.test.ts`（c01 査読の3文・各事件の真相文が `correct`）、`tests/content/regression/*.json` の宣告セット。
 
 ### AI 部品（実装済み・詳細は docs/ai.md）
@@ -161,7 +195,7 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
 - `server/engine/providers/jev.ts` → `createJevProvider(env): DecisionProvider`
 - `server/engine/providers/openrouter-llm.ts` → `createOpenRouterLlm(env): LlmProvider`
 - `server/engine/providers/codex.ts` → `createCodexLlm(env): LlmProvider`（Node 専用処理は server/node/ に置き動的 import）
-- `server/engine/ai/jev-judge.ts` → `new JevJudge({ provider, model })`, `new JevVerdictJudge({ provider, model })`, `new JevPostChecker({ provider, model })`
+- `server/engine/ai/jev-judge.ts` → `new JevJudge({ provider, model, strategy?, prompt? })`（`warm()` で目覚まし）, `new JevVerdictJudge({ provider, model })`, `new JevPostChecker({ provider, model })`
 - `server/engine/ai/llm-renderer.ts` → `new LlmRenderer({ llm })`（`canned = false`）
 - `server/engine/ai/llm-judge.ts` → `new LlmJudge({ llm })`（`JudgeDecision.line` に一言を入れてよい）
 
@@ -208,7 +242,7 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 
 | メソッド | パス | 本体 → 応答 |
 |---|---|---|
-| GET | `/api/health` | 稼働状況（mode・事件数・秘密鍵設定済みか 等） |
+| GET | `/api/health` | 公開: `{ok, version}` だけ（設定不備の本番は 503 `{ok:false}`）。dev・管理者: mode・事件数・秘密鍵・予算・稼働時間 |
 | GET | `/api/cases` | `CaseSummary[]` |
 | GET | `/api/cases/:id` | `CasePublic` |
 | POST | `/api/token` | `{caseId}` → `{token, progress}` |
@@ -230,7 +264,13 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 
 - エラーは `{ "error": { "code", "message", "retryable" } }`。code は `ApiError` と同じ:
   400/404/405/413/403 → `bad_request`、401 → `bad_token`、429 → `rate_limited`（`Retry-After` 付き）、5xx → `server`。
-- 管理 API は dev では常に開く。本番は `x-admin-token` ヘッダーが `ADMIN_TOKEN` と一致したときだけ（それ以外は 404）。
+- 管理 API は dev では常に開く。本番は `x-admin-token` ヘッダーが `ADMIN_TOKEN`（**32文字以上**。短いと管理 API は無効のまま・起動時にエラーログ）と一致したときだけ（それ以外は 404）。
+  比較は固定長の HMAC 同士（長さを漏らさない）。**間違ったトークンは IP ごとに 10回/分・50回/日まで**（どのルートでも数える）。超えたらその IP のトークン付きリクエストは正しいトークンでも 429。
+- **設定不備の本番は閉じる（fail closed、2026-09-25）**: 本番（`APP_ENV=production`）で `SESSION_SECRET` が未設定・.env.example の値・32文字未満なら、
+  すべての POST（トークンを作る・検証するルート: token / ask / hint / inquest/* / reconstruction/* / solution、管理の mint-token / ask-debug）が
+  `503 {code:'server', message:'server misconfigured', retryable:false}`。公開の `/api/health` も 503 `{ok:false}`。`/api/cases` は動く（タイトルは出る）。
+  署名鍵は公開の開発用固定値ではなくプロセスごとの乱数になる（どこかが漏れても偽造できない）。以前は開発用固定値で署名して警告を出すだけで、`/api/health` の `secretConfigured:false` を見た誰でも解決済みトークンを作って真相を読めた（監査 qa/audit/forge.mjs）。
+  `vite preview`（ローカル）は `SESSION_SECRET` が無ければプロセスごとの乱数鍵を自動で入れる（再起動でトークンが無効になるだけ）。Vercel では入らない。
 - `trace` は dev か管理者のときだけ応答に入る。
 - `/api` より前にパスが付いていても動く（例 `/games/janedoe/api/cases`）。
 
@@ -242,7 +282,8 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 | リクエスト本文 | 8 KB（413） |
 | ask | IP ごと 30回/分・600回/日 |
 | verdict | 12回/分・200回/日 |
-| その他の POST | 120回/分・3000回/日、GET 240回/分、管理 120回/分 |
+| その他の POST | 120回/分・3000回/日、GET 240回/分（公開 health も）、管理 120回/分 |
+| 間違った `x-admin-token` | 10回/分・50回/日（超えたら正しいトークンでも 429） |
 | 1トークンあたりの質問 | 400（`QUESTION_CAP`。超えると 429 `rate_limited`, retryable=false） |
 | IP | `x-vercel-forwarded-for` → `x-real-ip` → `x-forwarded-for` 先頭（ローカルはソケットのアドレス） |
 
@@ -253,11 +294,12 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 ## 6. 進行トークンと秘密の守り方
 
 - 形式 `j1.<payload base64url>.<HMAC-SHA256 base64url>`。payload は
-  `{v, c: 事件id, u: 開示所見, m: 科学メモ, n: [質問数, ヒント, 論破ミス, 泣きつき, 宣告回数], rm: ラウンド別ミス, r: 突破ラウンド, f: 解決1|再構成2|nearCore4, t: 発行秒}`。
+  `{v, c: 事件id, u: 開示所見, m: 科学メモ, n: [質問数, ヒント, 論破ミス, 泣きつき, 宣告回数], rm: ラウンド別ミス, r: 突破ラウンド, f: 解決1|再構成2|nearCore4, k?: 確認済みの spoilerLevel 4 所見, t: 発行秒}`。
+  `k` は空なら省く（旧トークンは `[]` として読む）。
 - 毎回の呼び出しで検証（改ざん・別事件・形式違い・未来/期限切れ 120日 → 401 `bad_token`）し、毎回新しいトークンを返す（使っている限り期限は延びる）。
 - 事件データが後から変わっても、存在しない id はトークン読込時に捨てる（エラーにしない）。
 - 署名は WebCrypto（Node 20+ / ブラウザ）。安全でない http の LAN などで `crypto.subtle` が無いブラウザでは純 JS の HMAC（テストで一致を確認）。
-- 鍵は `SESSION_SECRET`。未設定なら開発用の固定値（dev は警告、本番はエラーログ。**本番では必ず設定**。未設定だと解決済みトークンを偽造して真相を読める）。
+- 鍵は `SESSION_SECRET`（本番は **32文字以上の乱数**）。dev で未設定なら開発用の固定値（警告）。**本番で未設定・短い・.env.example のままなら 503 で閉じる**（§5。以前は開発用固定値で署名していたので、解決済みトークンを偽造して真相を読めた）。
 - ブラウザに出るのは `public-view.ts` を通ったものだけ: 事件の公開情報、開示済みの所見と科学メモ、解決済みトークンがあるときの真相・科学解説。
   真相・全所見・想定質問・判定メモ・正解要素・再構成の正解・被害者の名前・leakTerms は出ない（テストで確認）。
 - LLM の言い換えは、まだ開示していない所見に含まれる `leakTerms` が混じったら捨てて定型文に戻す（mode C ではさらに Jev 検査）。
@@ -271,14 +313,16 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 | 変数 | 既定 | 説明 |
 |---|---|---|
 | `OPENROUTER_API_KEY` | — | サーバーだけが読む。ログにも応答にも出さない |
-| `SESSION_SECRET` | 開発用固定値 | トークンの HMAC 鍵。本番必須 |
+| `SESSION_SECRET` | dev: 開発用固定値 | トークンの HMAC 鍵。**本番必須・32文字以上**（無い・短いとトークンを扱う全ルートが 503） |
 | `PIPELINE_MODE` | キーあり→`jev` / なし→`rules` | §3 |
 | `DECISION_PROVIDER` | `jev` | `rules` にすると判定モデルを呼ばない |
 | `JEV_MODEL` | `typesafe/jev-1.13` | |
+| `JEV_CANDIDATES` | `all+prior` | 判定に渡す所見（docs/ai.md §3-2。`topk+prior` で費用 1/4・正答率 −3.6pt） |
+| `JEV_PROMPT` | `v2` | 判定の基準文と下書きの書き方（`v1` = 2026-09-24 版。比較・切り戻し用。docs/ai.md §5-6） |
 | `LLM_PROVIDER` | `none` | `openrouter` / `codex` / `none` |
 | `LLM_MODEL` | — | OpenRouter のモデル名 |
 | `DAILY_COST_LIMIT_USD` | `1` | 0 = 有料モデルを使わない、負 = 無制限 |
-| `ADMIN_TOKEN` | — | 本番の管理 API 用 |
+| `ADMIN_TOKEN` | — | 本番の管理 API 用。**32文字以上**（短いと管理 API は無効） |
 | `APP_ENV` | vite dev→`development`、preview/Vercel→`production` | dev は管理 API 開放・trace 返却・JSONL ログ・非公開事件表示 |
 | `QUESTION_CAP` | `400` | 1トークンの質問上限 |
 | `CONTENT_ROOT` | 自動 | content/ の場所 |
@@ -293,7 +337,8 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 
 - **Vercel**: `vercel.json` — build `npm run build`、出力 `dist`、関数 `api/[...path].ts`（Node、15秒、1GB、`content/**` 同梱）、
   拡張子の無いパスは `index.html` へ（`/api` 除く）、セキュリティヘッダー（CSP・HSTS・nosniff 等）、`/assets` は長期キャッシュ。
-  環境変数は §7 を Vercel の Project Settings に入れる（`SESSION_SECRET` 必須）。
+  環境変数は §7 を Vercel の Project Settings に入れる（`SESSION_SECRET` 必須・32文字以上。無いと token 系ルートが 503 — 配備直後に `/api/health` が 200 か確かめる）。
+  事件開始時の Jev の目覚まし（§2）は応答後の非同期処理なので、Vercel では止められて効かないことがある（`@vercel/functions` の `waitUntil` を使えば確実だが、依存追加は持ち主の判断待ち）。
 - **静的ホスティング**（fourthplace43.com/games/ など）: `npm run build:static` の `dist/` をそのまま置く（`base: './'`）。API 不要・rules 固定。
 - ローカル: `npm run dev`（5190、API 付き）/ `npm run preview`（4191、API 付き・本番相当）/ `npm run dev:static`（埋め込みエンジン）。
   ※ 4190 は Chromium・Node `fetch` の「危険ポート」なので preview は 4191 に変更済み（vite.config.ts）。
@@ -303,8 +348,15 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 ## 9. UI 実装者へ（src/**）
 
 - `import { api } from '../api'` だけを使う。失敗は `ApiError`（`code` で分岐: `network`/`timeout` → 再送ボタン、`rate_limited` → 少し待つ、`bad_token` → その事件のセーブをリセットして `newToken`）。
+- 通信（`src/api/http.ts`、2026-09-25）: 1回の呼び出し全体で約12秒（`REQUEST_DEADLINE_MS`。1回目 11秒）。サーバーは1手を9秒で打ち切るので、それ以上待っても来ない。
+  自動の再送は1回だけ、**2秒以内に失敗したとき**（接続できない・500/502/503・本文が壊れている）に限る。タイムアウト・504・`retryable:false`（設定不備の 503 など）は再送しない。以前は 12秒×2＋再送で、止まった要求のエラー表示まで 24.6秒かかった。
+- `slowRequests`（`src/api` から export、`@preact/signals`）: 5秒を超えて待っている HTTP 呼び出しの数。0 より大きい間、検分中の行にホルマの「まだ調べています」の一言を出せる（`error.network` の台詞を流用してよい）。埋め込み版では常に 0。
 - 返ってきた `token` は毎回保存し直す（localStorage、try/catch）。`progress` がそのまま画面の状態。
 - `AskAnswer.line` は複数の一言を `\n` で連結していることがある（前置き・本体・所見入手・核心接近）。`white-space: pre-line` で表示。
+- はい／いいえで答えられない質問（「なぜ倒れたの？」「どこに当たったんですか」「犯人は誰？」）は `answerClass: 'vague'` で、`line` は疑問詞ごとの言い直し方（『〜のせいですか？』のような型。事件の中身は含まない）。書き直し案を札にして出す API はまだ無い。
+- `AskAnswer.nearCore`: この答えで核心に迫った瞬間だけ `true`（§2 開示の規則）。ホルマの驚き・破片の明滅はこれで出す（台詞本文の照合は不要）。`progress.nearCore` は「もう核心の近くにいる」状態。
+- `ShotResponse.speaker`: `'jane'` = `lines` は正しく撃てたときのジェーンの記憶（突破済みラウンドへの再射撃も同じ）、`'holma'` = 外れ・ヒント・泣きつきのホルマの台詞。
+- `SolutionResponse.reviewStatus`: 事件の `reviewStatus`。`human-reviewed` 以外なら科学解説に「専門家確認前の下書き」を出す。
 - `AskAnswer.notice`: `'support'`（安全フィルター。真剣な台詞の横に相談窓口カード https://www.mhlw.go.jp/mamorouyokokoro/ を出す。スタンプや茶化し演出は出さない）/ `'degraded'`（簡易判定で答えた。控えめな印）。安全フィルターの返答は `answers` が1つだけ（質問文はメッセージ全体）。
 - 複数質問は `answers[]` に分割された順で返る。`question` は分割後の原文（先頭の「それと」「あと」は除去済み）。
 - 質問数（`progress.asked`）は空入力・長すぎを数えない。
@@ -327,6 +379,14 @@ npm run qa:mobile           同じく 390x844
 計測: dev は `logs/trace-YYYY-MM-DD.jsonl`、本番は 1ターン1行の JSON をコンソールへ、管理 API で直近 300 件。
 dev の JSONL は**90日より古いファイルを起動時に削除**（`server/node/trace-file.ts` の `pruneTraceFiles`。プライバシーの約束「90日以内」）。
 安全フィルターに当たった質問の本文はどこにも記録しない。
+
+AI にケースを遊ばせる（公開前の確認。docs/playtest-report.md）:
+```
+npx tsx scripts/playtest.ts --dry-run                  無料（rules 判定＋台本プレイヤー）で配線だけ確認
+npx tsx scripts/playtest.ts --max-usd 0.3              5人物 × 3事件（約$0.2）→ bench/reports/playtest/<日時>/
+npx tsx scripts/playtest.ts --case c02 --persona clumsy,adversarial --max-usd 0.05
+npx tsx scripts/playtest.ts --analyze bench/reports/playtest/<日時>   保存済みの記録を分析し直す（無料）
+```
 
 回帰:
 ```

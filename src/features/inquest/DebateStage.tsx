@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { audio } from '../../audio';
+import { motionReduced } from '../../fx/motion';
 import { Icon } from '../../ui/Icon';
 import type { InquestSession, Target } from './session';
 import { bandPos, StatementBand } from './StatementBand';
@@ -41,6 +42,11 @@ export function DebateStage({ session: s, narrow, hold }: DebateStageProps) {
     const prev = shown.current;
     const key = ++keySeq.current;
     shown.current = { idx: current, key };
+    // Reduced motion: no slide-out — two statements must never sit on top of each other.
+    if (motionReduced()) {
+      setBands([{ idx: current, key }]);
+      return;
+    }
     setBands([{ idx: prev.idx, key: prev.key, leaving: true }, { idx: current, key }]);
     const t = setTimeout(() => setBands((b) => b.filter((x) => !x.leaving)), 480);
     return () => clearTimeout(t);

@@ -35,7 +35,26 @@ function Flight({ req, onDone, onSkip }: { req: FlightRequest; onDone: () => voi
     gsap.set(cards, { xPercent: -50, yPercent: -50 });
     const tl = gsap.timeline({ onComplete: onDone });
     if (motionReduced()) {
-      tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.2 }).to(el, { opacity: 0, duration: 0.25 }, '+=0.9');
+      tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.2 }).to(el, { opacity: 0, duration: 0.25 }, req.compact ? '+=0.5' : '+=0.9');
+      return () => tl.kill();
+    }
+    if (req.compact) {
+      // compact (≈1.1 s): the card pops up small beside the stage centre, holds a beat, flies home
+      tl.fromTo(burst, { scale: 0.2, opacity: 0.7 }, { scale: 0.9, opacity: 0, duration: 0.45, ease: 'power2.out' }, 0);
+      tl.fromTo(label, { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.2, ease: 'power3.out' }, 0);
+      cards.forEach((c, i) => {
+        const off = i - (n - 1) / 2;
+        tl.fromTo(
+          c,
+          { scale: 0.3, opacity: 0, rotation: -10, y: 30, x: off * 20 },
+          { scale: 0.72, opacity: 1, rotation: off * 5 - 2, y: 0, x: off * 120, duration: 0.26, ease: 'back.out(1.6)' },
+          0.02 + i * 0.05,
+        );
+      });
+      tl.to(label, { opacity: 0, duration: 0.15 }, 0.58);
+      cards.forEach((c, i) => {
+        tl.to(c, { x: tx, y: ty, scale: 0.08, rotation: 18, opacity: 0.3, duration: 0.42, ease: 'power3.in' }, 0.58 + i * 0.05);
+      });
       return () => tl.kill();
     }
     tl.fromTo(burst, { scale: 0.2, opacity: 0.9 }, { scale: 1.4, opacity: 0, duration: 0.7, ease: 'power2.out' }, 0);
@@ -56,7 +75,7 @@ function Flight({ req, onDone, onSkip }: { req: FlightRequest; onDone: () => voi
     return () => tl.kill();
   }, []);
   return (
-    <div class={`flight ${req.core ? 'is-core' : ''}`} ref={ref} onClick={onSkip} aria-hidden="true">
+    <div class={`flight ${req.core ? 'is-core' : ''} ${req.compact ? 'is-compact' : ''}`} ref={ref} onClick={onSkip} aria-hidden="true">
       <div class="flight__burst" />
       <div class="flight__label">{req.core ? 'CORE FINDING — 核心所見' : 'NEW FINDING — 所見入手'}</div>
       {req.facts.map((f, i) => (

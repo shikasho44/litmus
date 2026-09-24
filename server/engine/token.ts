@@ -11,6 +11,7 @@
  *   n  [asked, hintsUsed, debateMisses, grants, verdictAttempts]
  *   rm misses per debate round      r  cleared debate rounds
  *   f  flags bitmask: 1 solved · 2 reconstructed · 4 nearCore
+ *   k  spoilerLevel-4 fact ids already confirmed (optional; omitted when empty)
  *   t  issuedAt (epoch seconds)
  */
 import { ApiError } from '../../shared/api.js';
@@ -33,6 +34,7 @@ interface Payload {
   rm: Record<string, number>;
   r: string[];
   f: number;
+  k?: string[];
   t: number;
 }
 
@@ -86,7 +88,7 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 function toPayload(s: GameState): Payload {
-  return {
+  const p: Payload = {
     v: TOKEN_VERSION,
     c: s.caseId,
     u: s.unlocked,
@@ -97,6 +99,8 @@ function toPayload(s: GameState): Payload {
     f: (s.solved ? 1 : 0) | (s.reconstructed ? 2 : 0) | (s.nearCore ? 4 : 0),
     t: Math.floor(s.issuedAt / 1000),
   };
+  if (s.coreSeen && s.coreSeen.length > 0) p.k = s.coreSeen;
+  return p;
 }
 
 const isStrArr = (x: unknown): x is string[] => Array.isArray(x) && x.length <= 400 && x.every((v) => typeof v === 'string' && v.length <= 64);
@@ -128,6 +132,7 @@ function fromPayload(p: unknown): GameState {
     solved: (o.f & 1) !== 0,
     reconstructed: (o.f & 2) !== 0,
     nearCore: (o.f & 4) !== 0,
+    coreSeen: isStrArr(o.k) ? o.k : [],
     issuedAt: o.t * 1000,
   };
 }

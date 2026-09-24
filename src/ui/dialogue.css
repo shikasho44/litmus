@@ -66,7 +66,8 @@
   color: var(--bone);
   text-wrap: pretty;
   white-space: pre-wrap;
-  word-break: normal;
+  /* phrase-aware Japanese wrapping (Chromium 119+): no 「警/報」 splits; others fall back to normal */
+  word-break: auto-phrase;
   overflow-wrap: anywhere;
   line-break: strict;
 }

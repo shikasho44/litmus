@@ -6,7 +6,8 @@ import { batch } from '@preact/signals';
 import { useEffect, useState } from 'preact/hooks';
 import type { CasePublic } from '../../../shared/api';
 import { api } from '../../api';
-import { addFacts, getCaseProgress, resetCase, setStage, setToken } from '../../state/save';
+import { addFacts, getCaseProgress, resetCase, setStage, setToken, updateCase } from '../../state/save';
+import type { PreviousAttempt } from '../../state/types';
 
 const cache = new Map<string, CasePublic>();
 const inflight = new Map<string, Promise<CasePublic>>();
@@ -91,12 +92,21 @@ export function ensureToken(caseId: string, pub?: CasePublic): Promise<boolean> 
 }
 
 /**
- * The server rejected the saved token (tampered / expired / different secret): start this
- * case over with a fresh token. Keeps best rank & clear count (resetCase).
+ * The server rejected the saved token (tampered / expired / different secret) and the player
+ * chose to start over: back the attempt up as `previousAttempt` (read-only 「前回の記録」 in the
+ * notebook), then start this case over with a fresh token. Keeps best rank & clear count
+ * (resetCase). An attempt with no questions is not worth a backup (an older one is kept).
  */
 export async function restartCaseAfterBadToken(caseId: string, pub?: CasePublic): Promise<boolean> {
+  const old = getCaseProgress(caseId);
+  const asked = old?.log.some((e) => e.kind === 'question');
+  const backup: PreviousAttempt | undefined =
+    old && asked
+      ? { at: Date.now(), log: old.log, facts: old.facts, factOrder: old.factOrder, hints: old.hints }
+      : old?.previousAttempt;
   batch(() => {
     resetCase(caseId);
+    if (backup) updateCase(caseId, { previousAttempt: backup });
     setStage(caseId, 'investigation');
   });
   return ensureToken(caseId, pub);

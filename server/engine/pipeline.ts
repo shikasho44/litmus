@@ -19,7 +19,7 @@ import type { Fact } from '../../shared/case-schema.js';
 import { ANSWER_CLASSES } from '../../shared/case-schema.js';
 import { ProviderError, type Usage } from './providers/types.js';
 import type { JudgeDecision, PipelineComponents } from './judge-types.js';
-import { analyze, MAX_QUESTION_CHARS, normalize, splitQuestions, type AnalyzedQuestion } from './normalize.js';
+import { analyze, MAX_QUESTION_CHARS, normalize, splitQuestions, whKindOf, type AnalyzedQuestion } from './normalize.js';
 import { retrieve, type Candidates } from './retrieve.js';
 import { judgeRules } from './rules-judge.js';
 import { applyPolicy, withPolicy, type PolicyResult } from './policy.js';
@@ -188,6 +188,16 @@ export function sanitizeDecision(d: JudgeDecision, loaded: LoadedCase, fallback:
   return { ...d, answerClass, factIds, confidence, closeness, source: d.source ?? 'model' };
 }
 
+/**
+ * AskAnswer.nearCore: THIS answer shows the player circling the core truth — a spoilerLevel-4
+ * topic confirmed, or closeness 3 on an affirming answer (policy.ts) — or the sticky state flag
+ * switched on with this answer (e.g. progress crossed 75 %). It is exactly when the canned line
+ * carries a nearCore flavour line, so the UI reaction and Holma's words always agree.
+ */
+export function nearCoreOf(p: PolicyResult): boolean {
+  return p.nearCoreHit || p.nearCoreNew;
+}
+
 interface PartWork {
   raw: string;
   q: AnalyzedQuestion;
@@ -236,6 +246,7 @@ export async function runAsk(ctx: AskContext): Promise<AskOutcome> {
         work.map(async (w) => {
           const hardMeta = w.rules.meta === 'empty' || w.rules.meta === 'tooLong' || w.rules.meta === 'rude';
           if (hardMeta) return void (w.judgeNote = 'skipped:meta');
+          if (w.rules.guard) return void (w.judgeNote = `skipped:${w.rules.guard}`);
           if (w.rules.source === 'probe' && w.rules.confidence >= PROBE_SHORTCUT) return void (w.judgeNote = 'skipped:probe-shortcut');
           const unlocked = new Set(ctx.state.unlocked);
           const r = await callModel(
@@ -267,7 +278,7 @@ export async function runAsk(ctx: AskContext): Promise<AskOutcome> {
   const composed: { policy: PolicyResult; text: string; mood: HolmaMood; stateAfter: GameState }[] = [];
   const turnDegraded = work.some((w) => w.degraded);
   work.forEach((w, i) => {
-    const policy = timer.timeSync('policy', () => applyPolicy(c, loaded.index, w.decision, state));
+    const policy = timer.timeSync('policy', () => applyPolicy(c, loaded.index, w.decision, state, { negated: w.q.negated }));
     state = withPolicy(state, policy);
     const unlockedCore = policy.unlock.some((id) => (loaded.index.factById.get(id)?.fact.importance ?? 0) >= 3);
     const line = timer.timeSync('render', () =>
@@ -276,12 +287,13 @@ export async function runAsk(ctx: AskContext): Promise<AskOutcome> {
         meta: w.decision.meta,
         unlockedCore,
         unlocked: policy.unlock.length > 0,
-        nearCore: policy.touchedCore || policy.nearCoreNew,
+        nearCore: nearCoreOf(policy),
         part: i,
         parts: work.length,
         degraded: turnDegraded,
         seed: state.asked + i,
         caseNearCore: c.holmaLines.nearCore,
+        whKind: w.decision.meta === 'open' ? whKindOf(w.q.norm) : undefined,
       }),
     );
     composed.push({ policy, text: line.text, mood: line.mood, stateAfter: state });
@@ -352,7 +364,9 @@ export async function runAsk(ctx: AskContext): Promise<AskOutcome> {
                   newlyUnlocked,
                   cannedLine: composed[i].text,
                   mood: composed[i].mood,
-                  nearCore: stateAfter.nearCore,
+                  // The answer's own nearCore moment (not the sticky state): the canned line and the
+                  // model phrasing then agree on when Holma shows it.
+                  nearCore: nearCoreOf(composed[i].policy),
                   signal,
                   timeoutMs,
                 }),
@@ -390,6 +404,7 @@ export async function runAsk(ctx: AskContext): Promise<AskOutcome> {
       memos: policy.memos.map((m) => memoView(c, m)).filter((m): m is NonNullable<typeof m> => !!m),
     };
     if (w.degraded) a.notice = 'degraded';
+    if (nearCoreOf(policy)) a.nearCore = true;
     return a;
   });
 
@@ -405,6 +420,7 @@ export async function runAsk(ctx: AskContext): Promise<AskOutcome> {
       meta: w.decision.meta,
       confidence: w.decision.confidence,
       closeness: w.decision.closeness,
+      nearCore: nearCoreOf(policy) || undefined,
       factIds: w.decision.factIds,
       unlocked: policy.unlock,
       blocked: policy.blocked,

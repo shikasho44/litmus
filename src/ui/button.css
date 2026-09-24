@@ -102,9 +102,9 @@
   --btn-bg: rgba(198, 255, 61, 0.08);
 }
 
-/* danger */
+/* danger (ink on alarm: bone on alarm is only 3.1:1) */
 .btn--danger {
-  --btn-fg: var(--bone);
+  --btn-fg: var(--on-alarm);
   --btn-bg: var(--alarm);
   --btn-shadow: var(--ink);
 }
@@ -237,9 +237,9 @@
   padding: 0 5px;
   border-radius: 9px;
   background: var(--alarm);
-  color: var(--bone);
+  color: var(--on-alarm);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   line-height: 18px;
   text-align: center;
   font-weight: 700;
@@ -301,5 +301,22 @@
   [data-tip][data-tip-side='right']:hover::after,
   [data-tip][data-tip-side='right']:focus-visible::after {
     transform: translate(0, -50%);
+  }
+}
+
+/* ==========================================================================
+   Touch: every small control gets at least a 44px hit area (the visual size stays,
+   the invisible ::after extends the target — no layout shift in dense toolbars)
+   ========================================================================== */
+@media (pointer: coarse) {
+  .btn--sm::after,
+  .ibtn--sm::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
   }
 }

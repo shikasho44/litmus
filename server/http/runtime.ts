@@ -3,8 +3,8 @@
  * traces. The content source and Node-only sinks are injected (server/node/handler.ts).
  */
 import type { PipelineMode } from '../../shared/api.js';
-import { readConfig, type EngineConfig, type EnvLike } from '../engine/env.js';
-import { createComponents } from '../engine/factory.js';
+import { MIN_ADMIN_TOKEN_CHARS, MIN_SESSION_SECRET_CHARS, readConfig, type EngineConfig, type EnvLike } from '../engine/env.js';
+import { componentsFor, createComponents } from '../engine/factory.js';
 import { GameService } from '../engine/game.js';
 import { BudgetGuard } from '../engine/budget.js';
 import type { PipelineComponents } from '../engine/judge-types.js';
@@ -46,21 +46,31 @@ export interface RuntimeOptions {
   componentsFor?: (mode: PipelineMode) => PipelineComponents;
 }
 
-let warnedSecret = false;
+const warnedOnce = new Set<string>();
+function warnOnce(level: 'warn' | 'error', msg: string): void {
+  if (warnedOnce.has(msg)) return;
+  warnedOnce.add(msg);
+  (level === 'warn' ? console.warn : console.error)(`[janedoe] ${msg}`);
+}
 
 export function createRuntime(o: RuntimeOptions): ApiRuntime {
   const config = readConfig(o.env);
   const components = o.components ?? createComponents(o.env);
   const warnings = [...components.warnings];
-  if (config.secretIsDefault) {
-    const msg = config.dev
-      ? 'SESSION_SECRET is not set — using the development default.'
-      : 'SESSION_SECRET is not set in PRODUCTION — progress tokens can be forged. Set SESSION_SECRET.';
+  if (config.misconfigured) {
+    // Fail closed (handler.ts): token routes answer 503 until a real secret is configured.
+    const msg = `${config.misconfigured} in PRODUCTION — every progress-token route answers 503 (server misconfigured). Set SESSION_SECRET to a random string of at least ${MIN_SESSION_SECRET_CHARS} characters.`;
     warnings.push(msg);
-    if (!warnedSecret) {
-      warnedSecret = true;
-      (config.dev ? console.warn : console.error)(`[janedoe] ${msg}`);
-    }
+    warnOnce('error', msg);
+  } else if (config.secretIsDefault) {
+    const msg = 'SESSION_SECRET is not set — using the development default (development only).';
+    warnings.push(msg);
+    warnOnce('warn', msg);
+  }
+  if (config.adminTokenRejected) {
+    const msg = `ADMIN_TOKEN is shorter than ${MIN_ADMIN_TOKEN_CHARS} characters — the admin API stays disabled in production.`;
+    warnings.push(msg);
+    warnOnce('error', msg);
   }
   for (const w of components.warnings) if (config.dev) console.warn(`[janedoe] ${w}`);
 
@@ -72,7 +82,8 @@ export function createRuntime(o: RuntimeOptions): ApiRuntime {
     content: o.content,
     secret: config.sessionSecret,
     components,
-    componentsFor: o.componentsFor ?? ((mode) => createComponents(o.env, mode)),
+    // Built once per mode and reused (admin ask-debug overrides); providers are shared anyway.
+    componentsFor: o.componentsFor ?? componentsFor(o.env),
     dev: config.dev,
     budget,
     traces: new TraceHub(sinks),

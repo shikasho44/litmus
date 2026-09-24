@@ -5,7 +5,7 @@
  */
 import { useMemo, useState } from 'preact/hooks';
 import type { PublicFact } from '../../../shared/api';
-import { FACT_CATEGORIES, type FactCategory } from '../../../shared/case-schema';
+import { FACT_CATEGORIES, type FactCategory } from '../../../shared/constants';
 import { audio } from '../../audio';
 import { Icon } from '../../ui/Icon';
 import { CATEGORY_ICON, resolveIcon } from '../../ui/icons';

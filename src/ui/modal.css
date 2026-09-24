@@ -11,6 +11,9 @@
   inset: 0;
   z-index: 60;
   display: grid;
+  /* one track that fills the padded viewport: without it the implicit auto row grows with
+     the dialog, max-height: 100% never bites and the footer ends up below the fold */
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   place-items: center;
   padding: calc(var(--safe-t) + 16px) calc(var(--safe-r) + 16px) calc(var(--safe-b) + 16px) calc(var(--safe-l) + 16px);
   top: var(--vv-top);
@@ -54,6 +57,7 @@
 
 .modal__head {
   position: relative;
+  flex: none; /* only the body scrolls/shrinks when the dialog is taller than the screen */
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -110,6 +114,7 @@
   padding: 20px 28px 24px;
 }
 .modal__foot {
+  flex: none;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;

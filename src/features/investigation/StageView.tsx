@@ -23,7 +23,9 @@ export function StageView({ ctl, pub, progress, elapsed }: StageViewProps) {
   const narrow = layout.value === 'narrow';
   const janeRef = useRef<HTMLDivElement>(null);
   const [resonate, setResonate] = useState(false);
+  const [glint, setGlint] = useState(false);
   const nearTick = ctl.nearTick.value;
+  const bumpTick = ctl.bumpTick.value;
   const shown = ctl.shownProgress.value;
   const lit = shardsLit(shown);
   const near = !!progress?.snapshot?.nearCore;
@@ -32,6 +34,7 @@ export function StageView({ ctl, pub, progress, elapsed }: StageViewProps) {
   const idle = ctl.idleLine.value;
   const whisper = ctl.whisper.value;
   const mood = ctl.mood.value;
+  const ffHint = ctl.ffHint.value;
 
   useEffect(() => {
     if (!nearTick) return;
@@ -40,6 +43,14 @@ export function StageView({ ctl, pub, progress, elapsed }: StageViewProps) {
     const t = setTimeout(() => setResonate(false), 1700);
     return () => clearTimeout(t);
   }, [nearTick]);
+
+  // every finding that lands makes her glass answer (even when it lights no whole shard)
+  useEffect(() => {
+    if (!bumpTick) return;
+    setGlint(true);
+    const t = setTimeout(() => setGlint(false), 1100);
+    return () => clearTimeout(t);
+  }, [bumpTick]);
 
   const asked = progress?.snapshot?.asked ?? 0;
   const unlockedCount = progress?.factOrder.length ?? 0;
@@ -51,26 +62,43 @@ export function StageView({ ctl, pub, progress, elapsed }: StageViewProps) {
       <div class="ivs__scan" aria-hidden="true" />
 
       {/* Jane Doe */}
-      <div ref={janeRef} class={`ivs__jane ${resonate ? 'is-resonating' : ''}`}>
+      <div ref={janeRef} class={`ivs__jane ${resonate ? 'is-resonating' : ''} ${glint ? 'is-glinting' : ''}`}>
         <div class="ivs__jane-halo" aria-hidden="true" />
         <ShardPortrait
           image={pub?.portrait}
           seed={ctl.caseId}
           shardCount={SHARD_COUNT}
           revealed={lit}
-          glow={near || resonate}
-          label={`${pub?.codename ?? 'ジェーン・ドゥ'}の破片（${lit}/${SHARD_COUNT}）`}
+          glow={near || resonate || glint}
+          label={`${pub?.codename ?? 'ジェーン・ドゥ'}の破片（復元 ${pct}%）`}
         />
         <div class="ivs__jane-tag">
           <span class="ivs__jane-name">{pub?.codename ?? 'ジェーン・ドゥ'}</span>
           <span class="ivs__jane-meter" aria-hidden="true">
             <span style={{ width: `${pct}%` }} />
           </span>
-          <span class="ivs__jane-pct t-mono">
-            SHARDS {String(lit).padStart(2, '0')}/{SHARD_COUNT}
+          {/* restoration is weighted by importance (a core finding lights more glass), so show a share, not a shard count */}
+          <span class="ivs__jane-pct t-mono" aria-hidden="true">
+            復元 {pct}%
           </span>
         </div>
       </div>
+
+      {/* after the first core confirmation: a quiet, persistent marker */}
+      {near && (
+        <div class="ivs__near" role="status">
+          <Icon name="star" size={12} />
+          <span>核心に迫っている</span>
+        </div>
+      )}
+
+      {/* one-time: how to skip the show */}
+      {ffHint && (
+        <div class="ivs__ff" aria-hidden="true">
+          <Icon name="skip" size={12} />
+          {narrow ? 'タップで早送り' : 'クリック / Enter で早送り'}
+        </div>
+      )}
 
       {/* Holma */}
       <div class={`ivs__holma ${asking ? 'is-thinking' : ''}`}>

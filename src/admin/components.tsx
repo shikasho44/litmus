@@ -1,5 +1,5 @@
 /** Shared building blocks for the admin console (utilitarian, token-styled). */
-import type { ComponentChildren, JSX } from 'preact';
+import { Fragment, type ComponentChildren, type JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { Icon } from '../ui/Icon';
 import type { IconName } from '../ui/icons';
@@ -70,6 +70,24 @@ export function Stat({ label, value, sub, tone }: { label: string; value: Compon
       <span class="adm-stat__value">{value}</span>
       {sub !== undefined && <span class="adm-stat__sub">{sub}</span>}
     </div>
+  );
+}
+
+/**
+ * A file path as code that wraps at the separators (a <wbr> after every "/" or "\") instead of
+ * mid-word, so a narrow screen never leaves one stray letter on its own line.
+ */
+export function PathText({ path }: { path: string }) {
+  const parts = path.split(/(?<=[/\\])/);
+  return (
+    <code class="adm-path" title={path}>
+      {parts.map((p, i) => (
+        <Fragment key={i}>
+          {p}
+          {i < parts.length - 1 && <wbr />}
+        </Fragment>
+      ))}
+    </code>
   );
 }
 

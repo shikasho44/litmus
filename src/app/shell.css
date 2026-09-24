@@ -19,10 +19,15 @@
 .scene-wrap:focus {
   outline: none;
 }
+.scene.scene-error-wrap {
+  display: grid;
+  place-items: center;
+}
 .scene-error {
   display: grid;
   gap: 10px;
   justify-items: center;
+  max-width: 560px;
   text-align: center;
   padding: 24px;
 }

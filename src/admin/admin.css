@@ -54,7 +54,14 @@ code {
   border-radius: var(--r-1);
   background: var(--ink-3);
   color: var(--bone-2);
-  word-break: break-all;
+  /* wrap long identifiers only where they must, never one stray letter per line */
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+/* file paths: <wbr> after each separator (PathText) gives the preferred break points */
+.adm-path {
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 ::selection {
@@ -398,6 +405,17 @@ code {
   border-color: #d6ff6e;
   color: var(--ink);
 }
+/* A faded formalin reads as "olive, maybe broken". Disabled primaries go neutral instead,
+   so a live primary is always full formalin and a dead one is unmistakably dead. */
+.adm-btn--primary:disabled {
+  opacity: 1;
+  background: var(--ink-3);
+  border-color: var(--ink-4);
+  color: var(--mute);
+}
+.adm-btn[aria-busy='true'] {
+  cursor: progress;
+}
 .adm-btn--danger {
   background: transparent;
   border-color: var(--alarm);
@@ -467,6 +485,12 @@ textarea::placeholder {
   font-size: 12px;
   color: var(--mute);
 }
+.adm-field.is-invalid input {
+  border-color: var(--amber);
+}
+.adm-field.is-invalid .adm-field__hint {
+  color: var(--amber);
+}
 .adm-check {
   display: inline-flex;
   align-items: center;
@@ -535,7 +559,7 @@ textarea::placeholder {
   font-size: 15px;
   font-weight: 700;
   line-height: 1.35;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 .adm-card__actions {
   display: flex;
@@ -558,11 +582,14 @@ textarea::placeholder {
 }
 
 .adm-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  /* flex, not grid: a short last row stretches to the edge instead of leaving an empty cell */
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
 }
 .adm-stat {
+  flex: 1 1 170px;
+  min-width: 0;
   display: grid;
   align-content: start;
   gap: 4px;
@@ -678,7 +705,7 @@ textarea::placeholder {
   font-size: 12px;
   line-height: 1.5;
   color: var(--bone-2);
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 .adm-chip--ok {
   border-color: var(--formalin-deep);
@@ -1767,10 +1794,12 @@ textarea::placeholder {
 @media (max-width: 860px) {
   .adm-shell {
     grid-template-columns: minmax(0, 1fr);
+    /* strip + page; a short page must not stretch the strip (auto rows share free height) */
+    grid-template-rows: auto 1fr;
     background: var(--ink);
   }
-  .adm-stats {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  .adm-stat {
+    flex-basis: 150px;
   }
   .adm-stat__value {
     font-size: 19px;
@@ -1781,22 +1810,46 @@ textarea::placeholder {
     height: auto;
     flex-direction: row;
     align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
+    gap: 0;
+    padding: 0;
     border-right: 0;
     border-bottom: 1px solid var(--ink-4);
-    overflow-x: auto;
+    overflow: hidden;
   }
   .adm-side .adm-brand {
     display: none;
   }
+  /* The section strip scrolls sideways; the edge that still hides tabs fades out
+     (has-more-l / has-more-r from useNavStrip) and tabs snap to the start. */
   .adm-nav {
+    --fade-l: 0px;
+    --fade-r: 0px;
+    flex: 1 1 auto;
+    min-width: 0;
     display: flex;
     gap: 4px;
+    padding: 8px 12px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 12px;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent 100%);
+  }
+  .adm-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .adm-nav.has-more-l {
+    --fade-l: 28px;
+  }
+  .adm-nav.has-more-r {
+    --fade-r: 44px;
   }
   .adm-nav__item {
     flex: none;
     padding: 6px 10px;
+    scroll-snap-align: start;
   }
   .adm-nav__label small {
     display: none;
@@ -1806,6 +1859,34 @@ textarea::placeholder {
   }
   .adm-side__foot {
     display: none;
+  }
+  /* production (token in this tab): keep sign-out reachable as an icon at the strip's end */
+  .adm-side__foot.has-token {
+    display: flex;
+    flex: none;
+    margin: 0;
+    padding: 0 12px 0 8px;
+    border-top: 0;
+    border-left: 1px solid var(--ink-4);
+    align-self: stretch;
+    align-items: center;
+  }
+  .adm-side__foot.has-token .adm-side__env,
+  .adm-side__foot.has-token .adm-side__game,
+  .adm-side__signout-label {
+    display: none;
+  }
+  .adm-side__signout {
+    display: inline-grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--r-2);
+    color: var(--bone-2);
+  }
+  .adm-side__signout:hover {
+    background: var(--ink-3);
+    text-decoration: none;
   }
   .adm-main {
     padding: 16px 16px 48px;

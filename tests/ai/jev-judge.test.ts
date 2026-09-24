@@ -235,3 +235,27 @@ describe('JevPostChecker', () => {
     expect(vague.pass).toBe(true);
   });
 });
+
+describe('prompt v2 (2026-09-25 playtest fixes)', () => {
+  it('default: criteria v2 and a keyword prior that names the matched words', async () => {
+    const { ANSWER_CRITERIA, ANSWER_CRITERIA_V2, DEFAULT_PROMPT } = await import('../../server/engine/ai/jev-judge');
+    expect(DEFAULT_PROMPT).toEqual({ prior: 'evidence', criteria: 'v2' });
+    const inp = input('七輪は古かったですか？');
+    expect(inp.rules.source).toBe('keyword');
+    const b = buildAskRequest(inp, 'all+prior');
+    expect((b.questions.answer as { criteria: Record<string, string> }).criteria).toEqual(ANSWER_CRITERIA_V2);
+    expect(String(b.state['規則による下書きの判定'])).toMatch(/^はい／所見 F06（質問の「七輪」.*確かめていない/);
+    const plain = buildAskRequest(inp, 'all+prior', { prior: 'plain', criteria: 'v1' });
+    expect((plain.questions.answer as { criteria: Record<string, string> }).criteria).toEqual(ANSWER_CRITERIA);
+    expect(String(plain.state['規則による下書きの判定'])).toContain('キーワード一致');
+  });
+
+  it('pure wh-questions never get a polar stamp (「犯人は誰ですか」)', () => {
+    const inp = input('犯人は誰ですか？');
+    const d = mapAskDecision(result({ answer: { no: 0.72, vague: 0.21, cannot: 0.07 } }), buildAskRequest(inp, 'topk'), inp, 'topk');
+    expect(d.answerClass).toBe('vague');
+    expect(d.meta).toBe('open');
+    const polar = input('誰かと争いましたか？');
+    expect(mapAskDecision(result({ answer: { no: 0.9, vague: 0.1 } }), buildAskRequest(polar, 'topk'), polar, 'topk').answerClass).toBe('no');
+  });
+});

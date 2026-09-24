@@ -21,6 +21,8 @@ export interface ModalProps {
   class?: string;
   /** id for aria-labelledby (auto if omitted). */
   labelId?: string;
+  /** 'alertdialog' for blocking errors that need an answer (default 'dialog'). */
+  role?: 'dialog' | 'alertdialog';
 }
 
 let uid = 0;
@@ -29,7 +31,7 @@ let uid = 0;
  * Accessible modal dialog (role=dialog, aria-modal, focus trap, Esc, restore focus).
  * Rendered into #portal-root so parent transforms (screen shake) never affect it.
  */
-export function Modal({ open, onClose, title, en, size = 'md', footer, children, dismissible = true, tone = 'formalin', class: cls, labelId }: ModalProps) {
+export function Modal({ open, onClose, title, en, size = 'md', footer, children, dismissible = true, tone = 'formalin', class: cls, labelId, role = 'dialog' }: ModalProps) {
   const [mounted, setMounted] = useState(open);
   const [closing, setClosing] = useState(false);
   const [id] = useState(() => labelId ?? `modal-${++uid}`);
@@ -55,7 +57,7 @@ export function Modal({ open, onClose, title, en, size = 'md', footer, children,
   return createPortal(
     <div class={`modal-root ${closing ? 'is-closing' : ''}`} data-tone={tone}>
       <div class="modal-backdrop" onClick={() => dismissible && onClose?.()} aria-hidden="true" />
-      <div ref={ref} class={`modal modal--${size} ${cls ?? ''}`} role="dialog" aria-modal="true" aria-labelledby={id} tabIndex={-1}>
+      <div ref={ref} class={`modal modal--${size} ${cls ?? ''}`} role={role} aria-modal="true" aria-labelledby={id} tabIndex={-1}>
         <header class="modal__head">
           <div class="modal__stripe" aria-hidden="true" />
           <div class="modal__titles">

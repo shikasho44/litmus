@@ -16,6 +16,8 @@ export interface PartTrace {
   meta?: string;
   confidence: number;
   closeness: number;
+  /** AskAnswer.nearCore for this part (a level-4 topic confirmed / closeness 3 affirmed). */
+  nearCore?: boolean;
   factIds: string[];
   unlocked: string[];
   blocked: { id: string; reason: string }[];

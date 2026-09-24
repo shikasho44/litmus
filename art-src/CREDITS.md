@@ -1,5 +1,10 @@
 # Art credits — ジェーンドゥの死因
 
+> Internal provenance record. It lives in `art-src/`, **never in `public/`**: the panel and
+> portrait notes below describe every case's solution, and everything under `public/` is served
+> as-is. The player-facing credit line is in `src/overlays/Credits.tsx`. A build guard
+> (`src/build/release-guard.ts`) fails the build if any `.md` file or case secret reaches `dist`.
+
 All illustrations in `public/art/`, `public/cases/c0N/{bg,portrait,panel-N}.webp` and
 `public/og.png` are original images **generated with gpt-image via the Codex CLI built-in image
 tool** (batch 1: codex-cli 0.155.0-alpha.16; batch 2: codex-cli 0.155.1) on **2026-09-24**, then
@@ -44,7 +49,7 @@ the head box around the `face.json` anchor), masked tightly (plus its highlights
 the pink nose, open mouths, paw pads and every other red/magenta accent are excluded — 0 pixels
 changed outside the mask in the key-art source), and hue-shifted per pixel so shading, the black
 rim and the specular highlight are kept. Alpha is bit-exact.
-Recoloured: `art/holma/*.webp`, `art/key-art.webp`, `../og.png` (and their sources in `art-src/`).
+Recoloured: `public/art/holma/*.webp`, `public/art/key-art.webp`, `public/og.png` (and their sources in `art-src/`).
 Untouched originals: `art-src/holma/split/*.red-eye.png`, `art-src/key-art/key-art.red-eye.png`,
 `art-src/red-eye-originals/`. Before/after crops: `qa/art/eye-recolour-*.png`.
 `art-src/holma/holma-sheet.png` is the raw generator output and is still red — use

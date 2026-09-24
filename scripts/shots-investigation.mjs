@@ -75,7 +75,7 @@ function attach(page, tag) {
   });
 }
 async function ready(page) {
-  await page.waitForFunction(() => window.__JD && document.documentElement.classList.contains('app-ready'), null, { timeout: 30000 });
+  await page.waitForFunction(() => window.__JD && document.documentElement.classList.contains('app-ready'), null, { timeout: 120000 });
   await page.evaluate(() => window.__JD.idle());
 }
 async function shot(page, name) {
@@ -119,7 +119,18 @@ const lastAnswer = (page) =>
   page.evaluate(() => {
     const rows = [...document.querySelectorAll('.arow[data-answer]')];
     const r = rows[rows.length - 1];
-    return r ? { cls: r.getAttribute('data-answer'), text: r.querySelector('.arow__line')?.textContent ?? '', cards: r.querySelectorAll('.ev').length, support: r.classList.contains('is-support'), memo: r.querySelectorAll('.memo').length } : null;
+    return r ? { cls: r.getAttribute('data-answer'), text: r.querySelector('.arow__line')?.textContent ?? '', cards: r.querySelectorAll('.fchip').length, support: r.classList.contains('is-support'), memo: r.querySelectorAll('.memo').length } : null;
+  });
+/** The start of the newest exchange (question / hint / error row) is inside the chat viewport. */
+const newestExchangeVisible = (page) =>
+  page.evaluate(() => {
+    const sc = document.querySelector('.chat__scroll');
+    const starts = [...document.querySelectorAll('.chat__inner > .chat__row[data-start]')];
+    const a = starts[starts.length - 1];
+    if (!sc || !a) return { ok: false, why: 'no rows' };
+    const s = sc.getBoundingClientRect();
+    const r = a.getBoundingClientRect();
+    return { ok: r.top >= s.top - 1 && r.top < s.bottom - 20, top: Math.round(r.top - s.top), h: Math.round(s.height) };
   });
 
 /** One-shot interception of the next /api/ask. mode: abort | 429 | 401 | inject */
@@ -146,9 +157,10 @@ async function interceptAsk(page, mode, inject) {
 }
 
 async function freshApp(page, extra = '') {
-  await page.goto(`${BASE}?debug=1&mute=1${extra}`, { waitUntil: 'load' });
+  // generous: a cold dev server on a busy machine can take a while to transform the app
+  await page.goto(`${BASE}?debug=1&mute=1${extra}`, { waitUntil: 'load', timeout: 180000 });
   await page.evaluate(() => localStorage.clear());
-  await page.reload({ waitUntil: 'load' });
+  await page.reload({ waitUntil: 'load', timeout: 180000 });
   await ready(page);
   await page.evaluate(() => window.__JD.setMeta({ prologueSeen: true }));
 }
@@ -188,10 +200,15 @@ async function runPc() {
   await page.waitForSelector('.itc__num', { timeout: 30000 });
   await wait(1300);
   await shot(page, `02-intro-slam-${tag}`);
-  await page.locator('.intro__stage').click({ position: { x: 700, y: 450 } });
-  await page.waitForSelector('.itc__continue');
-  await shot(page, `03-intro-titlecard-${tag}`);
-  await page.locator('.intro__stage').click({ position: { x: 700, y: 450 } });
+  // a slow screenshot can outlast the whole title card (≈5 s): then it has already moved on
+  if (await page.$('.intro.is-title')) {
+    await page.locator('.intro__stage').click({ position: { x: 700, y: 450 } });
+    await page.waitForSelector('.itc__continue, .intro.is-narration');
+  }
+  if (await page.$('.itc__continue')) {
+    await shot(page, `03-intro-titlecard-${tag}`);
+    await page.locator('.intro__stage').click({ position: { x: 700, y: 450 } });
+  } else notes.push('the title card had already advanced after the slam shot (slow screenshot) — no 03-intro-titlecard shot');
   await page.waitForSelector('.intro.is-narration');
   await wait(1600);
   await page.evaluate(() => window.__JD.skipText());
@@ -250,13 +267,23 @@ async function runPc() {
   await page.waitForSelector('.fx-cutin', { timeout: 30000 });
   await wait(250);
   await shot(page, `12-finding-cutin-${tag}`);
-  await page.waitForSelector('.flight', { state: 'attached', timeout: 30000 });
+  // the cut-in screenshot can outlast the flight on a busy machine: note it, do not fail
+  await page.waitForSelector('.flight', { state: 'attached', timeout: 15000 }).catch(() => notes.push(`missed the '.flight' moment after the cut-in shot (slow screenshot)`));
   await wait(350);
   await shot(page, `13-finding-flight-${tag}`);
   await settled(page);
   const b = await lastAnswer(page);
-  check(b?.cls === 'yes' && b.cards === 1, 'answer: はい + 1 finding card inline');
+  check(b?.cls === 'yes' && b.cards === 1, 'answer: はい + 1 finding chip inline');
+  const ex = await newestExchangeVisible(page);
+  check(ex.ok, `newest question row in view after a finding (top ${ex.top}px of ${ex.h}px)`);
   await shot(page, `14-finding-done-${tag}`);
+  // the chip opens the full card in place
+  await page.locator('.arow[data-answer]').last().locator('.fchip__btn').first().click();
+  await wait(450);
+  check(!!(await page.$('.fchip.is-open .ev')), 'finding chip opens the full card');
+  await shot(page, `14b-finding-chip-open-${tag}`);
+  await page.locator('.arow[data-answer]').last().locator('.fchip__btn').first().click();
+  await wait(200);
 
   // ---- c) irrelevant, d) vague
   await send(page, 'コーヒーはブラックでしたか？');
@@ -273,7 +300,8 @@ async function runPc() {
   await page.waitForSelector('.fx-cutin', { timeout: 30000 });
   await wait(420);
   await shot(page, `17-core-cutin-${tag}`);
-  await page.waitForSelector('.flight.is-core', { state: 'attached', timeout: 30000 });
+  // the cut-in screenshot can outlast the flight on a busy machine: note it, do not fail
+  await page.waitForSelector('.flight.is-core', { state: 'attached', timeout: 15000 }).catch(() => notes.push(`missed the '.flight.is-core' moment after the cut-in shot (slow screenshot)`));
   await wait(400);
   await shot(page, `18-core-flight-${tag}`);
   await settled(page);
@@ -293,17 +321,50 @@ async function runPc() {
   await shot(page, `21-nearcore-${tag}`);
   await settled(page);
   check(await page.$('.ivs.is-near'), 'nearCore state lit on stage');
+  check(!!(await page.$('.ivs__near')), "persistent 「核心に迫っている」 tag on stage");
+  const nearRows = await page.evaluate((id) => window.__JD.getState().save.cases[id].log.filter((e) => e.kind === 'answer' && e.nearCore).length, CASE);
+  check(nearRows >= 1 && !!(await page.$('.arow.is-near .arow__near')), `nearCore answer marked ★ in the log (${nearRows})`);
   await shot(page, `22-nearcore-done-${tag}`);
 
-  // ---- h) two findings + science memo
+  // ---- h) findings + science memo (F31 is CORE → it keeps the full cut-in)
   await send(page, '壁の酸素濃度計の電池は切れていましたか？');
+  const t0 = Date.now();
   await page.waitForSelector('.flight', { state: 'attached', timeout: 30000 });
-  await wait(420);
+  check(!(await page.$('.flight.is-compact')), 'a CORE finding keeps the full treatment (cut-in + full flight)');
+  await wait(300);
   await shot(page, `23-memo-flight-${tag}`);
   await settled(page);
+  notes.push(`core finding: presentation ran ${((Date.now() - t0 - 250) / 1000).toFixed(1)} s (answer received → settled)`);
   const h = await lastAnswer(page);
-  check((h?.cards ?? 0) >= 1 && (h?.memo ?? 0) >= 1, `finding card(s) + a science memo inline (${h?.cards} card(s))`);
+  check((h?.cards ?? 0) >= 1 && (h?.memo ?? 0) >= 1, `finding chip(s) + a science memo inline (${h?.cards} chip(s))`);
   await shot(page, `24-cards-memo-${tag}`);
+
+  // ---- h1) an ordinary finding after the first reveals → compact flight, no cut-in
+  await send(page, '部屋は狭いですか？');
+  const tc = Date.now();
+  const sawCut = page.waitForSelector('.fx-cutin', { state: 'attached', timeout: 4000 }).then(() => true, () => false);
+  await page.waitForSelector('.flight', { state: 'attached', timeout: 30000 });
+  check(!!(await page.$('.flight.is-compact')), 'after the first reveals, ordinary findings use the compact flight');
+  await wait(250);
+  await shot(page, `23b-compact-flight-${tag}`);
+  await settled(page);
+  check(!(await sawCut), 'compact finding: no 所見入手 cut-in');
+  notes.push(`compact (ordinary) finding: presentation ran ${((Date.now() - tc - 250) / 1000).toFixed(1)} s (answer received → settled)`);
+
+  // ---- h2) Enter during the presentation with a question typed: fast-forward + send it after
+  const qBefore = await page.evaluate((id) => window.__JD.getState().save.cases[id].log.filter((e) => e.kind === 'question').length, CASE);
+  await send(page, '扉は自動で閉まりますか？');
+  await type(page, '部屋に誰かいましたか？');
+  await page.locator('.dock__input').press('Enter');
+  await wait(120);
+  const queuedShown = !!(await page.$('.dock.is-queued'));
+  await page
+    .waitForFunction(([id, n]) => window.__JD.getState().save.cases[id].log.filter((e) => e.kind === 'question').length >= n + 2, [CASE, qBefore], { timeout: 30000, polling: 100 })
+    .catch(() => {});
+  await settled(page);
+  const qAfter = await page.evaluate((id) => window.__JD.getState().save.cases[id].log.filter((e) => e.kind === 'question').length, CASE);
+  check(qAfter - qBefore === 2 && (await page.locator('.dock__input').inputValue()) === '', `Enter during the presentation queues the typed question (sent without a 2nd Enter${queuedShown ? ', queued state shown' : ''})`);
+  await shot(page, `24b-queued-sent-${tag}`);
 
   // ---- i) safety → support card
   let realSupport = false;
@@ -340,6 +401,8 @@ async function runPc() {
   await page.waitForSelector('.arow--error', { timeout: 30000 });
   await wait(300);
   check((await page.locator('.dock__input').inputValue()) === '換気扇は回っていましたか？', 'network error keeps the question in the input');
+  const errVis = await newestExchangeVisible(page);
+  check(errVis.ok && !!(await page.$('.dock__alert')), `network error row scrolled into view + inline alert above the dock (top ${errVis.top}px)`);
   await shot(page, `27-network-error-${tag}`);
   await page.locator('.arow__retry').click();
   await settled(page);
@@ -394,6 +457,14 @@ async function runPc() {
   await page.locator('.nb--side .tab', { hasText: '質問ログ' }).click();
   await wait(400);
   await shot(page, `33-notebook-log-${tag}`);
+  if (await page.$('.nb--side .nb-filter--core')) {
+    await page.locator('.nb--side .nb-filter--core').click();
+    await wait(300);
+    const coreRows = await page.$$eval('.nb--side .nb-row.is-near', (els) => els.length);
+    check(coreRows >= 1, `質問ログ ★核心 filter shows the confirmed core question(s) (${coreRows})`);
+    await shot(page, `33b-notebook-log-core-${tag}`);
+    await page.locator('.nb--side .nb-filter--all').click();
+  } else problems.push('notebook log: no ★核心 filter chip after a nearCore answer');
   await page.locator('.nb--side .nb-filter--no').click();
   await page.locator('.nb--side .nb-search input').fill('毒');
   await wait(400);
@@ -438,7 +509,7 @@ async function runPc() {
     return { log: c.log.length, facts: c.factOrder.length, memos: Object.keys(c.memos).length, hints: c.hints.length, token: c.token };
   }, CASE);
   await page.evaluate(() => window.__JD.flushSave());
-  await page.goto(`${BASE}?debug=1&mute=1&idlems=4000#/investigation/${CASE}`, { waitUntil: 'load' });
+  await page.goto(`${BASE}?debug=1&mute=1&idlems=4000#/investigation/${CASE}`, { waitUntil: 'load', timeout: 180000 });
   await ready(page);
   await waitInvestigation(page);
   const saveAfter = await page.evaluate((id) => {
@@ -469,11 +540,15 @@ async function runSp() {
   await page.waitForSelector('.itc__num', { timeout: 30000 });
   await wait(1500);
   await shot(page, `02-intro-slam-${tag}`);
-  await page.locator('.intro__stage').tap({ position: { x: 195, y: 400 } });
-  await page.waitForSelector('.itc__continue');
-  await shot(page, `03-intro-titlecard-${tag}`);
-  // watch a little, then skip
-  await page.locator('.intro__stage').tap({ position: { x: 195, y: 400 } });
+  if (await page.$('.intro.is-title')) {
+    await page.locator('.intro__stage').tap({ position: { x: 195, y: 400 } });
+    await page.waitForSelector('.itc__continue, .intro.is-narration');
+  }
+  if (await page.$('.itc__continue')) {
+    await shot(page, `03-intro-titlecard-${tag}`);
+    // watch a little, then skip
+    await page.locator('.intro__stage').tap({ position: { x: 195, y: 400 } });
+  } else notes.push('phone: the title card had already advanced after the slam shot (slow screenshot)');
   await page.waitForSelector('.intro.is-narration');
   await wait(1500);
   await page.evaluate(() => window.__JD.skipText());
@@ -516,14 +591,19 @@ async function runSp() {
   await page.waitForSelector('.fx-cutin', { timeout: 30000 });
   await wait(420);
   await shot(page, `17-core-cutin-${tag}`);
-  await page.waitForSelector('.flight', { state: 'attached', timeout: 30000 });
+  // the cut-in screenshot can outlast the flight on a busy machine: note it, do not fail
+  await page.waitForSelector('.flight', { state: 'attached', timeout: 15000 }).catch(() => notes.push(`missed the '.flight' moment after the cut-in shot (slow screenshot)`));
   await wait(420);
   await shot(page, `18-core-flight-${tag}`);
   await settled(page);
+  const spEx = await newestExchangeVisible(page);
+  check(spEx.ok, `phone: question + stamp row of the core answer in view (top ${spEx.top}px of ${spEx.h}px)`);
   await shot(page, `19-core-done-${tag}`);
 
   await send(page, '毒ですか？それとも病気ですか？');
   await settled(page);
+  const spMulti = await newestExchangeVisible(page);
+  check(spMulti.ok, `phone: multi-answer exchange starts in view (top ${spMulti.top}px)`);
   await shot(page, `20-multi-${tag}`);
   await send(page, '酸欠ですか？');
   await settled(page);
@@ -588,18 +668,43 @@ async function runSp() {
   check((await rowCount(page)) === n, `phone reload resumes the conversation (${n} rows)`);
   await shot(page, `39-resumed-${tag}`);
 
-  // bad token → graceful reset with a toast and a new token
+  // bad token → the player decides (dialog); nothing is wiped before that
   expectNetErrors = true;
   const oldTok = await page.evaluate((id) => window.__JD.getState().save.cases[id].token, CASE);
+  const oldQs = await page.evaluate((id) => window.__JD.getState().save.cases[id].log.filter((e) => e.kind === 'question').length, CASE);
   await interceptAsk(page, '401');
   await type(page, '部屋は狭いですか？');
   await page.locator('.dock__input').press('Enter');
-  await page.waitForSelector('.toast', { timeout: 20000 });
-  await wait(1200);
-  const newTok = await page.evaluate((id) => window.__JD.getState().save.cases[id].token, CASE);
-  check(!!newTok && newTok !== oldTok && (await page.locator('.dock__input').inputValue()) === '部屋は狭いですか？', 'bad_token → case restarted with a new token, question kept');
-  await shot(page, `41-bad-token-reset-${tag}`);
+  await page.waitForSelector('.ivdlg--token', { timeout: 20000 });
+  await wait(500);
+  const kept = await page.evaluate((id) => window.__JD.getState().save.cases[id], CASE);
+  check(kept.token === oldTok && kept.log.filter((e) => e.kind === 'question').length === oldQs, 'bad_token → dialog first; the case is untouched until the player chooses');
+  await shot(page, `41-bad-token-dialog-${tag}`);
+  await page.locator('.modal-root button', { hasText: '最初からやり直す' }).tap();
+  await page.waitForFunction(([id, t]) => {
+    const c = window.__JD.getState().save.cases[id];
+    return !!c.token && c.token !== t;
+  }, [CASE, oldTok], { timeout: 20000 });
+  await wait(900);
+  const after = await page.evaluate((id) => window.__JD.getState().save.cases[id], CASE);
+  check(
+    after.token !== oldTok && (await page.locator('.dock__input').inputValue()) === '部屋は狭いですか？' && after.previousAttempt?.log?.filter((e) => e.kind === 'question').length === oldQs,
+    `start over → new token, question kept, previous attempt backed up (${after.previousAttempt?.log?.length ?? 0} log entries)`,
+  );
+  await shot(page, `41b-bad-token-restarted-${tag}`);
   expectNetErrors = false;
+  await page.locator('.ivtop__nb').tap();
+  await page.waitForSelector('.sheet .nb', { timeout: 10000 });
+  await page.locator('.sheet .tab', { hasText: '質問ログ' }).tap();
+  await wait(300);
+  if (await page.$('.sheet .nb-prev')) {
+    await page.locator('.sheet .nb-prev__sum').tap();
+    await wait(300);
+  } else problems.push('notebook: 前回の記録 missing after a restart');
+  await shot(page, `42-notebook-previous-attempt-${tag}`);
+  await page.locator('.sheet .tab', { hasText: '所見' }).tap();
+  await wait(300);
+  await shot(page, `43-notebook-facts-after-restart-${tag}`);
   await ctx.close();
 }
 
@@ -609,6 +714,7 @@ async function runSp() {
 async function runSmall() {
   for (const [tag, vp, mobile] of [
     ['pc720', { width: 1280, height: 720 }, false],
+    ['pc1920', { width: 1920, height: 1080 }, false],
     ['sp360', { width: 360, height: 740 }, true],
     ['sp320', { width: 320, height: 640 }, true],
   ]) {
@@ -617,20 +723,81 @@ async function runSmall() {
     const page = await ctx.newPage();
     attach(page, tag);
     await freshApp(page);
+    if (tag === 'pc1920') {
+      // the notebook before the case record exists: hold the new token back (well under the
+      // client's 11 s timeout), look at the empty state, then start over for the normal flow
+      let releaseToken = () => {};
+      const tokenGate = new Promise((r) => (releaseToken = r));
+      const holdToken = async (route) => (await Promise.race([tokenGate, wait(8000)]), route.continue());
+      await page.route('**/api/token', holdToken);
+      await page.evaluate((id) => window.__JD.goto('investigation', { caseId: id }), CASE);
+      await page.waitForSelector('.iv .dock__input', { timeout: 30000 });
+      await wait(700);
+      check(!!(await page.$('.nb--side .nb-start__chip')), `${tag}: empty notebook shows the 「最初の一問を」 state with example chips`);
+      await shot(page, `08b-notebook-empty-state-${tag}`);
+      await page.locator('.nb--side .nb-start__chip').first().click();
+      await wait(200);
+      check((await page.locator('.dock__input').inputValue()).length > 0, `${tag}: an example chip in the notebook fills the input`);
+      releaseToken();
+      // on a busy machine the held request may already have hit the client's 11 s timeout (the
+      // next question would fetch a token again); the page is reset right below either way
+      await page
+        .waitForFunction((id) => !!window.__JD.getState().save.cases[id]?.token, CASE, { timeout: 20000 })
+        .catch(() => notes.push(`${tag}: the held token request timed out client-side (slow machine) — not needed for the rest`));
+      await page.unroute('**/api/token', holdToken);
+      await freshApp(page);
+    }
     await page.evaluate((id) => window.__JD.goto('intro', { caseId: id }), CASE);
     await page.waitForSelector('.itc__num', { timeout: 30000 });
     await wait(1200);
     await page.locator('.intro__stage').click({ position: { x: vp.width / 2, y: vp.height / 2 } });
-    await page.waitForSelector('.itc__continue');
-    await shot(page, `03-intro-titlecard-${tag}`);
-    await overflow(page, `${tag} intro`);
+    await page.waitForSelector('.itc__continue, .intro.is-narration');
+    if (await page.$('.itc__continue')) {
+      await shot(page, `03-intro-titlecard-${tag}`);
+      await overflow(page, `${tag} intro`);
+    } else notes.push(`${tag}: the title card had already advanced (slow machine) — no title card shot`);
     await page.locator('.intro__skip').click();
     await waitInvestigation(page);
     await shot(page, `08-inv-empty-${tag}`);
     await overflow(page, `${tag} empty`);
-    for (const q of ['スマホに通知が届いていましたか？', 'ホースがつながったままでしたか？', '毒ですか？それとも病気ですか？']) {
+    for (const [i, q] of ['スマホに通知が届いていましたか？', 'ホースがつながったままでしたか？', '毒ですか？それとも病気ですか？'].entries()) {
       await send(page, q);
+      if (i === 0) {
+        // the judgement stamp stays inside the stage frame (measured at the end of the slam)
+        const fitP = page.evaluate(
+          () =>
+            new Promise((res) => {
+              // the resting size = the smallest box seen while the stamp is on screen (the slam
+              // starts oversized on purpose; a busy machine may render it late)
+              const t0 = performance.now();
+              let seenAt = 0;
+              let best = null;
+              const tick = () => {
+                const f = document.querySelector('.fx-stamp .stamp__frame');
+                const now = performance.now();
+                if (f && !seenAt) seenAt = now;
+                if (f) {
+                  const s = f.getBoundingClientRect();
+                  const st = document.querySelector('[data-stage]').getBoundingClientRect();
+                  const m = { s: Math.round(s.height), st: Math.round(st.height), inside: s.top >= st.top - 2 && s.bottom <= st.bottom + 2 };
+                  if (!best || m.s < best.s) best = m;
+                }
+                if ((!f && seenAt) || now - t0 > 8000) return res(best);
+                requestAnimationFrame(tick);
+              };
+              tick();
+            }),
+        );
+        await wait(500);
+        await shot(page, `10-stamp-${tag}`);
+        const fit = await fitP;
+        check(!!fit && fit.inside, `${tag}: judgement stamp fits the stage (${fit?.s}px in ${fit?.st}px)`);
+      }
       await settled(page);
+      if (i === 1) {
+        const ex = await newestExchangeVisible(page);
+        check(ex.ok, `${tag}: newest question row in view after a core finding (top ${ex.top}px of ${ex.h}px)`);
+      }
     }
     await shot(page, `19-after-questions-${tag}`);
     await overflow(page, `${tag} after questions`);

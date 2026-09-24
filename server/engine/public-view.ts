@@ -144,5 +144,6 @@ export function solutionView(c: Case, unlocked: ReadonlySet<string>): SolutionRe
     quiz: c.quiz,
     sources: c.sources,
     holmaSolved: [...c.holmaLines.solved],
+    reviewStatus: c.reviewStatus,
   };
 }

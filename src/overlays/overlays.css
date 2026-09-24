@@ -170,13 +170,17 @@
 }
 .howto-q__label {
   position: absolute;
-  top: -10px;
+  top: -11px;
   right: 10px;
-  font-size: 10px;
-  padding: 0 6px;
+  padding: 1px 8px;
   background: var(--ink);
   color: var(--formalin);
-  font-family: var(--font-mono);
+  /* kanji label: the body face (the mono face has no kanji and fell back to a blurry one) */
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  line-height: 1.5;
 }
 .howto-a {
   display: grid;
@@ -277,7 +281,7 @@
   top: -12px;
   left: 14px;
   padding: 0 10px;
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   color: var(--cyan);
   background: var(--ink);
@@ -329,8 +333,10 @@
   top: -11px;
   left: 12px;
   padding: 0 8px;
-  font-family: var(--font-display);
-  font-size: 12px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
   background: var(--formalin);
   color: var(--ink);
 }
@@ -436,6 +442,34 @@
 }
 [data-layout='narrow'] .howto-nav {
   justify-content: space-between;
+  gap: 8px;
+}
+@media (pointer: coarse) {
+  .howto-dots {
+    gap: 2px;
+  }
+  .howto-dot {
+    width: 36px;
+    height: 44px;
+  }
+}
+/* short phones: the art is an illustration, not content — let it shrink so the text and the
+   pager stay on screen */
+@media (max-height: 760px) {
+  [data-layout='narrow'] .howto__art {
+    padding: 12px 10px;
+  }
+  [data-layout='narrow'] .howto-art__shard {
+    height: 140px;
+  }
+  [data-layout='narrow'] .howto-a__holma {
+    width: 64px;
+    height: 72px;
+  }
+  [data-layout='narrow'] .howto-art--ask,
+  [data-layout='narrow'] .howto-art--inquest {
+    gap: 12px;
+  }
 }
 
 /* ==========================================================================

@@ -151,3 +151,7 @@ html.app-ready #boot {
   visibility: hidden;
   transition: opacity 0.5s var(--ease-out), visibility 0s 0.5s;
 }
+/* the loader bar's infinite animation must not keep ticking under the game (App removes #boot) */
+html.app-ready #boot .bar::after {
+  animation: none;
+}

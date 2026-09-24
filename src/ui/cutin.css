@@ -101,6 +101,7 @@
   color: var(--cut-ink);
   opacity: 0.85;
   padding-left: 0.5em;
+  white-space: nowrap;
 }
 [data-layout='narrow'] .cutin {
   --cut-h: clamp(120px, 24vh, 200px);
@@ -110,9 +111,41 @@
   width: 40vw;
 }
 [data-layout='narrow'] .cutin__copy.has-char {
-  padding-left: 40vw;
+  /* the band starts 12% left of the screen: this puts the copy just right of the art */
+  padding-left: calc(10% + 34vw);
   padding-right: 6%;
 }
 [data-layout='narrow'] .cutin__text {
   font-size: calc(clamp(40px, 13vw, 84px) * var(--cut-scale, 1));
+}
+
+/* lead-in line above the main copy (「さァ——」) */
+.cutin__lead {
+  font-family: var(--font-display);
+  font-size: calc(clamp(56px, 10vw, 168px) * 0.34);
+  line-height: 1;
+  color: var(--cut-ink);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-shadow: 3px 3px 0 var(--cut-back);
+  margin-bottom: 0.1em;
+}
+[data-layout='narrow'] .cutin__lead {
+  font-size: calc(clamp(40px, 13vw, 84px) * 0.4);
+}
+/* furigana on cut-in copy: a quiet body-font reading, not a second headline */
+.cutin__text rt {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.3em;
+  letter-spacing: 0.24em;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+}
+/* fitCopy(): a long line may wrap into two balanced lines at phrase boundaries */
+.cutin__text.is-wrap {
+  white-space: normal;
+  word-break: auto-phrase;
+  text-wrap: balance;
+  line-height: 1.08;
 }

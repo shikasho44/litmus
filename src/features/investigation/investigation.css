@@ -1730,3 +1730,348 @@
 [data-reduce-motion='true'] .arow__card {
   animation: none !important;
 }
+
+/* ======================================================================
+   Pacing / readability pass
+   ====================================================================== */
+
+/* judgement stamp sized from the stage (controller fitStamp → --iv-stamp-s) */
+:root:has(.scene.iv) .fx-stamp .stamp--xl,
+:root:has(.scene.iv) .fx-stamp .stamp--lg {
+  --s: var(--iv-stamp-s, clamp(64px, 8.2vw, 112px));
+}
+
+/* 審問を開く while Holma answers: full strength (no per-turn flicker), clicks wait */
+.ivtop__inquest.is-busy {
+  pointer-events: none;
+  cursor: default;
+}
+
+/* toasts never cover the top-bar buttons */
+:root:has(.scene.iv) .toasts {
+  top: calc(var(--vv-top) + var(--safe-t) + 76px);
+}
+[data-layout='narrow']:has(.scene.iv) .toasts {
+  top: calc(var(--vv-top) + var(--safe-t) + 64px);
+}
+
+/* ---------------- stage: near-core marker, fast-forward hint, glint ---------------- */
+.ivs__near {
+  position: absolute;
+  z-index: 3;
+  left: 12px;
+  top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 8px;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #BFEFFF;
+  background: rgba(8, 20, 28, 0.78);
+  border: 1px solid rgba(61, 224, 255, 0.55);
+  box-shadow: 0 0 14px -2px rgba(61, 224, 255, 0.45);
+  animation: iv-pop 0.35s var(--ease-snap);
+}
+.ivs__near .icon {
+  color: var(--cyan);
+}
+[data-layout='narrow'] .ivs__near {
+  left: 8px;
+  top: 38px;
+  padding: 2px 8px 2px 6px;
+  font-size: 10px;
+}
+[data-layout='narrow'][data-kb='open'] .ivs__near {
+  top: 6px;
+}
+.ivs__ff {
+  position: absolute;
+  z-index: 4;
+  right: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: var(--bone-2);
+  background: rgba(11, 13, 18, 0.8);
+  border: 1px solid var(--bone-a24);
+  pointer-events: none;
+  animation: iv-ff-in 0.4s var(--ease-out) 0.6s both;
+}
+@keyframes iv-ff-in {
+  from { opacity: 0; transform: translateY(6px); }
+}
+[data-layout='narrow'] .ivs__ff {
+  right: 8px;
+  bottom: 44px;
+  padding: 3px 8px;
+  font-size: 10px;
+}
+.ivs__jane.is-glinting .shards {
+  animation: iv-glint 1s ease-out;
+}
+@keyframes iv-glint {
+  0% { filter: none; }
+  25% { filter: brightness(1.45) drop-shadow(0 0 14px rgba(61, 224, 255, 0.8)); }
+  100% { filter: none; }
+}
+
+/* ---------------- chat ---------------- */
+.chat__inner {
+  position: relative; /* rows' offsetTop = position in the log (scroll anchoring) */
+}
+.chat__earlier {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border: 1px dashed var(--bone-a24);
+  color: var(--bone-3);
+  font-size: var(--fs-xs);
+}
+.chat__earlier:hover {
+  color: var(--formalin);
+  border-color: var(--formalin);
+}
+.chat__jump.is-more {
+  background: var(--bone);
+}
+/* the small verdict chip waits for the big stamp to leave (space kept) */
+.arow__stamp.is-held {
+  visibility: hidden;
+}
+.arow__stamp .stamp {
+  animation: iv-pop 0.3s var(--ease-snap);
+}
+.arow__near {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px 1px 6px;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--cyan);
+  box-shadow: 0 0 12px -2px rgba(61, 224, 255, 0.7);
+}
+.arow.is-near .arow__body {
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(61, 224, 255, 0.3);
+}
+
+/* finding chip: one line in the log, the full card opens in place (the notebook keeps it too) */
+.arow__cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+  padding: 0;
+}
+.fchip {
+  --fc: var(--formalin);
+  animation: iv-card-in 0.45s var(--ease-snap) both;
+  animation-delay: calc(var(--fchip-i, 0) * 70ms);
+}
+.fchip--core {
+  --fc: var(--alarm);
+}
+.fchip__btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 10px 6px 8px;
+  text-align: left;
+  background: #EEE8D8;
+  color: var(--paper-ink);
+  box-shadow: inset 4px 0 0 var(--fc), 3px 3px 0 rgba(0, 0, 0, 0.45);
+  transition: transform var(--dur-1), box-shadow var(--dur-1);
+}
+.fchip__btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: inset 4px 0 0 var(--fc), 4px 4px 0 rgba(0, 0, 0, 0.45);
+}
+.fchip__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-left: 4px;
+  color: var(--paper-ink);
+  border: 1px solid rgba(26, 23, 18, 0.35);
+}
+.fchip__kicker {
+  flex: none;
+  padding: 0 5px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--bone);
+  background: var(--fc);
+}
+.fchip:not(.fchip--core) .fchip__kicker {
+  color: var(--ink);
+}
+.fchip__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fchip__cat {
+  flex: none;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: #6E6656;
+}
+.fchip__chev {
+  flex: none;
+  color: #6E6656;
+  transition: transform var(--dur-1);
+}
+.fchip.is-open .fchip__chev {
+  transform: rotate(180deg);
+}
+.fchip__card {
+  margin: 8px 2px 4px;
+  animation: iv-card-in 0.35s var(--ease-snap);
+}
+[data-layout='narrow'] .fchip__cat {
+  display: none;
+}
+
+/* ---------------- dock: network error, queued question ---------------- */
+.dock__alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 10px;
+  border-left: 3px solid var(--amber);
+  background: rgba(255, 176, 32, 0.1);
+  color: var(--amber);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  animation: iv-row-in 0.3s var(--ease-out);
+}
+.dock__alert-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--bone);
+}
+.dock__alert-sub {
+  color: var(--bone-3);
+  font-weight: 500;
+}
+.dock__alert-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--formalin);
+  color: var(--formalin);
+  font-size: var(--fs-xs);
+}
+.dock__alert-btn:hover {
+  background: var(--formalin);
+  color: var(--ink);
+}
+.dock__queued {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.08em;
+  color: var(--cyan);
+}
+.dock__spinner--sm {
+  width: 12px;
+  height: 12px;
+  border-width: 2px;
+  border-color: rgba(61, 224, 255, 0.25);
+  border-top-color: var(--cyan);
+}
+.dock.is-queued .dock__input {
+  border-color: rgba(61, 224, 255, 0.6);
+}
+[data-layout='narrow'] .dock__alert-sub {
+  display: none;
+}
+
+/* ---------------- compact finding flight ---------------- */
+.flight.is-compact .flight__burst {
+  left: -150px;
+  top: -150px;
+  width: 300px;
+  height: 300px;
+}
+.flight.is-compact .flight__label {
+  top: -118px;
+  font-size: var(--fs-xs);
+}
+
+/* ---------------- bad-token dialog ---------------- */
+.ivdlg--token .ivdlg__bubble {
+  box-shadow: 4px 4px 0 var(--amber);
+}
+
+/* ---------------- big screens: the HUD and the notebook grow with the room ---------------- */
+@media (min-width: 1600px) {
+  [data-layout='wide'] .iv {
+    --side-w: 380px;
+  }
+  [data-layout='wide'] .ivtop {
+    min-height: 72px;
+  }
+  [data-layout='wide'] .ivtop__stats {
+    gap: 24px;
+  }
+  [data-layout='wide'] .ivtop__stats dt {
+    font-size: 11px;
+  }
+  [data-layout='wide'] .ivtop__stats dd {
+    font-size: var(--fs-lg);
+  }
+  [data-layout='wide'] .ivtop__btn {
+    height: 48px;
+    font-size: var(--fs-md);
+  }
+  [data-layout='wide'] .ivtop__inquest {
+    height: 50px;
+  }
+  [data-layout='wide'] .ivtop__inquest-label {
+    font-size: var(--fs-lg);
+  }
+  [data-layout='wide'] .ivs__jane-pct,
+  [data-layout='wide'] .ivs__near,
+  [data-layout='wide'] .ivs__ff {
+    font-size: var(--fs-xs);
+  }
+  [data-layout='wide'] .ivs__caption-text {
+    font-size: var(--fs-md);
+  }
+  [data-layout='wide'] .arow__line,
+  [data-layout='wide'] .qrow__text {
+    font-size: var(--fs-lg);
+  }
+}
+
+[data-reduce-motion='true'] .fchip,
+[data-reduce-motion='true'] .fchip__card,
+[data-reduce-motion='true'] .arow__stamp .stamp,
+[data-reduce-motion='true'] .ivs__jane.is-glinting .shards,
+[data-reduce-motion='true'] .ivs__near,
+[data-reduce-motion='true'] .ivs__ff,
+[data-reduce-motion='true'] .dock__alert {
+  animation: none !important;
+}

@@ -10,7 +10,7 @@ import { ApiError, type CaseSummary, type SolutionResponse } from '../../../shar
 import { api } from '../../api';
 import { loadCases } from '../../lib/cases';
 import type { CaseStage } from '../../state/types';
-import { getCaseProgress, setStage } from '../../state/save';
+import { getCaseProgress, setRestored, setStage } from '../../state/save';
 
 export type SolutionError = 'unsolved' | 'network' | 'bad_token' | 'server';
 
@@ -61,7 +61,11 @@ export function useSolution(caseId: string): [SolutionState, () => void] {
     let alive = true;
     if (state.status !== 'ok') setState({ status: 'loading' });
     Promise.all([fetchSolution(caseId), loadCases().catch(() => null)])
-      .then(([sol, list]) => alive && setState({ status: 'ok', sol, summary: summaryFor(caseId, list) }))
+      .then(([sol, list]) => {
+        // the identity is revealed from here on: remember it for the Files tag (shown once the case is completed)
+        setRestored(caseId, sol.victim.name, sol.victim.nameKana);
+        if (alive) setState({ status: 'ok', sol, summary: summaryFor(caseId, list) });
+      })
       .catch((e: unknown) => alive && setState({ status: 'error', reason: reasonOf(e), message: e instanceof Error ? e.message : String(e) }));
     return () => {
       alive = false;

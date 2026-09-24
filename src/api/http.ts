@@ -1,11 +1,18 @@
 /**
  * GameApi over HTTP (dev server, vite preview, Vercel).
  *
- * - 12 s timeout per attempt (AbortController)
- * - one automatic retry on network error / timeout / 5xx (never on 4xx or 429)
+ * - one overall deadline per call (REQUEST_DEADLINE_MS ≈ 12 s), not per attempt: the server
+ *   answers a turn within 9 s (pipeline TURN_DEADLINE_MS) or not at all, so waiting longer — or
+ *   retrying after a timeout — only doubles the silence (it used to take 24.6 s to show an error)
+ * - one automatic retry, only after a FAST failure (< FAST_FAIL_MS): a network error or a
+ *   500/502/503 that the server did not mark retryable:false. Never after a timeout or a 504.
+ *   (All POSTs are safe to repeat: the server is stateless, progress lives in the signed token.)
+ * - `slowRequests` counts calls still waiting after SLOW_MS (5 s), so the UI can let Holma say
+ *   something instead of only showing the EXAMINING dots
  * - every failure is an ApiError with a code the UI can switch on:
  *     network · timeout · rate_limited · bad_request · bad_token · server
  */
+import { signal } from '@preact/signals';
 import type {
   AskRequest, AskResponse, CasePublic, CaseSummary, GameApi, GrantRequest, HintRequest, HintResponse,
   InquestStartRequest, InquestStartResponse, ProgressSnapshot, ProgressToken, ReconstructionRequest,
@@ -17,7 +24,16 @@ import { ApiError } from '../../shared/api';
 type Code = ApiError['code'];
 const CODES: readonly Code[] = ['network', 'timeout', 'rate_limited', 'bad_request', 'bad_token', 'server'];
 
-export const HTTP_TIMEOUT_MS = 12_000;
+/** Whole call, retry included. */
+export const REQUEST_DEADLINE_MS = 12_000;
+/** First attempt (leaves room for a fast retry inside the deadline). */
+export const HTTP_TIMEOUT_MS = 11_000;
+/** A failure later than this is not retried (the server was busy, not unreachable). */
+export const FAST_FAIL_MS = 2_000;
+/** After this long a call counts as slow (slowRequests). */
+export const SLOW_MS = 5_000;
+/** Number of HTTP calls in flight for longer than SLOW_MS (UI: Holma's "still examining" line). */
+export const slowRequests = signal(0);
 const API_BASE = String((import.meta.env.VITE_API_BASE as string | undefined) || '/api').replace(/\/+$/, '');
 
 function codeFor(status: number, bodyCode: unknown): Code {
@@ -32,9 +48,9 @@ function codeFor(status: number, bodyCode: unknown): Code {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function once<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
+async function once<T>(method: 'GET' | 'POST', path: string, body: unknown, timeoutMs: number): Promise<T> {
   const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(), HTTP_TIMEOUT_MS);
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
   try {
     let res: Response;
     try {
@@ -71,14 +87,33 @@ async function once<T>(method: 'GET' | 'POST', path: string, body?: unknown): Pr
   }
 }
 
+/** Worth one more try: failed fast, and not a 504 / timeout / explicit retryable:false. */
+function retryableFast(e: unknown, elapsedMs: number): boolean {
+  if (!(e instanceof ApiError) || elapsedMs >= FAST_FAIL_MS) return false;
+  if (e.code === 'network') return true;
+  // status 0 = no HTTP error status (an unreadable / empty 200 body).
+  const status = (e as ApiError & { status?: number }).status ?? 0;
+  return e.code === 'server' && e.retryable !== false && (status === 0 || (status >= 500 && status <= 503));
+}
+
 async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
+  const started = Date.now();
+  let slow = false;
+  const slowTimer = setTimeout(() => {
+    slow = true;
+    slowRequests.value = slowRequests.peek() + 1;
+  }, SLOW_MS);
   try {
-    return await once<T>(method, path, body);
-  } catch (e) {
-    const transient = e instanceof ApiError && (e.code === 'network' || e.code === 'timeout' || (e.code === 'server' && ((e as ApiError & { status?: number }).status ?? 500) >= 500));
-    if (!transient) throw e;
-    await sleep(350 + Math.random() * 400);
-    return once<T>(method, path, body);
+    try {
+      return await once<T>(method, path, body, HTTP_TIMEOUT_MS);
+    } catch (e) {
+      if (!retryableFast(e, Date.now() - started)) throw e;
+      await sleep(350 + Math.random() * 400);
+      return await once<T>(method, path, body, Math.max(1_000, REQUEST_DEADLINE_MS - (Date.now() - started)));
+    }
+  } finally {
+    clearTimeout(slowTimer);
+    if (slow) slowRequests.value = Math.max(0, slowRequests.peek() - 1);
   }
 }
 

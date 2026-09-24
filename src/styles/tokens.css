@@ -20,6 +20,7 @@
   --bone-a24: rgba(242, 239, 230, 0.24);
   --bone-a60: rgba(242, 239, 230, 0.6);
   --paper-ink: #1A1712;          /* printed text on bone paper */
+  --paper-ink-2: #524B3F;        /* secondary print on paper tags (>= 5.5:1 on the textured paper) */
 
   /* signal colours */
   --formalin: #C6FF3D;
@@ -28,6 +29,8 @@
   --alarm: #FF2E63;
   --alarm-deep: #A80E3A;
   --alarm-glow: rgba(255, 46, 99, 0.4);
+  /* text ON an --alarm fill: bone on alarm is only 3.1:1, ink is 5.4:1 (WCAG AA for small text) */
+  --on-alarm: var(--ink);
   --cyan: #3DE0FF;
   --cyan-deep: #0B7C99;
   --cyan-glow: rgba(61, 224, 255, 0.35);

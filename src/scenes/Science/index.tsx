@@ -2,10 +2,16 @@
  * 科学解剖 SCIENCE AUTOPSY (design bible §3-4) — the case's science as a long-form,
  * typeset explainer. Data: api.solution().science (+ allFacts, memos, sources).
  *
- * Desktop: sticky section index with reading progress on the left, article on the right.
- * Phone:   sticky top bar with progress + the current section (tap → section menu).
+ * The page opens with a one-screen QUICK READ (cause, causal chain, 3 takeaways, a link to the
+ * main figure and a prominent 記憶の定着へ button), so nobody has to read ~10 minutes of text to
+ * reach the recall test. The deeper sections (why here / 伏線 / mechanism / myths / everyday /
+ * memos / sources) are accordions: closed by default on phones, open on desktop (sources closed).
+ *
+ * Desktop: sticky section index (+ 13 記憶の定着へ) with reading progress on the left, article in
+ *          the middle; from 1640px the QUICK READ moves into a sticky rail on the right.
+ * Phone:   sticky top bar with progress + the current section (tap → section menu) + テストへ.
  * Diagrams come from src/features/diagrams and are placed after the mechanism section they
- * talk about. A draft badge is shown while the case is not human-reviewed.
+ * talk about. A draft badge is shown unless SolutionResponse.reviewStatus is 'human-reviewed'.
  */
 import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
@@ -16,6 +22,7 @@ import { Diagram } from '../../features/diagrams';
 import { motionReduced } from '../../fx/motion';
 import { ART, useImage } from '../../lib/asset';
 import { pickLine } from '../../lib/lines';
+import { layout } from '../../lib/viewport';
 import { useCaseProgress } from '../../state/hooks';
 import { Button, IconButton } from '../../ui/Button';
 import { factTitle } from '../../ui/EvidenceCard';
@@ -24,7 +31,7 @@ import { Icon } from '../../ui/Icon';
 import { resolveIcon, type IconName } from '../../ui/icons';
 import { EndingError, EndingLoading, SectionHead } from '../Resolution/common';
 import { advanceStage, caseNumber, pad2, useSolution } from '../Resolution/solution';
-import { paragraphs, placeDiagrams, pullQuote } from './text';
+import { paragraphs, placeDiagrams, pullQuote, readingMinutes, sectionChars } from './text';
 import './science.css';
 
 export function ScienceScene({ params }: SceneProps) {
@@ -43,22 +50,32 @@ interface Sec {
   en: string;
   jp: string;
   short: string;
+  /** Deeper reading: an accordion (closed by default on phones). */
+  deep?: boolean;
 }
 
 const SECTIONS: Sec[] = [
   { id: 'cause', en: 'CAUSE OF DEATH', jp: '今回の死因', short: '今回の死因' },
   { id: 'chain', en: 'CAUSAL CHAIN', jp: '因果の鎖', short: '因果の鎖' },
-  { id: 'body', en: 'INSIDE THE BODY', jp: '何が身体で起きたのか', short: '身体で起きたこと' },
-  { id: 'why', en: 'WHY HERE', jp: 'なぜ、この状況で起きたのか', short: 'なぜ、ここで' },
-  { id: 'clues', en: 'FORESHADOWING', jp: '事件中の伏線', short: '事件中の伏線' },
-  { id: 'mech', en: 'MECHANISM', jp: '科学的メカニズム', short: 'メカニズム' },
-  { id: 'myths', en: 'MYTH / TRUTH', jp: 'よくある誤解', short: 'よくある誤解' },
-  { id: 'everyday', en: 'CLOSER TO HOME', jp: '身近なところでは', short: '身近なところでは' },
+  { id: 'body', en: 'INSIDE THE BODY', jp: '何が身体で起きたのか', short: '身体で起きたこと', deep: true },
+  { id: 'why', en: 'WHY HERE', jp: 'なぜ、この状況で起きたのか', short: 'なぜ、ここで', deep: true },
+  { id: 'clues', en: 'FORESHADOWING', jp: '事件中の伏線', short: '事件中の伏線', deep: true },
+  { id: 'mech', en: 'MECHANISM', jp: '科学的メカニズム', short: 'メカニズム', deep: true },
+  { id: 'myths', en: 'MYTH / TRUTH', jp: 'よくある誤解', short: 'よくある誤解', deep: true },
+  { id: 'everyday', en: 'CLOSER TO HOME', jp: '身近なところでは', short: '身近なところでは', deep: true },
   { id: 'points', en: 'TAKEAWAYS', jp: '覚えて帰るポイント', short: '覚えて帰るポイント' },
   { id: 'safety', en: 'STAY SAFE', jp: '身を守るために', short: '身を守るために' },
-  { id: 'memos', en: 'SCIENCE MEMOS', jp: '科学メモ', short: '科学メモ' },
-  { id: 'sources', en: 'SOURCES', jp: '参考資料', short: '参考資料' },
+  { id: 'memos', en: 'SCIENCE MEMOS', jp: '科学メモ', short: '科学メモ', deep: true },
+  { id: 'sources', en: 'SOURCES', jp: '参考資料', short: '参考資料', deep: true },
 ];
+
+/** Item 13 of the index: the way out to the recall test. */
+const QUIZ_ITEM = { no: pad2(SECTIONS.length + 1), jp: '記憶の定着へ', short: '記憶の定着へ' };
+
+const REVIEW_BADGE: Record<string, string> = {
+  'draft-ai': 'AI下書き・専門家確認前',
+  'ai-reviewed': 'AI作成・出典照合済み／専門家確認前',
+};
 
 const STAGE_TONE: Record<string, { en: string; color: string }> = {
   原因: { en: 'CAUSE', color: 'var(--bone)' },
@@ -84,18 +101,27 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
   const [active, setActive] = useState(0);
   const [read, setRead] = useState(0);
   const [menu, setMenu] = useState(false);
+  // phones: deep sections start closed; desktop: everything open except the reference list
+  const [open, setOpen] = useState<Set<string>>(() => new Set(SECTIONS.filter((x) => !x.deep || (layout.peek() !== 'narrow' && x.id !== 'sources')).map((x) => x.id)));
   const intro = useMemo(() => pickLine('science.intro'), []);
   const outro = useMemo(() => pickLine('science.outro'), []);
   const slots = useMemo(() => placeDiagrams(s), [s]);
   const quote = useMemo(() => pullQuote(s), [s]);
+  const chars = useMemo(() => sectionChars(sol), [sol]);
+  const minutes = (id: string) => readingMinutes(chars[id] ?? 0);
+  const totalMin = useMemo(() => readingMinutes(Object.values(chars).reduce((a, b) => a + b, 0)), [chars]);
   const num = caseNumber(caseId, summary);
-  const reviewed = (sol as { reviewStatus?: string }).reviewStatus === 'human-reviewed';
+  const review = sol.reviewStatus;
+  const reviewed = review === 'human-reviewed';
+  const badge = REVIEW_BADGE[review ?? 'draft-ai'] ?? REVIEW_BADGE['draft-ai'];
   const facts = useMemo(() => new Map(sol.allFacts.map((f) => [f.id, f])), [sol]);
   const unlockedMemos = new Set([...Object.keys(progress.value?.memos ?? {}), ...(progress.value?.snapshot?.memos ?? [])]);
+  const memoCount = sol.memos.filter((m) => unlockedMemos.has(m.id)).length;
   let diagramNo = 0;
   const cm = s.causeName.match(/^([^（(]+)[（(](.+)[）)]$/);
   const causeMain = cm ? cm[1].trim() : s.causeName;
   const causeSub = cm ? cm[2].trim() : '';
+  const firstFig = s.diagrams[0];
 
   // reading progress + active section
   useEffect(() => {
@@ -120,23 +146,59 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
     };
     update();
     el.addEventListener('scroll', onScroll, { passive: true });
+    // opening / closing an accordion changes the page height → refresh the progress
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(onScroll) : null;
+    const inner = el.querySelector('.sci-layout');
+    if (inner) ro?.observe(inner);
     return () => {
       el.removeEventListener('scroll', onScroll);
+      ro?.disconnect();
       cancelAnimationFrame(raf);
     };
   }, []);
 
-  const jump = (id: string) => {
+  const scrollToNode = (node: HTMLElement | null, focusHeading = true) => {
     const el = scroller.current;
-    const node = document.getElementById(`sci-${id}`);
     if (!el || !node) return;
     const top = node.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop - (el.clientWidth < 760 ? 64 : 20);
     el.scrollTo({ top, behavior: motionReduced() ? 'auto' : 'smooth' });
-    setMenu(false);
-    audio.sfx('page');
+    if (!focusHeading) return;
+    const toggleBtn = node.querySelector<HTMLElement>('h2 > button');
+    if (toggleBtn) return toggleBtn.focus({ preventScroll: true });
     const h = node.querySelector<HTMLElement>('h2');
     h?.setAttribute('tabindex', '-1');
     h?.focus({ preventScroll: true });
+  };
+
+  /** Scroll to a section (opening it first when it is a closed accordion). */
+  const jump = (id: string) => {
+    setMenu(false);
+    audio.sfx('page');
+    if (!open.has(id)) setOpen((o) => new Set(o).add(id));
+    requestAnimationFrame(() => scrollToNode(document.getElementById(`sci-${id}`)));
+  };
+
+  const toggle = (id: string) => {
+    audio.sfx(open.has(id) ? 'close' : 'open');
+    setOpen((o) => {
+      const n = new Set(o);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  };
+
+  /** 「じっくり読む」: open every section and go to 01. */
+  const readAll = () => {
+    audio.sfx('page');
+    setOpen(new Set(SECTIONS.map((x) => x.id)));
+    requestAnimationFrame(() => scrollToNode(document.getElementById('sci-cause')));
+  };
+
+  const toFigure = () => {
+    audio.sfx('page');
+    if (!open.has('mech')) setOpen((o) => new Set(o).add('mech'));
+    requestAnimationFrame(() => scrollToNode(document.getElementById('sci-fig-1'), false));
   };
 
   const toQuiz = () => {
@@ -145,6 +207,23 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
   };
 
   const secNo = (id: string) => pad2(SECTIONS.findIndex((x) => x.id === id) + 1);
+  const secProps = (id: string) => ({ sec: SECTIONS.find((x) => x.id === id)!, no: secNo(id), open: open.has(id), onToggle: () => toggle(id), minutes: minutes(id) });
+
+  const quick = (variant: 'inline' | 'rail') => (
+    <QuickRead
+      variant={variant}
+      causeMain={causeMain}
+      causeSub={causeSub}
+      chain={s.chain}
+      points={s.takeaways.slice(0, 3)}
+      totalMin={totalMin}
+      quizCount={sol.quiz.length}
+      figure={firstFig ? firstFig.title : undefined}
+      onFigure={toFigure}
+      onQuiz={toQuiz}
+      onReadAll={readAll}
+    />
+  );
 
   return (
     <section class="scene sci" style={summary?.accent ? { '--case-accent': summary.accent } : undefined}>
@@ -153,7 +232,7 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
         <div class="sci__shade" />
       </div>
       <div class="page sci-page" ref={scroller}>
-        {/* phone: sticky progress + section menu */}
+        {/* phone: sticky progress + section menu + the way to the recall test */}
         <div class={`sci-mnav only-narrow ${menu ? 'is-open' : ''}`}>
           <div class="sci-mnav__bar">
             <IconButton icon="back" label="身元回復へ戻る" size="sm" variant="plain" sfx="cancel" onClick={() => goto('resolution', { caseId })} />
@@ -164,20 +243,32 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
               <span class="sci-mnav__label">{SECTIONS[active].short}</span>
               <Icon name="chevronDown" size={18} />
             </button>
+            <button type="button" class="sci-mnav__quiz" onClick={toQuiz} aria-label="記憶の定着（確認テスト）へ進む">
+              <Icon name="check" size={16} />
+              <span>テストへ</span>
+            </button>
           </div>
           <div class="sci-mnav__progress" aria-hidden="true">
             <span style={{ transform: `scaleX(${read})` }} />
           </div>
           {menu && (
             <ol class="sci-mnav__list" id="sci-mnav-list">
-              {SECTIONS.map((sec, i) => (
-                <li key={sec.id}>
-                  <button type="button" class={i === active ? 'is-active' : ''} onClick={() => jump(sec.id)}>
+              {SECTIONS.map((x, i) => (
+                <li key={x.id}>
+                  <button type="button" class={i === active ? 'is-active' : ''} onClick={() => jump(x.id)}>
                     <span class="t-mono">{pad2(i + 1)}</span>
-                    {sec.jp}
+                    <span class="sci-mnav__item">{x.jp}</span>
+                    {x.deep && <span class="sci-mnav__min t-mono">{minutes(x.id)}分</span>}
                   </button>
                 </li>
               ))}
+              <li>
+                <button type="button" class="sci-mnav__to-quiz" onClick={toQuiz}>
+                  <span class="t-mono">{QUIZ_ITEM.no}</span>
+                  <span class="sci-mnav__item">{QUIZ_ITEM.jp}</span>
+                  <span class="sci-mnav__min t-mono">{sol.quiz.length}問</span>
+                </button>
+              </li>
             </ol>
           )}
         </div>
@@ -196,18 +287,27 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
                   <span style={{ transform: `scaleY(${read})` }} />
                 </div>
                 <ol>
-                  {SECTIONS.map((sec, i) => (
-                    <li key={sec.id}>
-                      <button type="button" class={`${i === active ? 'is-active' : ''} ${i < active ? 'is-read' : ''}`} aria-current={i === active ? 'location' : undefined} onClick={() => jump(sec.id)}>
+                  {SECTIONS.map((x, i) => (
+                    <li key={x.id}>
+                      <button type="button" class={`${i === active ? 'is-active' : ''} ${i < active ? 'is-read' : ''}`} aria-current={i === active ? 'location' : undefined} onClick={() => jump(x.id)}>
                         <span class="t-mono">{pad2(i + 1)}</span>
-                        {sec.short}
+                        {x.short}
                       </button>
                     </li>
                   ))}
+                  <li>
+                    <button type="button" class="sci-index__quiz" onClick={toQuiz}>
+                      <span class="t-mono">{QUIZ_ITEM.no}</span>
+                      {QUIZ_ITEM.short}
+                      <Icon name="chevronRight" size={14} />
+                    </button>
+                  </li>
                 </ol>
               </div>
-              <p class="sci-index__pct t-mono">{Math.round(read * 100)}% READ</p>
-              {!reviewed && <p class="sci-index__draft">AI下書き・専門家確認前</p>}
+              <p class="sci-index__pct t-mono">
+                {Math.round(read * 100)}% READ · 全文 約{totalMin}分
+              </p>
+              {!reviewed && <p class="sci-index__draft">{badge}</p>}
             </div>
           </nav>
 
@@ -225,14 +325,20 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
               {!reviewed && (
                 <p class="sci-draft" role="note">
                   <Icon name="info" size={18} />
-                  <span>この解説はAIが作成した下書きです（専門家による確認前）。正確さには注意を払っていますが、医療・安全の判断は公的機関や専門家の情報をご確認ください。</span>
+                  <span>
+                    {review === 'ai-reviewed'
+                      ? 'この解説はAIが作成し、出典との照合もAIが行ったものです（専門家による確認前）。'
+                      : 'この解説はAIが作成した下書きです（専門家による確認前）。'}
+                    医療・安全の判断は、公的機関や専門家の情報をご確認ください。
+                  </span>
                 </p>
               )}
               <HolmaAside mood={intro.mood} text={intro.text} />
+              {quick('inline')}
             </header>
 
             {/* 01 cause */}
-            <Section sec={SECTIONS[0]} no={secNo('cause')}>
+            <Section {...secProps('cause')}>
               <div class="sci-cause">
                 <p class="sci-cause__label t-mono">DIAGNOSIS — 正式な死因</p>
                 <p class="sci-cause__name">{causeMain}</p>
@@ -242,12 +348,12 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
             </Section>
 
             {/* 02 chain */}
-            <Section sec={SECTIONS[1]} no={secNo('chain')}>
+            <Section {...secProps('chain')}>
               <CausalChain chain={s.chain} />
             </Section>
 
             {/* 03 body */}
-            <Section sec={SECTIONS[2]} no={secNo('body')}>
+            <Section {...secProps('body')}>
               <Prose text={s.body} />
               {quote && (
                 <blockquote class="sci-pull">
@@ -257,12 +363,12 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
             </Section>
 
             {/* 04 why */}
-            <Section sec={SECTIONS[3]} no={secNo('why')}>
+            <Section {...secProps('why')}>
               <Prose text={s.whyHere} />
             </Section>
 
             {/* 05 clues */}
-            <Section sec={SECTIONS[4]} no={secNo('clues')}>
+            <Section {...secProps('clues')}>
               <p class="sci-note">捜査で集めた所見の、本当の意味。</p>
               <ol class="clues">
                 {s.foreshadowing.map((c, i) => {
@@ -295,7 +401,7 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
             </Section>
 
             {/* 06 mechanism + diagrams */}
-            <Section sec={SECTIONS[5]} no={secNo('mech')}>
+            <Section {...secProps('mech')} note={s.diagrams.length ? `図解${s.diagrams.length}点` : undefined}>
               {s.mechanism.map((m, i) => (
                 <div key={i} class="mech">
                   <h3 class="mech__h">
@@ -303,20 +409,25 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
                     {m.heading}
                   </h3>
                   <Prose text={m.text} />
-                  {slots[i]?.map((di) => (
-                    <Diagram key={di} d={s.diagrams[di]} index={diagramNo++} />
-                  ))}
+                  {slots[i]?.map((di) => {
+                    const n = ++diagramNo;
+                    return (
+                      <div key={di} class="sci-fig" id={`sci-fig-${n}`}>
+                        <Diagram d={s.diagrams[di]} index={n - 1} />
+                      </div>
+                    );
+                  })}
                 </div>
               ))}
             </Section>
 
             {/* 07 myths */}
-            <Section sec={SECTIONS[6]} no={secNo('myths')}>
+            <Section {...secProps('myths')} note={`${s.misconceptions.length}枚`}>
               <MythCards items={s.misconceptions} />
             </Section>
 
             {/* 08 everyday */}
-            <Section sec={SECTIONS[7]} no={secNo('everyday')}>
+            <Section {...secProps('everyday')}>
               <ul class="everyday">
                 {s.everyday.map((e, i) => (
                   <li key={i}>
@@ -330,7 +441,7 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
             </Section>
 
             {/* 09 takeaways */}
-            <Section sec={SECTIONS[8]} no={secNo('points')}>
+            <Section {...secProps('points')}>
               <ol class="points">
                 {s.takeaways.map((t, i) => (
                   <li key={i}>
@@ -344,7 +455,7 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
             </Section>
 
             {/* 10 safety */}
-            <Section sec={SECTIONS[9]} no={secNo('safety')}>
+            <Section {...secProps('safety')}>
               <div class="safety" role="note">
                 <span class="safety__icon" aria-hidden="true">
                   <Icon name="info" size={26} />
@@ -354,9 +465,9 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
             </Section>
 
             {/* 11 memos */}
-            <Section sec={SECTIONS[10]} no={secNo('memos')}>
+            <Section {...secProps('memos')} note={`${memoCount} / ${sol.memos.length}枚`}>
               <p class="sci-note">
-                捜査で入手した科学メモ：{sol.memos.filter((m) => unlockedMemos.has(m.id)).length} / {sol.memos.length}
+                捜査で入手した科学メモ：{memoCount} / {sol.memos.length}
               </p>
               <div class="memos">
                 {sol.memos.map((m) => {
@@ -373,7 +484,7 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
             </Section>
 
             {/* 12 sources */}
-            <Section sec={SECTIONS[11]} no={secNo('sources')}>
+            <Section {...secProps('sources')} note={`${sol.sources.length}件`}>
               <p class="sci-note">この解説は、次の公的機関・学会・大学・論文などの情報をもとに書かれています（リンクは別のタブで開きます）。</p>
               <ol class="sources">
                 {sol.sources.map((src) => (
@@ -398,25 +509,127 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
               </ol>
             </Section>
 
-            <footer class="sci-end">
+            <footer class="sci-end" id="sci-quiz">
               <HolmaAside mood={outro.mood} text={outro.text} />
-              <Button variant="big-cta" class="end-cta" size="lg" icon="check" iconRight="chevronRight" en="RECALL TEST" onClick={toQuiz}>
+              <Button variant="big-cta" class="end-cta" size="lg" icon="check" iconRight="chevronRight" en={`RECALL TEST — ${sol.quiz.length} QUESTIONS`} onClick={toQuiz}>
                 記憶の定着へ
               </Button>
-              {!reviewed && <p class="sci-end__draft">※ この解説はAIが作成した下書きです（専門家による確認前）。</p>}
+              {!reviewed && <p class="sci-end__draft">※ {badge}の解説です。</p>}
             </footer>
           </article>
+
+          {/* very wide screens (≥1640px): the quick read lives in a sticky rail instead of the article top */}
+          <aside class="sci-rail" aria-label="要点">
+            {quick('rail')}
+          </aside>
         </div>
       </div>
     </section>
   );
 }
 
-function Section({ sec, no, children }: { sec: Sec; no: string; children: ComponentChildren }) {
+/** The one-screen summary: cause · causal chain · 3 takeaways · main figure · the recall test. */
+function QuickRead(p: {
+  variant: 'inline' | 'rail';
+  causeMain: string;
+  causeSub: string;
+  chain: SolutionResponse['science']['chain'];
+  points: string[];
+  totalMin: number;
+  quizCount: number;
+  figure?: string;
+  onFigure: () => void;
+  onQuiz: () => void;
+  onReadAll: () => void;
+}) {
+  const hid = `sci-quick-h-${p.variant}`;
   return (
-    <section class={`sci-sec sci-sec--${sec.id}`} id={`sci-${sec.id}`} aria-labelledby={`sci-h-${sec.id}`}>
-      <SectionHead num={no} en={sec.en} jp={sec.jp} id={`sci-h-${sec.id}`} />
-      {children}
+    <section class={`sci-quick sci-quick--${p.variant}`} aria-labelledby={hid}>
+      <header class="sci-quick__head">
+        <span class="sci-quick__en">QUICK READ</span>
+        <h2 class="sci-quick__title" id={hid}>
+          要点だけ、先に
+        </h2>
+        <span class="sci-quick__time t-mono">全文 約{p.totalMin}分</span>
+      </header>
+      <div class="sci-quick__cause">
+        <span class="sci-quick__label">死因</span>
+        <p>
+          <strong>{p.causeMain}</strong>
+          {p.causeSub && <small>{p.causeSub}</small>}
+        </p>
+      </div>
+      <ol class="sci-quick__chain" aria-label="因果の鎖">
+        {p.chain.map((c, i) => {
+          const tone = STAGE_TONE[c.stage] ?? STAGE_TONE['原因'];
+          return (
+            <li key={i} style={{ '--tone': tone.color }}>
+              <span class="sci-quick__stage">{c.stage}</span>
+              <span class="sci-quick__step">{c.title}</span>
+            </li>
+          );
+        })}
+      </ol>
+      <div class="sci-quick__points">
+        <p class="sci-quick__label">覚えて帰る</p>
+        <ol>
+          {p.points.map((t, i) => (
+            <li key={i}>
+              <span class="sci-quick__no" aria-hidden="true">
+                {i + 1}
+              </span>
+              <p>{t}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <div class="sci-quick__actions">
+        <Button variant="big-cta" class="end-cta sci-quick__cta" size="lg" icon="check" iconRight="chevronRight" en={p.variant === 'rail' ? 'RECALL TEST' : `RECALL TEST — ${p.quizCount} QUESTIONS`} onClick={p.onQuiz}>
+          記憶の定着へ
+        </Button>
+        <div class="sci-quick__more">
+          <Button variant="ghost" size="sm" icon="chevronDown" onClick={p.onReadAll} sfx={false}>
+            じっくり読む
+          </Button>
+          {p.figure && (
+            <Button variant="quiet" size="sm" icon="science" onClick={p.onFigure} sfx={false}>
+              図解を見る
+            </Button>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Section({ sec, no, open, onToggle, minutes, note, children }: { sec: Sec; no: string; open: boolean; onToggle: () => void; minutes: number; note?: string; children: ComponentChildren }) {
+  // a closed accordion mounts its content on first open (diagrams measure themselves; no work for unread parts)
+  const everOpen = useRef(open);
+  if (open) everOpen.current = true;
+  if (!sec.deep)
+    return (
+      <section class={`sci-sec sci-sec--${sec.id}`} id={`sci-${sec.id}`} aria-labelledby={`sci-h-${sec.id}`}>
+        <SectionHead num={no} en={sec.en} jp={sec.jp} id={`sci-h-${sec.id}`} />
+        {children}
+      </section>
+    );
+  // deeper reading: an accordion whose whole heading is the toggle
+  return (
+    <section class={`sci-sec sci-sec--${sec.id} sci-sec--deep ${open ? 'is-open' : ''}`} id={`sci-${sec.id}`} aria-labelledby={`sci-h-${sec.id}`}>
+      <h2 class="sci-sec__h" id={`sci-h-${sec.id}`}>
+        <button type="button" class="sec-head sci-toggle" aria-expanded={open} aria-controls={`sci-body-${sec.id}`} onClick={onToggle}>
+          <span class="sec-head__num t-mono">{no}</span>
+          <span class="sec-head__en">{sec.en}</span>
+          <span class="sec-head__jp">{sec.jp}</span>
+          <span class="sci-toggle__meta t-mono">
+            {note ? `${note} · ` : ''}約{minutes}分
+          </span>
+          <Icon name="chevronDown" size={22} class="sci-toggle__chev" />
+        </button>
+      </h2>
+      <div class="sci-sec__body" id={`sci-body-${sec.id}`} hidden={!open}>
+        {everOpen.current ? children : null}
+      </div>
     </section>
   );
 }

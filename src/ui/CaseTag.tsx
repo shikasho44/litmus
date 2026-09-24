@@ -1,5 +1,5 @@
 import type { CaseSummary } from '../../shared/api';
-import type { CaseStatus, Rank } from '../state/types';
+import type { CaseStatus, Rank, RestoredIdentity } from '../state/types';
 import { CASE_STATUS_LABEL } from '../state/types';
 import { audio } from '../audio';
 import { Icon } from './Icon';
@@ -15,6 +15,23 @@ export interface CaseTagProps {
   secondaryLabel?: string;
   index?: number;
   onFocusCase?: () => void;
+  /** The victim's name once the identity ceremony has played (solved / complete). */
+  restored?: RestoredIdentity;
+}
+
+/**
+ * The summary always ends with the case's hook question. Split it off so the card can clamp
+ * the set-up but never the question: 「…争った跡もない。——眠っているように見えた彼女は、…のか？」
+ */
+export function splitHook(summary: string): { body: string; hook: string | null } {
+  const s = summary.trim();
+  if (!/[？?]$/.test(s)) return { body: s, hook: null };
+  const inner = s.slice(0, -1);
+  const dash = inner.lastIndexOf('——');
+  const dot = inner.lastIndexOf('。');
+  if (dash > dot && dash > 0) return { body: s.slice(0, dash).trim(), hook: s.slice(dash + 2).trim() };
+  if (dot > 0) return { body: s.slice(0, dot + 1).trim(), hook: s.slice(dot + 1).trim() };
+  return { body: '', hook: s };
 }
 
 const ACTION: Record<CaseStatus, { jp: string; en: string }> = {
@@ -25,8 +42,10 @@ const ACTION: Record<CaseStatus, { jp: string; en: string }> = {
 };
 
 /** Toe-tag case card for the 事件ファイル screen. */
-export function CaseTag({ summary: c, status, bestRank, onOpen, onSecondary, secondaryLabel, index = 0, onFocusCase }: CaseTagProps) {
+export function CaseTag({ summary: c, status, bestRank, onOpen, onSecondary, secondaryLabel, index = 0, onFocusCase, restored }: CaseTagProps) {
   const num = String(c.number).padStart(2, '0');
+  const { body, hook } = splitHook(c.summary);
+  const identified = !!restored && (status === 'solved' || status === 'complete');
   const tilt = [-2.2, 1.6, -1.1, 2][index % 4];
   const action = ACTION[status];
   const titleId = `case-${c.id}-title`;
@@ -46,16 +65,29 @@ export function CaseTag({ summary: c, status, bestRank, onOpen, onSecondary, sec
             <span class="tag__case-en">CASE</span>
             <span class="tag__num">{num}</span>
           </span>
-          <span class="tag__meta-mono">
-            <span>{c.codename}</span>
-            <span>UNIDENTIFIED</span>
-          </span>
+          {identified ? (
+            <span class="tag__meta-mono tag__meta-mono--identified">
+              <s class="tag__was" aria-label={`旧称 ${c.codename}`}>
+                {c.codename}
+              </s>
+              <span class="tag__name">{restored!.name}</span>
+              <span class="tag__identified">IDENTIFIED</span>
+            </span>
+          ) : (
+            <span class="tag__meta-mono">
+              <span>{c.codename}</span>
+              <span>UNIDENTIFIED</span>
+            </span>
+          )}
         </div>
         <h3 class="tag__title" id={titleId}>
           {c.title}
         </h3>
         <p class="tag__title-en">{c.titleEn}</p>
-        <p class="tag__summary">{c.summary}</p>
+        <div class="tag__summary">
+          {body && <p class="tag__summary-body">{body}</p>}
+          {hook && <p class="tag__hook">{hook}</p>}
+        </div>
         <dl class="tag__facts">
           <div>
             <dt>難易度</dt>
@@ -81,6 +113,17 @@ export function CaseTag({ summary: c, status, bestRank, onOpen, onSecondary, sec
             <dt>目安</dt>
             <dd class="t-mono">約{c.estimatedMinutes}分</dd>
           </div>
+          {bestRank && (
+            <div class="tag__facts-rank">
+              <dt class="sr-only">最高ランク</dt>
+              <dd class="tag__rank" aria-label={`最高ランク ${bestRank}`}>
+                <span class="tag__rank-label" aria-hidden="true">
+                  BEST
+                </span>
+                <span class="tag__rank-value">{bestRank}</span>
+              </dd>
+            </div>
+          )}
         </dl>
         {c.contentWarning && (
           <p class="tag__warning">
@@ -112,12 +155,6 @@ export function CaseTag({ summary: c, status, bestRank, onOpen, onSecondary, sec
         <div class={`tag__status tag__status--${status}`} aria-label={`状態：${CASE_STATUS_LABEL[status]}`}>
           <span>{CASE_STATUS_LABEL[status]}</span>
         </div>
-        {bestRank && (
-          <div class="tag__rank" aria-label={`最高ランク ${bestRank}`}>
-            <span class="tag__rank-label">BEST</span>
-            <span class="tag__rank-value">{bestRank}</span>
-          </div>
-        )}
       </div>
     </article>
   );

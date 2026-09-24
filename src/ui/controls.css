@@ -176,7 +176,7 @@
 }
 .seg__sub {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 400;
   opacity: 0.75;
 }
@@ -187,4 +187,14 @@
 }
 [data-layout='narrow'] .slider {
   flex: 1 1 auto;
+}
+
+/* touch: 44px targets (segmented options grow; the switch gets padding) */
+@media (pointer: coarse) {
+  .seg__opt {
+    min-height: 44px;
+  }
+  .switch {
+    padding: 6px 2px;
+  }
 }

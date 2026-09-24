@@ -5,7 +5,7 @@
  */
 import type { ComponentChildren } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
-import { AnswerChip, Badge, Btn, Card, Chips, Empty, ErrorBox, KV, Meter, Seg, Stat, type Tone } from '../components';
+import { AnswerChip, Badge, Btn, Card, Chips, Empty, ErrorBox, KV, Meter, PathText, Seg, Stat, type Tone } from '../components';
 import { fmtPct, noiseSegments } from '../format';
 import { cases, go, pendingAsk, route, setQuery } from '../store';
 import type { AdminCase, Case, ProbeMismatch } from '../types';
@@ -745,7 +745,7 @@ export function CasesSection() {
           <ErrorBox>
             {all.issues.map((i, k) => (
               <div key={k}>
-                <code>{i.path}</code> {i.message}
+                <PathText path={i.path} /> {i.message}
               </div>
             ))}
           </ErrorBox>
@@ -809,7 +809,7 @@ export function CasesSection() {
           </span>
           <h2>{d.title}</h2>
           <p class="adm-dim adm-small">
-            <code>{c.path}</code>
+            <PathText path={c.path} />
           </p>
         </div>
         <dl class="adm-casehead__facts">

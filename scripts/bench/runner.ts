@@ -21,6 +21,7 @@ import type { Judge, JudgeDecision, PipelineComponents, PostChecker, Renderer } 
 import { ContentRegistry, type LoadedCase } from '../../server/engine/registry.js';
 import type { LineBank } from '../../server/engine/lines.js';
 import { normalize } from '../../server/engine/normalize.js';
+import { keywordHits } from '../../server/engine/retrieve.js';
 import type { EngineTrace } from '../../server/engine/trace.js';
 import { createJevProvider } from '../../server/engine/providers/jev.js';
 import { createOpenRouterLlm } from '../../server/engine/providers/openrouter-llm.js';
@@ -261,6 +262,16 @@ export function qtypeOf(part: PartTraceLike | undefined): QType {
   return 'yesno';
 }
 
+/** Unlocked cards that neither share a keyword with the question nor are labelled for the probe. */
+export function offTopicCards(task: ProbeTask, unlockedIds: string[]): string[] {
+  const norm = normalize(task.probe.q);
+  return unlockedIds.filter((id) => {
+    if (task.probe.facts.includes(id)) return false;
+    const entry = task.loaded.index.factById.get(id);
+    return !!entry && keywordHits(norm, entry).length === 0;
+  });
+}
+
 export async function runOne(task: ProbeTask, base: PipelineComponents, lines: LineBank, loo: boolean): Promise<RunRecord> {
   const loaded = loo ? leaveOneOut(task.loaded, task.probe) : task.loaded;
   const registry = new ContentRegistry([loaded], [], lines, undefined);
@@ -298,6 +309,7 @@ export async function runOne(task: ProbeTask, base: PipelineComponents, lines: L
     leaks: leaksIn(line, c.leakTerms, allowedFacts),
     level4Cards: unlockedIds.filter((id) => (byId.get(id)?.spoilerLevel ?? 0) >= 4),
     foreign: llmLine ? foreignFactMentions(line, task.probe.q, c.facts, allowedIds) : [],
+    offTopicCards: offTopicCards(task, unlockedIds),
     selfHarmFlag: cap.decision?.flags?.selfHarm,
     judge: {
       model: cap.decision ? { answer: cap.decision.answerClass, conf: cap.decision.confidence, facts: cap.decision.factIds, raw: cap.decision.raw } : undefined,

@@ -17,6 +17,8 @@ export interface IndexedFact {
   clauses: { norm: string; polarity?: Polarity; marks: PolarityMark[] }[];
   /** Polarity marks of the whole statement. */
   marks: PolarityMark[];
+  /** Spoken forms of compound keywords (「酸素メーター」 → 「酸素のメーター」), normalised. */
+  variants: { form: string; keyword: string }[];
 }
 
 export interface IndexedProbe {
@@ -41,6 +43,39 @@ export interface CaseIndex {
   leakTerms: string[];
   /** Every fact keyword with ≥ 2 characters (normalised) — content words of the case. */
   contentWords: string[];
+  /**
+   * Normalised forms of the victim's real name (secret until solved). A question that contains
+   * one is answered 'cannot' without consulting any model: confirming 「白石さんですか？」 would
+   * leak the identity (the judge sees the truth summary, which names her).
+   */
+  secretNames: string[];
+}
+
+const HONORIFICS = ['さん', 'ちゃん', 'くん', '氏', '様', 'さま', 'せんせい', '先生'];
+
+/**
+ * Name forms that identify the victim: full name (kanji / kana, no space), the kanji surname
+ * (≥ 2 chars), and any name part followed by an honorific. Bare kana parts are left out on
+ * purpose — しいな is inside おかしいな, はるか is an ordinary word.
+ */
+export function secretNamesOf(c: Pick<Case, 'victim'>): string[] {
+  const out = new Set<string>();
+  const kanji = c.victim.name.split(/[\s　・]+/u).filter(Boolean);
+  const kana = c.victim.nameKana.split(/[\s　・]+/u).filter(Boolean);
+  const add = (s: string) => {
+    const n = normalize(s);
+    if ([...n].length >= 2) out.add(n);
+  };
+  add(kanji.join(''));
+  add(kana.join(''));
+  if (kanji.length > 1 && [...kanji[0]].length >= 2 && /\p{Script=Han}/u.test(kanji[0])) add(kanji[0]);
+  for (const part of [...kanji, ...kana]) for (const h of HONORIFICS) add(`${part}${h}`);
+  return [...out];
+}
+
+/** Secret name forms contained in a normalised question. */
+export function secretNamesIn(norm: string, names: readonly string[]): string[] {
+  return names.filter((n) => norm.includes(n));
 }
 
 /**
@@ -69,6 +104,22 @@ export function indexProbe(probe: Probe, index: number, contentWords: readonly s
   return { probe, index, norm, core, grams: bigrams(core), negated: isNegatedConfirmation(norm), open: isOpenQuestion(norm), keywords: contentWordsIn(norm, contentWords), prop: questionProposition(probe.q) };
 }
 
+/** A kanji noun + katakana noun compound (「酸素メーター」「窒素ガス」). */
+const HAN_KATA = /^(\p{Script=Han}{2,})([\p{Script=Katakana}ー]{2,})$/u;
+
+/**
+ * Players split compound keywords with 「の」: 「酸素のメーター」 for 酸素メーター. Only kanji +
+ * katakana compounds get the variant — the boundary is certain there (「酸素濃度計」 is not split).
+ */
+export function keywordVariants(keywords: readonly string[]): { form: string; keyword: string }[] {
+  const out: { form: string; keyword: string }[] = [];
+  for (const k of keywords) {
+    const m = HAN_KATA.exec(k.normalize('NFKC').trim());
+    if (m) out.push({ form: normalize(`${m[1]}の${m[2]}`), keyword: normalize(k) });
+  }
+  return out;
+}
+
 export function buildCaseIndex(c: Case): CaseIndex {
   const facts: IndexedFact[] = c.facts.map((fact) => {
     const norm = normalize(fact.text);
@@ -82,7 +133,7 @@ export function buildCaseIndex(c: Case): CaseIndex {
         return { norm: c, polarity: marksPolarity(marks), marks };
       });
     const marks = polarityMarks(norm);
-    return { fact, norm, grams: bigrams(norm), keywords: kws, polarity: marksPolarity(marks), clauses, marks };
+    return { fact, norm, grams: bigrams(norm), keywords: kws, polarity: marksPolarity(marks), clauses, marks, variants: keywordVariants(fact.keywords) };
   });
   const contentWords = [...new Set(facts.flatMap((f) => f.keywords).filter((k) => [...k].length >= 2))];
   return {
@@ -92,5 +143,6 @@ export function buildCaseIndex(c: Case): CaseIndex {
     probes: c.probes.map((p, i) => indexProbe(p, i, contentWords)),
     memoById: new Map(c.scienceMemos.map((m) => [m.id, m])),
     leakTerms: [...new Set(c.leakTerms.map(normalize).filter((t) => t.length > 0))],
+    secretNames: secretNamesOf(c),
   };
 }

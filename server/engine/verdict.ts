@@ -21,7 +21,14 @@ import type { VerdictResult } from '../../shared/api.js';
 import type { RulesVerdict, VerdictJudgeOutput } from './judge-types.js';
 import { normalize } from './normalize.js';
 
-export const ELEMENT_PROB = 0.7;
+/**
+ * A model-only element match (the rules keyword groups did not match) needs this probability.
+ * 0.7 → 0.85 on 2026-09-25: over the 144 authored regression verdicts + 20 AI-playtest verdicts
+ * (hand-labelled), Jev's element nouls at 0.7–0.85 only ever turned wrong mechanisms into
+ * 'correct' (「力んで迷走神経反射」「錯乱して脱いだ」) and never rescued a right one
+ * (fixtures 141 → 142/144, playtest 15 → 17/20, no correct verdict lost). docs/ai.md §3-4.
+ */
+export const ELEMENT_PROB = 0.85;
 export const WRONG_PROB = 0.7;
 /** A rules-affirmed wrong claim stands unless the model is fairly sure it is not asserted. */
 export const WRONG_VETO_PROB = 0.4;

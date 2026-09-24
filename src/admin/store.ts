@@ -68,6 +68,8 @@ export const authError = signal<string>('');
 export const hasToken = signal<boolean>(!!getAdminToken());
 
 export const health = signal<Health | null>(null);
+/** HTTP status of the last failed /api/health (503 = production server misconfigured), 0 = network. */
+export const healthFailure = signal<number | null>(null);
 export const status = signal<AdminStatus | null>(null);
 export const cases = signal<AdminCases | null>(null);
 export const casesError = signal<string>('');
@@ -82,8 +84,10 @@ export const caseIds = computed(() => (cases.value?.cases ?? []).map((c) => c.id
 export async function refreshHealth(): Promise<void> {
   try {
     health.value = await adminApi.health();
-  } catch {
+    healthFailure.value = null;
+  } catch (e) {
     health.value = null;
+    healthFailure.value = e instanceof AdminError ? e.status : 0;
   }
 }
 

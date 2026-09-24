@@ -198,7 +198,13 @@
     {"q": "友達のせいですか？", "expect": ["no"], "noNearCore": true, "critical": true, "group": "blame"},
     {"q": "山小屋の人のせいですか？", "expect": ["no", "vague"], "critical": true, "group": "blame", "note": "「はい」にならないことが要点。"},
     {"q": "救助隊のせいですか？", "expect": ["no", "vague"], "critical": true, "group": "blame"},
-    {"q": "友人が悪いのですか？", "expect": ["no"], "pending": "cause-routing", "group": "blame", "note": "人を指す「〜のせい／〜が悪い」は、責めを否定する所見（または vague）へ回す目標。 今は vague。"}
+    {"q": "友人が悪いのですか？", "expect": ["no"], "pending": "cause-routing", "group": "blame", "note": "人を指す「〜のせい／〜が悪い」は、責めを否定する所見（または vague）へ回す目標。 今は vague。"},
+    {"q": "服は破れていましたか？", "expect": ["no"], "fact": "F28", "critical": true, "group": "starter", "note": "質問の例（性暴力を示唆しない中立の言い方）。審問①の手がかり。"},
+    {"q": "服を脱いだ時、寒さを感じていましたか？", "expect": ["no"], "group": "playtest contradiction", "note": "熱いと錯覚していた（F37）。docs/playtest-report.md §4。"},
+    {"q": "岩の隙間を雪洞だと思ったのですか？", "expect": ["irrelevant"], "group": "inner experience", "note": "心の中で何を思ったかは所見に無い（関係ない）。"},
+    {"q": "幻覚を見ていましたか？", "expect": ["irrelevant"], "group": "inner experience"},
+    {"q": "あと何回質問できますか？", "expect": ["cannot"], "group": "game help"},
+    {"q": "審問はいつ開けばいいですか？", "expect": ["cannot"], "group": "game help"}
   ],
   "verdicts": [
     {"text": "撮影中に吹雪で道に迷い、足首を捻挫して動けなくなった。寒さで低体温症になり、末期に体が熱いと錯覚して自分で服を脱ぎ（矛盾脱衣）、岩の隙間に潜り込んで亡くなった。事件ではない。", "expect": ["correct"], "note": "correct verdicts (natural player language)"},

@@ -193,7 +193,8 @@ const inquest: Track = {
   id: 'inquest',
   bpm: 138,
   bars: 16,
-  gain: 0.82,
+  // −3 dB: the inquest sat ~5 LU above the other tracks at the same volume setting
+  gain: 0.58,
   echo: [0.326, 0.22],
   step(api, bar, s, t) {
     const { out, s16 } = api;
@@ -207,10 +208,12 @@ const inquest: Track = {
       clap(out, t, { vel: 0.38 });
       snare(out, t, { vel: 0.22 });
     }
-    if (bar === 15) snare(out, t, { vel: 0.08 + (s / 16) * 0.35, decay: 0.1 });
+    // bar 15: an audible build (it used to drop to −36 dB right before the loop's downbeat)
+    if (bar === 15) snare(out, t, { vel: 0.2 + (s / 15) * 0.5, decay: 0.14 });
+    if (bar === 15 && s === 0) pad(out, t, c.chord.map((m) => m - 12), s16 * 16, { vel: 0.09, cutoff: 1400, attack: 0.08, release: 0.25 });
     if (!brk && s % 4 === 2) hat(out, t, { vel: 0.14, open: s === 14 && bar % 2 === 1 });
     if (B && !brk && s % 2 === 1) hat(out, t, { vel: 0.05 });
-    if (bar === 15 && s === 0) sweep(out, t, s16 * 16, { vel: 0.12, from: 300, to: 7000, shape: 'rise' });
+    if (bar === 15 && s === 0) sweep(out, t, s16 * 16, { vel: 0.3, from: 300, to: 7000, shape: 'rise' });
     if (bar === 0 && s === 0) {
       bell(out, t, 28, { vel: 0.22, decay: 4, partials: GLOCK, wet: 0.7 });
       sweep(out, t, 1.2, { vel: 0.1, from: 5000, to: 300, shape: 'fall' });

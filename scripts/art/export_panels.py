@@ -4,7 +4,11 @@ Usage (from the project root):
     python scripts/art/export_panels.py            # all panels that have a source
     python scripts/art/export_panels.py --sheet    # also writes qa/art/panels-contact.png
 
-    art-src/panels/c0N-panel-N.png  ->  public/cases/c0N/panel-N.webp   (1280x853, q84)
+    art-src/panels/c0N-panel-N.png  ->  public/cases/c0N/panel-N.webp   (1024x683, q84)
+
+Size: the reconstruction board shows a panel at most ~470 CSS px wide (1440 px desktop) and
+~340 CSS px on phones, i.e. <= ~1000 device px even at DPR 2-3. 1024 w covers that and is a
+third lighter than the former 1280 w (all 15 panels: 4.5 MB -> 3.0 MB).
 
 Every content/cases/*/case.json reconstruction.panels[].image is checked: a referenced image
 without a source, or a source nobody references, is reported and exits non-zero.
@@ -23,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from export_art import cover_resize, save_webp  # noqa: E402
 from style import ART_SRC, PUBLIC, ROOT  # noqa: E402
 
-W, H, Q = 1280, 853, 84
+W, H, Q = 1024, 683, 84
 
 
 def referenced() -> dict[str, str]:

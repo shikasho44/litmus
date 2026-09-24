@@ -27,6 +27,8 @@ import { StageTimer, traceId, type EngineTrace, type TraceSink } from './trace.j
 
 export const MAX_VERDICT_CHARS = 600;
 export const DEFAULT_QUESTION_CAP = 400;
+/** At most one judge wake-up call per this interval (per server instance). */
+export const WARM_INTERVAL_MS = 120_000;
 
 export interface GameServiceOptions {
   /** Returns the current registry (may reload content in dev). */
@@ -61,6 +63,9 @@ const str = (v: unknown, name: string, max = 200): string => {
 export class GameService {
   private readonly clock: () => number;
   private readonly questionCap: number;
+  private lastWarm = -Infinity;
+  /** The pending wake-up call (tests and the Vercel entry may await it). */
+  warming?: Promise<void>;
 
   constructor(private readonly opts: GameServiceOptions) {
     this.clock = opts.clock ?? Date.now;
@@ -109,7 +114,22 @@ export class GameService {
 
   async newToken(caseId: string, o?: CallOptions): Promise<{ token: ProgressToken; progress: ProgressSnapshot }> {
     const c = await this.loaded(caseId, o);
+    this.warmJudge();
     return this.issue(c, initialState(c.data, this.clock()));
+  }
+
+  /**
+   * A player is starting a case: wake the model judge up in the background (fire-and-forget,
+   * throttled) so the first question — asked after the intro — does not hit a cold provider.
+   */
+  warmJudge(): void {
+    const judge = this.opts.components.judge;
+    const now = this.clock();
+    if (!judge?.warm || now - this.lastWarm < WARM_INTERVAL_MS || this.opts.budget?.exceeded()) return;
+    this.lastWarm = now;
+    this.warming = judge.warm().then((u) => {
+      if (u) this.opts.budget?.add(u.costUsd);
+    }, () => undefined);
   }
 
   /**
@@ -208,8 +228,9 @@ export class GameService {
     if (!s.unlocked.includes(factId)) throw badRequest('that evidence has not been collected');
     const lines = await this.registry().then((r) => r.lines);
 
+    // Success lines are Jane's corrected memory; every other shot line is Holma's.
     if (s.cleared.includes(round.id)) {
-      return { correct: true, lines: [...round.success], ...(await this.issue(c, s)) };
+      return { correct: true, lines: [...round.success], speaker: 'jane', ...(await this.issue(c, s)) };
     }
 
     const answerStmt = round.statements.find((x) => x.id === round.answer.statement);
@@ -221,12 +242,12 @@ export class GameService {
 
     if (correct) {
       const ns: GameState = { ...s, cleared: [...s.cleared, round.id] };
-      return { correct: true, lines: [...round.success], ...(await this.issue(c, ns)) };
+      return { correct: true, lines: [...round.success], speaker: 'jane', ...(await this.issue(c, ns)) };
     }
     const misses = (s.roundMisses[round.id] ?? 0) + 1;
     const ns: GameState = { ...s, debateMisses: s.debateMisses + 1, roundMisses: { ...s.roundMisses, [round.id]: misses } };
     const pool = round.wrongShot.length > 0 ? round.wrongShot : texts(lines.lines.inquest.wrongShot);
-    const res: ShotResponse = { correct: false, lines: [lines.pick(pool, ns.debateMisses, `shot.${round.id}`).text], ...(await this.issue(c, ns)) };
+    const res: ShotResponse = { correct: false, lines: [lines.pick(pool, ns.debateMisses, `shot.${round.id}`).text], speaker: 'holma', ...(await this.issue(c, ns)) };
     if (misses >= 2) res.hint = round.hint;
     return res;
   }
@@ -240,7 +261,7 @@ export class GameService {
     if (!fact) throw badRequest('round has no answer fact');
     if (s.unlocked.includes(fact.id)) {
       // Already held: no penalty, point at it.
-      return { correct: false, lines: [round.hint], granted: publicFact(fact), ...(await this.issue(c, s)) };
+      return { correct: false, lines: [round.hint], speaker: 'holma', granted: publicFact(fact), ...(await this.issue(c, s)) };
     }
     const lines = (await this.registry()).lines;
     const memo = memoIdForFact(c.data, fact.id);
@@ -250,7 +271,7 @@ export class GameService {
       memos: memo && !s.memos.includes(memo) ? [...s.memos, memo] : s.memos,
       grants: s.grants + 1,
     };
-    return { correct: false, lines: [lines.pick(lines.lines.inquest.grant, ns.grants, 'grant').text], granted: publicFact(fact), ...(await this.issue(c, ns)) };
+    return { correct: false, lines: [lines.pick(lines.lines.inquest.grant, ns.grants, 'grant').text], speaker: 'holma', granted: publicFact(fact), ...(await this.issue(c, ns)) };
   }
 
   async verdict(req: VerdictRequest, o?: CallOptions): Promise<VerdictResponse> {

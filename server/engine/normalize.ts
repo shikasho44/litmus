@@ -253,6 +253,62 @@ export function isOpenQuestion(norm: string): boolean {
   return OPEN_Q.test(norm) || VALUE_TOPIC.test(norm);
 }
 
+// The wh-word IS the predicate (「犯人は誰ですか」「死因は何？」「どちらですか」), or the question asks
+// why / how. These cannot be answered はい／いいえ whatever a model says (→ 具体的に). Weaker open
+// forms (「誰のせいでもない？」「何分もたってから倒れた？」) stay yes/no questions.
+const WH_PREDICATE = /(?:誰|だれ|何|なに|なん|どこ|いつ|どれ|どっち|どちら|いくつ|いくら|何人|なんにん|何時|なんじ|何歳|なんさい|何色|なにいろ|何者|なにもの)(?:なの|なん)?(?:です|でした|だ|だった|でしょう|でしょ)?(?:か|の|かな|かね)?$/u;
+const WHY_HOW = /(?:なぜ|何故|どうして|どうやって|どのように|どのようにして|どういうふうに|どういう風に|どんなふうに)(?!か|も)/u;
+
+export function isPureOpenQuestion(norm: string): boolean {
+  return WH_PREDICATE.test(norm) || WHY_HOW.test(norm) || VALUE_TOPIC.test(norm);
+}
+
+/**
+ * A wh-word used as an argument of the predicate: 「どこで見つかったの？」「いつ倒れたの？」
+ * 「何を吸ったの？」「誰がやったの？」「どんな音？」「部屋はどうなっていましたか」. Indefinites and
+ * quantities that keep a yes/no question (何か・誰も・どこにも・いつも・何となく・何分も…) never match.
+ */
+const WH_ARGUMENT = new RegExp(
+  [
+    '(?:どこ|何処)(?:で|に|へ|から|まで|を|が|の)(?!か|も|でも)',
+    '(?<![あこそど])いつ(?!か|も|でも)',
+    '(?:誰|だれ)(?:が|に|を|と|から)(?!か|も)',
+    '(?:何|なに)(?:を|が|に|と)(?!か|も|な|いう)',
+    'どんな(?!に)', 'どういう', 'どのよう', 'どの(?:くらい|ぐらい)', 'どれ(?:くらい|ぐらい)',
+    'どう(?:だった|でした|なって|なった|なっ|なの|なん|です|でしょう|でしょ|思)',
+  ].join('|'),
+  'u',
+);
+
+/**
+ * The question cannot be answered はい／いいえ: the pure open forms above plus a wh-word used as
+ * an argument. A polar stamp here is nonsense whatever a judge says (rules and Jev both answer
+ * 'vague' with meta 'open' → Holma's rephrasing lines, lines.ts).
+ */
+export function isWhQuestion(norm: string): boolean {
+  return isPureOpenQuestion(norm) || WH_ARGUMENT.test(norm);
+}
+
+/** Which rephrasing advice fits an open question (picks the line pool, lines.ts). */
+export type WhKind = 'why' | 'how' | 'where' | 'when' | 'who' | 'what';
+
+export function whKindOf(norm: string): WhKind {
+  const at = (re: RegExp) => {
+    const m = re.exec(norm);
+    return m ? m.index : Infinity;
+  };
+  const kinds: [WhKind, number][] = [
+    ['why', at(/なぜ|何故|なんで|どうして/u)],
+    ['how', at(/どうやって|どのように|どのよう|どういうふう|どういう風|どんなふう|どう(?:だった|でした|なって|なった|なっ|なの|なん|です|でしょう|でしょ|思)/u)],
+    ['where', at(/どこ|何処/u)],
+    ['when', at(/(?<![あこそど])いつ|何時|なんじ|時刻|じこく|時間|じかん|日時|時期/u)],
+    ['who', at(/誰|だれ|何者|なにもの|犯人|はんにん/u)],
+    ['what', at(/何|なに|なん|どれ|どっち|どちら|どんな|どういう|いくつ|いくら|くらい|ぐらい/u)],
+  ];
+  const first = kinds.filter(([, i]) => i !== Infinity).sort((a, b) => a[1] - b[1])[0];
+  return first ? first[0] : 'what';
+}
+
 // "Is X relevant / important?" — answered from the importance of the fact X points at.
 const RELEVANCE_Q = /(?:関係|関連|かんけい|かんれん|重要|じゅうよう|大事|だいじ|意味)(?:が|は|も)?(?:ある|あり|あった|する|し|な(?:い|かった)|です|でした|なの|なん|ありそう)/u;
 
@@ -281,6 +337,20 @@ const META_ASK_HINT: RegExp[] = [
   /^(?:もう|全然|ぜんぜん|さっぱり|全く|まったく|ほんとに|本当に|ほんと|まじで|うーん|うーむ)?(?:わから(?:ない|ん|なく|なくなった|なくなってきた)|分から(?:ない|ん|なく|なくなった)|わかんな(?:い)?|わかんね(?:ー|え)?|わかりません|分かりません|降参|こうさん|ぎぶあっぷ|ぎぶ|お手上げ|おてあげ|詰んだ|つんだ|詰み|手詰まり|てづまり|行き詰(?:まった|まり|まってる)|いきづま(?:った|り|ってる)|助けて|たすけて|むり|無理|だめだ|もうだめ|難しい|むずかしい|むずい|困った|こまった)(?:です|でした|だ|だよ|だわ|よ|ね|な|なあ|なぁ|わ|かも|ー|w|笑)*$/u,
   /(?:何|なに)を(?:聞|訊|き|質問し|しつもんし)(?:けば|いたら|たらいい|すれば|ればいい)/u,
 ];
+/**
+ * Questions about the game itself (how to play, how many questions are left, when to open the
+ * inquest). Answered like a hint request — Holma points at 『ホルマの囁き』 — instead of 「具体的に」.
+ * The first pattern only counts without a case keyword (「安全のルールは守られていましたか」).
+ */
+const META_GAME_HELP_WEAK = /(?:遊び方|あそびかた|やり方|やりかた|ルール|るーる|操作方法|そうさほうほう|質問の仕方|しつもんのしかた|質問のしかた|聞き方|ききかた|訊き方|何を聞けば|なにをきけば|何を質問|なにをしつもん)/u;
+const META_GAME_HELP: RegExp[] = [
+  /(?:あと|残り|のこり)(?:何|なん|いく)(?:問|もん|回|かい|つ|個|こ|枚|まい)/u,
+  /(?:何|なん)(?:問|もん|回|かい)(?:で|くらいで|ぐらいで)(?:解け|とけ|終わ|おわ|クリア|くりあ)/u,
+  /(?:審問|しんもん).{0,6}(?:開|ひら|始め|はじめ|いつ|進め|すすめ)/u,
+  /(?:所見|しょけん)(?:は|が)?(?:全部で|ぜんぶで|あと|残り|のこり)?(?:何|なん|いく)(?:枚|まい|個|こ|つ)/u,
+];
+export const MAX_GAME_HELP_CHARS = 30;
+
 const META_RUDE = /(?:ばか(?!り|ら|す)|馬鹿|あほ(?!う)|阿呆|くそ(?!う)|糞|うざ|きも(?!ち|の|ど|だめ)|きしょ|ぼけ(?!る|て)|かす(?![かりれみんけ])|だまれ|黙れ|死ね|しねよ|^しね$|きえろ|消えろ|ころすぞ|殺すぞ|ふざけんな|ふざけるな|役立たず|やくたたず|のろま|くたばれ)/u;
 const META_OFFTOPIC = /^(?:こんにちは|こんにちわ|こんばんは|こんばんわ|おはよう|はじめまして|よろしく|ありがとう|さようなら|さよなら|おやすみ|やあ|hello|hi|hey|もしもし|てすと|test|元気|げんき|天気|てんき|好きな食べ物|すきなたべもの|趣味|しゅみ|今何時|いまなんじ|暇|ひま|眠い|ねむい|お腹すいた|おなかすいた|疲れた|つかれた|おい|ねえ|ねぇ|へい)/u;
 /** Small talk that stays small talk even when a case keyword appears (「今日の天気は？」). */
@@ -296,6 +366,7 @@ export function detectMeta(raw: string, norm: string, hasCaseSignal: boolean): M
   if (!hasCaseSignal && META_RUDE.test(norm)) return 'rude';
   if (META_ASK_ANSWER.some((re) => re.test(norm))) return 'askAnswer';
   if (META_ASK_HINT.some((re) => re.test(norm)) && [...norm].length <= 16) return 'askHint';
+  if ([...norm].length <= MAX_GAME_HELP_CHARS && (META_GAME_HELP.some((re) => re.test(norm)) || (!hasCaseSignal && META_GAME_HELP_WEAK.test(norm)))) return 'askHint';
   if (META_OFFTOPIC_STRONG.test(norm)) return 'offtopic';
   if (!hasCaseSignal && META_OFFTOPIC.test(norm)) return 'offtopic';
   if (!hasCaseSignal && META_ABOUT_HOLMA.test(norm)) return 'aboutHolma';
@@ -355,8 +426,14 @@ export function splitQuestions(raw: string, max = 3): SplitResult {
       merged[merged.length - 1] += p;
     } else merged.push(p);
   }
-  return { parts: merged.slice(0, max), dropped: Math.max(0, merged.length - max) };
+  // 「はい/いいえで答えてください。死因は毒ですか？」: the instruction is not a question of its own.
+  const questions = merged.length > 1 ? merged.filter((p) => !ANSWER_FORMAT_ONLY.test(normalize(p))) : merged;
+  const kept = questions.length > 0 ? questions : merged;
+  return { parts: kept.slice(0, max), dropped: Math.max(0, kept.length - max) };
 }
+
+/** A part that only tells Holma how to answer (normalised: punctuation and 「/」 are gone). */
+export const ANSWER_FORMAT_ONLY = /^(?:ねえ|ねぇ|ほるま|ほるまさん)?(?:はいかいいえ|はいといいえ|はいいいえ|はいまたはいいえ|はいいいえのどちらか|yesかno|yesno|いえすかのー|二択|にたく|正直|しょうじき|ちゃんと|きちんと|簡潔|かんけつ|手短|てみじか|ひとこと|一言|はっきり)(?:だけ|のみ)?(?:で|に)?(?:答え|こたえ|回答|かいとう|返事|へんじ|教え|おしえ)(?:て|ろ|なさい|てください|てくれ|てくれる|てね|てよ|ろよ|てほしい|てもらえ(?:ます|る)?)?(?:か|ね|よ)?$/u;
 
 /* ------------------------------------------------------------------ */
 /* Analysed question                                                    */
@@ -369,6 +446,8 @@ export interface AnalyzedQuestion {
   core: string;
   negated: boolean;
   open: boolean;
+  /** Not answerable はい／いいえ at all (isWhQuestion): polar judgements become 'vague' + meta 'open'. */
+  wh: boolean;
   /** 「〜は関係ありますか」 style question. */
   relevance: boolean;
   /** What the question proposes: works/exists (pos) vs stopped/absent/not (neg). */
@@ -383,6 +462,7 @@ export function analyze(raw: string): AnalyzedQuestion {
     core: coreForm(norm),
     negated: isNegatedConfirmation(norm),
     open: isOpenQuestion(norm),
+    wh: isWhQuestion(norm),
     relevance: isRelevanceQuestion(norm),
     prop: questionProposition(raw),
   };

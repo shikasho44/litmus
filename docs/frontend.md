@@ -17,6 +17,7 @@ src/
   lib/                assets, lines (Holma bank + prologue), cases list, viewport, rng, env
   styles/             tokens, base, typography, utilities, fonts (generated)
   build/html-env.ts   Vite plugin for index.html env defaults (wire it in vite.config.ts)
+  build/release-guard.ts  build fails on Markdown / case secrets / zod in the output; emits robots.txt
 ```
 
 ---
@@ -69,7 +70,16 @@ Rules of the house
 - Everything the player reads is DOM text. Images never contain text.
 - Public assets: always via `assetUrl()` / `useImage()` (`src/lib/asset.ts`) — the site runs
   from a sub-folder. `useImage(path)` returns `null` until the file is known to exist, so
-  render your fallback while it is null (no broken-image icons, ever).
+  render your fallback while it is null (no broken-image icons, ever). `useImageMissing(path)`
+  is true only once the file is known to be missing — use it for heavy stand-ins (the title
+  shows Holma only if the key art fails, not while it loads).
+- Loading budget: boot fetches only the key art (preloaded in `index.html`); room-zero and
+  Holma's sprites are warmed when idle after the title is up (`src/main.tsx`). Don't mount
+  images the player can't see yet (Files mounts a case background on first hover/focus).
+- Browser code imports `FACT_CATEGORIES` / `ANSWER_CLASSES` / `AnswerClass`… from
+  `shared/constants.ts`, never values from `shared/case-schema.ts` (that pulls zod into the
+  entry chunk and trips the CSP); the release guard fails the build if zod leaks in.
+- Never put notes in `public/` — it ships verbatim (art provenance lives in `art-src/CREDITS.md`).
 - Respect reduced motion: use `fx.*` (they already do) and `motionReduced()` for your own GSAP.
 - Call `setStage(caseId, 'investigation')` etc. when the player reaches a stage; `openCase()`
   and the Title's 「続きから」 use `stage` to resume.
@@ -251,7 +261,11 @@ is suspended while the tab is hidden. Tracks are 16-bar loops with a variation e
 `src/styles/fonts.css` (critical: Dela Gothic One 400, Zen Kaku Gothic New 500, Anton,
 JetBrains Mono 400) and `fonts-extra.css` (Zen Kaku 700, Shippori Mincho B1 500) are generated
 from `@fontsource` (woff2 only, no greek/cyrillic/vietnamese). The boot splash in `index.html`
-waits (max 2.5 s) for the logo face; `fonts-extra` loads right after the first render.
+waits for the critical faces, at most until 2.5 s after navigation start (plus a 0.7 s grace
+once the JS runs; `src/main.tsx`). `fonts-extra` loads once the key art is in (or 1.2 s after
+the first render). The faces the first paint needs (Dela logo subsets 119/102/99, Zen Kaku 500
+kana subset 119, Anton Latin) are also declared inline in `index.html`, copied verbatim from
+`fonts.css` — update that block when regenerating.
 Regenerate after upgrading @fontsource by re-running the generator snippet used to create them
 (read the `@fontsource/<pkg>/<weight>.css` files, drop the `.woff` fallbacks and non-JP/Latin
 subsets, point `url()` at `../../node_modules/@fontsource/<pkg>/files/…`).

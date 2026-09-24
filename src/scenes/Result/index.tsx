@@ -3,8 +3,12 @@
  * (the quiz finishes the run); works without the server so the Files screen's 「記録」 button
  * can open it any time. `?fresh=1` plays the rank reveal.
  *
- * Buttons: 事件ファイルへ / 同じ事件をもう一度 (confirm → fresh run) / 次の事件へ / 共有 (Web
- * Share, clipboard fallback; spoiler-free text).
+ * Under the seal Holma names what cost the rank (rankAdvice: the 1–2 penalties whose removal
+ * would have given S, or the next rank up) and how S is earned; on a replay the change against
+ * the previous best rank is shown.
+ *
+ * Buttons: 次の事件へ (big CTA under the stats) / 事件ファイルへ / 同じ事件をもう一度 (confirm → fresh
+ * run) / 共有 (Web Share, clipboard fallback; spoiler-free text).
  */
 import { gsap } from 'gsap';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
@@ -13,7 +17,7 @@ import { openCase } from '../../app/flow';
 import { goto, type SceneProps } from '../../app/router';
 import { audio } from '../../audio';
 import { APP_CONFIG } from '../../config/app';
-import { buildCaseResult, computeRank, questionPar, RANK_LABEL, RANK_TITLES, type RankInput } from '../../features/rank';
+import { buildCaseResult, computeRank, questionPar, rankAdvice, RANK_LABEL, RANK_TITLES, S_CONDITION, type RankInput } from '../../features/rank';
 import { fx } from '../../fx';
 import { motionReduced } from '../../fx/motion';
 import { useImage } from '../../lib/asset';
@@ -31,6 +35,7 @@ import { caseNumber, pad2 } from '../Resolution/solution';
 import './result.css';
 
 const RANK_COLOR: Record<Rank, string> = { S: 'var(--formalin)', A: 'var(--cyan)', B: 'var(--amber)', C: 'var(--bone-2)' };
+const RANK_ORDER: Rank[] = ['S', 'A', 'B', 'C'];
 
 export function ResultScene({ params }: SceneProps) {
   const caseId = params.caseId!;
@@ -63,7 +68,7 @@ function NoRecord({ caseId }: { caseId: string }) {
       <div class="rs-empty__box">
         <p class="eyebrow">NO RECORD</p>
         <h1 class="rs-empty__title">この事件の記録は、まだありません</h1>
-        <p class="rs-empty__body">確認テストまで終えると、審問官ランクがここに刻まれます。</p>
+        <p class="rs-empty__body">記憶の定着まで終えると、審問官ランクがここに刻まれます。</p>
         <div class="row row--wrap" style={{ marginTop: 16 }}>
           <Button icon="gavel" onClick={() => openCase(caseId)} data-autofocus>
             事件を開く
@@ -77,9 +82,10 @@ function NoRecord({ caseId }: { caseId: string }) {
   );
 }
 
-function rankInputFrom(r: CaseResult): RankInput {
+function rankInputFrom(r: CaseResult, estimatedMinutes?: number): RankInput {
   const s = r.stats ?? {};
   return {
+    estimatedMinutes: s.estimatedMinutes || estimatedMinutes,
     difficulty: s.difficulty ?? 2,
     asked: s.asked ?? 0,
     keyQuestions: s.keyQuestions ?? 0,
@@ -95,8 +101,10 @@ function rankInputFrom(r: CaseResult): RankInput {
 
 function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId: string; result: CaseResult; best?: Rank; clears: number; summary: CaseSummary | null; list: CaseSummary[] | null; fresh: boolean }) {
   const s = result.stats ?? {};
-  const input = useMemo(() => rankInputFrom(result), [result]);
+  const input = useMemo(() => rankInputFrom(result, summary?.estimatedMinutes), [result, summary?.estimatedMinutes]);
   const detail = useMemo(() => computeRank(input), [input]);
+  // only explain the rank when the recomputation agrees with the stored one (older saves may lack inputs)
+  const advice = useMemo(() => (detail.rank === result.rank ? rankAdvice(input, detail) : null), [input, detail, result.rank]);
   const title = RANK_TITLES.find((t) => t.title === result.title) ?? RANK_TITLES.find((t) => t.id === detail.titleId)!;
   const rank = result.rank;
   const num = caseNumber(caseId, summary);
@@ -147,16 +155,33 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
     }
   };
 
-  const stats: { icon: IconName; label: string; value: string; sub?: string; tone?: 'good' | 'warn' }[] = [
-    { icon: 'send', label: '質問数', value: `${s.asked ?? 0}`, sub: `目安 ${par}問`, tone: (s.asked ?? 0) <= par ? 'good' : undefined },
-    { icon: 'star', label: '重要質問率', value: keyRate === null ? '—' : `${keyRate}%`, sub: s.answered ? `所見を得た質問 ${s.keyQuestions ?? 0} / ${s.answered}` : '記録なし' },
-    { icon: 'hint', label: 'ホルマの囁き', value: `${s.hintsUsed ?? 0}`, sub: 'ヒントの使用', tone: (s.hintsUsed ?? 0) === 0 ? 'good' : 'warn' },
-    { icon: 'shard', label: 'ノイズ・ブレイクのミス', value: `${s.debateMisses ?? 0}`, tone: (s.debateMisses ?? 0) === 0 ? 'good' : undefined },
-    { icon: 'help', label: '泣きつき', value: `${s.grants ?? 0}`, sub: '所見を借りた回数', tone: (s.grants ?? 0) === 0 ? 'good' : 'warn' },
-    { icon: 'gavel', label: '死因宣告', value: `${s.verdictAttempts ?? 1}回`, sub: (s.verdictAttempts ?? 1) <= 1 ? '一度で' : `${(s.verdictAttempts ?? 1) - 1}回やり直し`, tone: (s.verdictAttempts ?? 1) <= 1 ? 'good' : undefined },
-    { icon: 'time', label: '所要時間', value: formatElapsed(result.elapsedMs ?? 0) },
-    { icon: 'check', label: '確認テスト', value: (s.quizMisses ?? 0) === 0 ? '全問一発' : `やり直し ${s.quizMisses}`, tone: (s.quizMisses ?? 0) === 0 ? 'good' : undefined },
+  // value = number in the display face (+ a small unit in the body face only where it reads well: 問 / %).
+  // Counts stay bare: 回 set next to a big number, at any weight, reads as a missing-glyph box.
+  const verdicts = s.verdictAttempts ?? 1;
+  const quizMiss = s.quizMisses ?? 0;
+  const stats: { icon: IconName; label: string; num: string; unit?: string; sub?: string; tone?: 'good' | 'warn' }[] = [
+    { icon: 'send', label: '質問数', num: `${s.asked ?? 0}`, unit: '問', sub: `目安 ${par}問`, tone: (s.asked ?? 0) <= par ? 'good' : undefined },
+    { icon: 'star', label: '重要質問率', num: keyRate === null ? '—' : `${keyRate}`, unit: keyRate === null ? undefined : '%', sub: s.answered ? `所見を得た質問 ${s.keyQuestions ?? 0} / ${s.answered}` : '記録なし' },
+    { icon: 'hint', label: 'ホルマの囁き', num: `${s.hintsUsed ?? 0}`, sub: 'ヒントを使った回数', tone: (s.hintsUsed ?? 0) === 0 ? 'good' : 'warn' },
+    { icon: 'shard', label: '撃ち損じ', num: `${s.debateMisses ?? 0}`, sub: 'ノイズ・ブレイク', tone: (s.debateMisses ?? 0) === 0 ? 'good' : undefined },
+    { icon: 'help', label: '泣きつき', num: `${s.grants ?? 0}`, sub: '所見を借りた回数', tone: (s.grants ?? 0) === 0 ? 'good' : 'warn' },
+    { icon: 'gavel', label: '死因宣告', num: `${verdicts}`, sub: verdicts <= 1 ? '一度で通った' : `${verdicts}度目で通った`, tone: verdicts <= 1 ? 'good' : undefined },
+    { icon: 'time', label: '所要時間', num: formatElapsed(result.elapsedMs ?? 0) },
+    { icon: 'check', label: '記憶の定着', num: `${quizMiss}`, sub: quizMiss === 0 ? '一度で全問正解' : 'やり直した回数', tone: quizMiss === 0 ? 'good' : undefined },
   ];
+  const prev = result.prevBest;
+  const bestNote = !best
+    ? ''
+    : !prev
+      ? best !== rank
+        ? '（この事件の最高記録）'
+        : ''
+      : rank === prev
+        ? '（前回の最高と同じ）'
+        : RANK_ORDER.indexOf(rank) < RANK_ORDER.indexOf(prev)
+          ? ''
+          : `（今回 ${rank}）`;
+  const improved = !!prev && RANK_ORDER.indexOf(rank) < RANK_ORDER.indexOf(prev);
 
   return (
     <section class={`scene rs rs--${rank}`} style={{ '--rank-color': RANK_COLOR[rank] }}>
@@ -201,58 +226,78 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
                   <p>
                     <span class="rs-rank__name">ホルマ</span>
                     {title?.comment ?? detail.comment}
+                    {advice && <span class="rs-rank__advice">{advice.line}</span>}
                   </p>
                 </div>
+                <p class="rs-rank__cond">
+                  <span class="rs-rank__cond-k t-mono">RANK S</span>
+                  {S_CONDITION}
+                </p>
                 {best && (
-                  <p class="rs-rank__best t-mono">
-                    BEST RANK <strong>{best}</strong>
-                    {best !== rank ? '（この事件の最高記録）' : ''}
+                  <p class={`rs-rank__best t-mono ${improved ? 'is-up' : ''}`}>
+                    BEST RANK
+                    {improved && prev ? (
+                      <>
+                        <s class="rs-rank__prev">{prev}</s>
+                        <span aria-hidden="true">→</span>
+                        <strong>{rank}</strong>
+                        <em>記録更新</em>
+                      </>
+                    ) : (
+                      <strong>{best}</strong>
+                    )}
+                    {bestNote}
                   </p>
                 )}
               </div>
             </div>
 
-            <dl class="rs-stats">
-              {stats.map((st, i) => (
-                <div key={st.label} class={`rs-stat ${st.tone ? `is-${st.tone}` : ''}`} style={{ '--i': i }}>
-                  <dt>
-                    <Icon name={st.icon} size={16} />
-                    {st.label}
-                  </dt>
-                  <dd>
-                    <span class="rs-stat__value">{st.value}</span>
-                    {st.sub && <span class="rs-stat__sub">{st.sub}</span>}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </div>
+            <div class="rs-side">
+              <dl class="rs-stats">
+                {stats.map((st, i) => (
+                  <div key={st.label} class={`rs-stat ${st.tone ? `is-${st.tone}` : ''}`} style={{ '--i': i }}>
+                    <dt>
+                      <Icon name={st.icon} size={16} />
+                      {st.label}
+                    </dt>
+                    <dd>
+                      <span class="rs-stat__value">
+                        <span class="rs-stat__num">{st.num}</span>
+                        {st.unit && <span class="rs-stat__unit">{st.unit}</span>}
+                      </span>
+                      {st.sub && <span class="rs-stat__sub">{st.sub}</span>}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
 
-          <nav class="rs-actions" aria-label="次の行動">
-            {allDone && (
-              <p class="rs-actions__all">
-                <Icon name="star" size={18} /> すべての事件ファイルを閉じました。お見事ですとも。
-              </p>
-            )}
-            {next && !(allDone && next.number < (summary?.number ?? num)) && (
-              <Button variant="big-cta" class="end-cta" size="lg" icon="tag" iconRight="chevronRight" en={`NEXT — CASE ${pad2(next.number)}`} onClick={() => openCase(next.id)} data-autofocus>
-                {next.number > (summary?.number ?? num) ? '次の事件へ' : '未解決の事件へ'}
-              </Button>
-            )}
-            <div class="rs-actions__row">
-              <Button variant={next && !allDone ? 'ghost' : 'primary'} icon="tag" onClick={() => goto('files')} data-autofocus={next && !allDone ? undefined : true}>
-                事件ファイルへ
-              </Button>
-              <Button variant="ghost" icon="refresh" onClick={() => setConfirm(true)}>
-                同じ事件をもう一度
-              </Button>
-              {canShare && (
-                <Button variant="ghost" icon="external" onClick={share} sfx="page">
-                  共有する
-                </Button>
-              )}
+              <nav class="rs-actions" aria-label="次の行動">
+                {allDone && (
+                  <p class="rs-actions__all">
+                    <Icon name="star" size={18} /> すべての事件ファイルを閉じました。お見事ですとも。
+                  </p>
+                )}
+                {next && !(allDone && next.number < (summary?.number ?? num)) && (
+                  <Button variant="big-cta" class="end-cta" size="lg" icon="tag" iconRight="chevronRight" en={`NEXT — CASE ${pad2(next.number)}`} onClick={() => openCase(next.id)} data-autofocus>
+                    {next.number > (summary?.number ?? num) ? '次の事件へ' : '未解決の事件へ'}
+                  </Button>
+                )}
+                <div class="rs-actions__row">
+                  <Button variant={next && !allDone ? 'ghost' : 'primary'} icon="tag" onClick={() => goto('files')} data-autofocus={next && !allDone ? undefined : true}>
+                    事件ファイルへ
+                  </Button>
+                  <Button variant="ghost" icon="refresh" onClick={() => setConfirm(true)}>
+                    同じ事件をもう一度
+                  </Button>
+                  {canShare && (
+                    <Button variant="ghost" icon="external" onClick={share} sfx="page">
+                      共有する
+                    </Button>
+                  )}
+                </div>
+              </nav>
             </div>
-          </nav>
+          </div>
         </div>
       </div>
 

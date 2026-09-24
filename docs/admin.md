@@ -18,22 +18,36 @@ npm run dev
 ```
 dev サーバーでは管理 API が常に開いているので、トークン入力なしでそのまま使える。
 `vite preview`（本番相当）は `npm run preview` → `http://127.0.0.1:4191/admin.html`（**4190 はブラウザが拒否する番号なので 4191 に変更**）。
+preview は `dist/` をそのまま配信するので、admin.html を入れてビルドしておく（下の「ビルドに含める条件」。例: `VITE_INCLUDE_ADMIN=true npm run build`）。
 
 ### 本番（Vercel）
-1. Vercel の Project Settings → Environment Variables に `ADMIN_TOKEN`（長いランダム文字列）を入れて再デプロイ。
+1. Vercel の Project Settings → Environment Variables に `ADMIN_TOKEN`（長いランダム文字列）を入れて再デプロイ（**ビルド時にも見える設定にする**。Vercel の既定どおりなら見える）。
 2. `https://<ドメイン>/admin.html` を開く → 「ADMIN_TOKEN」欄に入力 → 接続。
 3. トークンは**このタブの `sessionStorage` にだけ**保存され（タブを閉じると消える）、各リクエストの `x-admin-token` ヘッダーで送る。URL には載せない。左下「トークンを消す」で即削除。
 
 - `ADMIN_TOKEN` が未設定の本番、またはトークン違いのときは、管理 API が 404 を返す（存在を隠す）。画面は「トークンが違うか、管理 API が無効」と表示する。
 - `admin.html` には `noindex` を固定で付けている。
-- 静的版（`npm run build:static`）には API が無いので、**admin.html はビルドに含めない**（`vite.config.ts` で embedded のときは入力から外す）。dev の `npm run dev:static` で開いても接続エラーの画面になる。
+
+#### ビルドに含める条件（`vite.config.ts`）
+管理画面の JS には管理 API の道筋と項目名が入るので、**使えない配備には置かない**。
+
+| ビルド | admin.html / `assets/admin-*.js` |
+|---|---|
+| 静的版（`npm run build:static`、embedded） | 常に含めない（API が無い）。dev の `npm run dev:static` で開いても接続エラーの画面になる |
+| http 版で `VITE_INCLUDE_ADMIN=true`（または `1`） | 含める |
+| http 版で `VITE_INCLUDE_ADMIN=false`（または `0`） | 含めない（`ADMIN_TOKEN` があっても。管理画面を別プロジェクトで配る場合など） |
+| http 版で `VITE_INCLUDE_ADMIN` 未設定 | **ビルド時に `ADMIN_TOKEN` があるときだけ**含める（無ければ本番の管理 API は 404 なので、画面を置いても使えない） |
+
+- 判定は `.env*` とビルド時の環境変数（サーバーと同じ `loadEnv`）。`ADMIN_TOKEN` の値はバンドルに入らない（有無を見るだけ）。
+- 含めないビルドでは `/admin.html` は 404（`vercel.json` の書き換えは拡張子つきの道を対象にしない）。
+- dev サーバー（`npm run dev`）はこの設定に関係なく `admin.html` を配信する。
 - サブフォルダ配備で API の場所が違うときは、ゲームと同じ `VITE_API_BASE` がそのまま効く。
 
 ---
 
 ## 2. 画面
 
-左の縦メニュー（スマホでは上の横スクロール）で切り替える。URL は `#/<セクション>/<引数>?…` なので、再読込やブックマークで同じ画面に戻れる。右上「再読込」で全データを取り直す。
+左の縦メニュー（スマホでは上の横スクロールの帯。まだ隠れたタブがある側の端は薄れて消え、開いているタブは帯の中央に寄る。トークンで入った本番では帯の右端に「トークンを消す」の鍵アイコン）で切り替える。URL は `#/<セクション>/<引数>?…` なので、再読込やブックマークで同じ画面に戻れる。右上「再読込」で全データを取り直す。
 
 ### 概要 OVERVIEW
 | 表示 | 中身 |
@@ -122,10 +136,10 @@ dev サーバーでは管理 API が常に開いているので、トークン�
 
 - 画面の文字は日本語（技術的なキー名・mode 名はそのまま）。
 - 事件の編集はしない（閲覧・検査・試験まで。`docs/decisions.md`「今回やらないこと」）。
-- 検証: `npx tsc --noEmit` / `npx vitest run src/admin` / dev サーバーで `node qa/admin/admin-shots.mjs http://127.0.0.1:<port>`（全セクションのスクリーンショットを `qa/admin/` に保存。`--mock-bench` で見本のベンチを差し込む）/ 本番ゲートは `ADMIN_TOKEN=… npx vite preview` に対して `node qa/admin/admin-gate.mjs <url> <token>`（`qa/` は git 管理外のローカル補助。残すなら `scripts/` へ移す）。
+- 検証: `npx tsc --noEmit` / `npx vitest run src/admin` / dev サーバーで `node qa/admin/admin-shots.mjs http://127.0.0.1:<port>`（全セクションのスクリーンショットを `qa/admin/` に保存。`--mock-bench` で見本のベンチを差し込む）/ 本番ゲートは `ADMIN_TOKEN=… npx vite build` → `ADMIN_TOKEN=… npx vite preview` に対して `node qa/admin/admin-gate.mjs <url> <token>`（`qa/` は git 管理外のローカル補助。残すなら `scripts/` へ移す）。
 
 ## 4. ビルド設定のメモ（vite.config.ts）
-- 入口は `index.html`（ゲーム）＋ `admin.html`（管理。静的版では除外）。
+- 入口は `index.html`（ゲーム）＋ `admin.html`（管理。静的版では除外、http 版は `VITE_INCLUDE_ADMIN` か ビルド時の `ADMIN_TOKEN` があるときだけ。§1「ビルドに含める条件」）。
 - `htmlEnvDefaults()` が HTML の `%VITE_*%` の既定値を埋め、`VITE_OFFICIAL_RELEASE_ENABLED=true` のときゲームの `noindex` を外す（admin.html の `noindex` は固定）。
 - `preview.port` は 4191（4190 は Chromium の危険ポート）。
 - dev サーバーは `bench/reports`・`logs`・`qa`・`dist` を監視しない（ベンチの HTML 書き出しでページが再読込されないように。配信はされる）。

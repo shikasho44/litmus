@@ -23,9 +23,9 @@
 import type { AnswerClass, Case, Fact } from '../../../shared/case-schema.js';
 import type {
   Judge, JudgeDecision, JudgeInput, PostChecker, PostCheckInput, PostCheckOutput, QuestionType,
-  VerdictJudge, VerdictJudgeInput, VerdictJudgeOutput,
+  Usage, VerdictJudge, VerdictJudgeInput, VerdictJudgeOutput,
 } from '../judge-types.js';
-import { bigrams, containment, type MetaKind } from '../normalize.js';
+import { bigrams, containment, isWhQuestion, type MetaKind } from '../normalize.js';
 import { ProviderError, type DecisionAnswer, type DecisionProvider, type DecisionQuestion, type DecisionResult } from '../providers/types.js';
 import { CLASS_LABEL, foreignFactMentions, leaksIn } from './guards.js';
 
@@ -39,6 +39,8 @@ export interface JevJudgeOptions {
   provider: DecisionProvider;
   model?: string;
   strategy?: CandidateStrategy;
+  /** Prompt variant (defaults to DEFAULT_PROMPT). */
+  prompt?: AskPromptOptions;
 }
 
 /* ------------------------------------------------------------------ */
@@ -56,6 +58,33 @@ export const ANSWER_CRITERIA: Record<AnswerClass, string> = {
   cannot: '答えられない: 死因・真相・名前など答えそのものやヒントを求めている、または死に方・自殺や殺害の方法・致死量など危険な情報を求めている。',
   vague: '具体的に: はい／いいえで答えられない質問（なぜ・どうやって・何・誰・いつ 等）や、意味の取れない入力。',
 };
+
+/**
+ * Answer criteria v2 (2026-09-25, AI playtest): Jev confirmed plausible-sounding but unsupported
+ * propositions — 「ボールが光で溶けた？」→ はい, 「まぶしさの反射で心臓が止まった？」→ はい,
+ * 「幻覚の中で岩の隙間を雪洞だと思った？」→ はい. v2 says what yes needs (every part supported),
+ * that an invented cause / mechanism is いいえ, and that an unwritten detail is 関係ない.
+ */
+export const ANSWER_CRITERIA_V2: Record<AnswerClass, string> = {
+  yes: 'はい: 命題の中身（原因・仕組み・状態・細部）がすべて真相・所見で裏づけられる。否定の確認（〜ではないですよね？）は、否定の内容が正しければ「はい」。',
+  no: 'いいえ: 命題が真相・所見に反し誤り。真相に無い原因・仕組み・出来事を主張している場合も「いいえ」。否定の確認は、否定の内容が誤りなら「いいえ」。',
+  partial: '一部そう: 命題の主な部分は正しいが、一部が違う・言い過ぎ・条件つき、または言葉の取り方で正誤が分かれる。',
+  irrelevant: '関係ない: 真相にも所見にも書かれていない細部（気持ち・感じたもの・道具の細かな仕様など）、死因と無関係な事柄、雑談。書かれていない細部を推測で「はい」「いいえ」にしない（反対の事実が書かれていれば「いいえ」）。',
+  cannot: ANSWER_CRITERIA.cannot,
+  vague: ANSWER_CRITERIA.vague,
+};
+
+/** Prompt variants compared by the playtest replay (docs/ai.md §3-6). */
+export interface AskPromptOptions {
+  /** 'plain': 「はい／所見 F08（キーワード一致…）」; 'evidence': also names the matched words and says the draft did not check the rest of the proposition. */
+  prior?: 'plain' | 'evidence';
+  criteria?: 'v1' | 'v2';
+}
+/**
+ * v2 since 2026-09-25: AI-playtest replay 21 → 29 / 44 hand-labelled questions, stratified bench
+ * sample 77 → 80 / 90 (irrelevant +2, ambiguous +1, no class lost net). docs/ai.md §3-6.
+ */
+export const DEFAULT_PROMPT: Required<AskPromptOptions> = { prior: 'evidence', criteria: 'v2' };
 
 const QTYPE_CRITERIA: Record<Exclude<QuestionType, 'unknown'>, string> = {
   yesno: 'はい／いいえで答えられる確認（否定の確認も含む）',
@@ -84,9 +113,14 @@ function factLabel(f: Fact): string {
   return `${f.id}: ${t.length > 34 ? `${t.slice(0, 34)}…` : t}`;
 }
 
-function rulesPrior(input: JudgeInput): string {
+function rulesPrior(input: JudgeInput, style: AskPromptOptions['prior'] = 'plain'): string {
   const r = input.rules;
   const facts = r.factIds.length > 0 ? `／所見 ${r.factIds.join(',')}` : '';
+  if (style === 'evidence' && r.source === 'keyword') {
+    const hits = input.candidates.facts.find((f) => f.id === r.factIds[0])?.hits ?? [];
+    const words = hits.length > 0 ? hits.slice(0, 4).map((h) => `「${h}」`).join('') : 'いくつかの語';
+    return `${CLASS_LABEL[r.answerClass]}${facts}（質問の${words}が所見の語と一致しただけの機械的な下書き。質問が述べる原因・仕組み・細部が正しいかは確かめていない。確かさ ${Math.round(r.confidence * 100)}%）`;
+  }
   const how =
     r.source === 'probe' ? `想定質問「${r.probe?.q ?? ''}」との類似 ${Math.round((r.probe?.score ?? 0) * 100)}%`
       : r.source === 'keyword' ? 'キーワード一致'
@@ -120,7 +154,7 @@ export function wideCandidates(input: JudgeInput, k = WIDE_K): Fact[] {
 }
 
 /** Builds the Jev state + questions for one atomic question. Exported for tests / bench. */
-export function buildAskRequest(input: JudgeInput, strategy: CandidateStrategy = DEFAULT_STRATEGY): AskRequestBuild {
+export function buildAskRequest(input: JudgeInput, strategy: CandidateStrategy = DEFAULT_STRATEGY, prompt: AskPromptOptions = DEFAULT_PROMPT): AskRequestBuild {
   const c = input.caseData;
   const base = strategy.split('+')[0];
   const facts: Fact[] =
@@ -136,14 +170,14 @@ export function buildAskRequest(input: JudgeInput, strategy: CandidateStrategy =
   if (input.question.negated) state['質問の形'] = '否定の確認（「〜ではないですよね？」型）。否定の内容が正しければ「はい」、誤りなら「いいえ」。';
   state['事件の真相'] = c.truth.summary;
   state['所見'] = Object.fromEntries(candidateIds.map((id) => [id, factLine(byId.get(id)!)]));
-  if (strategy.endsWith('+prior')) state['規則による下書きの判定'] = rulesPrior(input);
+  if (strategy.endsWith('+prior')) state['規則による下書きの判定'] = rulesPrior(input, prompt.prior ?? DEFAULT_PROMPT.prior);
 
   const factCriteria: Record<string, string> = {};
   for (const id of candidateIds) factCriteria[id] = factLabel(byId.get(id)!);
   factCriteria[FACT_NONE] = 'どの所見にも当たらない（雑談・無関係な細部・答えやヒントの要求など）';
 
   const questions: Record<string, DecisionQuestion> = {
-    answer: { type: 'choice', instructions: ANSWER_INSTRUCTIONS, criteria: { ...ANSWER_CRITERIA } },
+    answer: { type: 'choice', instructions: ANSWER_INSTRUCTIONS, criteria: { ...((prompt.criteria ?? DEFAULT_PROMPT.criteria) === 'v2' ? ANSWER_CRITERIA_V2 : ANSWER_CRITERIA) } },
     fact: { type: 'choice', instructions: 'この質問が直接たずねている所見はどれか。', criteria: factCriteria },
     qtype: { type: 'choice', instructions: '質問の形はどれか。', criteria: { ...QTYPE_CRITERIA } },
     closeness: { type: 'score', instructions: 'この質問は、死因の核心にどれだけ近いか。', criteria: CLOSENESS_CRITERIA },
@@ -216,6 +250,33 @@ export function mapAskDecision(res: DecisionResult, build: AskRequestBuild, inpu
   // Hybrid guard (docs/ai.md §3): Jev tends to call 「答えは何ですか？」 an open question (vague)
   // and 「ホルマは何歳？」 vague. The rules' regex metas and a strong directAnswer flag win over
   // a non-polar Jev answer; a yes / no / partial from Jev is never overridden here.
+  // 「犯人は誰ですか」「なぜ〜？」: a polar stamp would be nonsense (and Jev's 'no' here varied by
+  // case in the bench). The wh-predicate / why-how forms are always 具体的に (normalize.ts).
+  // Also the wh-argument forms (「どこで見つかったの？」「何を吸ったの？」): isWhQuestion.
+  let forcedOpen = false;
+  const wh = isWhQuestion(input.question.norm);
+  if ((answerClass === 'yes' || answerClass === 'no' || answerClass === 'partial') && wh) {
+    answerClass = 'vague';
+    forcedOpen = true;
+  }
+  // 「毒ガスが出ていましたか？」: the rules found a qualifier that a ruled-out fact denies (the gas
+  // was not poisonous). Jev may still confirm the topic — that would be a lie → the rules' answer
+  // (一部そう for a modifier, いいえ for 「窒素ガスは有毒ですか？」), and the ruling-out fact leads
+  // the cards (rules-judge.ts ruledOutQualifier).
+  let qualifierGuard = false;
+  if (answerClass === 'yes' && input.rules.qualifier) {
+    answerClass = input.rules.answerClass === 'no' ? 'no' : 'partial';
+    qualifierGuard = true;
+    const denying = input.rules.factIds[0];
+    if (denying && !factIds.includes(denying)) {
+      factIds.unshift(denying);
+      factStrength[denying] = r3(input.rules.factStrength?.[denying] ?? input.rules.confidence);
+      if (factIds.length > 3) factIds.length = 3;
+    } else if (denying) {
+      factIds.splice(factIds.indexOf(denying), 1);
+      factIds.unshift(denying);
+    }
+  }
   const polar = answerClass === 'yes' || answerClass === 'no' || answerClass === 'partial';
   if (!polar) {
     const pCannot = ans.probabilities.cannot ?? 0;
@@ -230,7 +291,8 @@ export function mapAskDecision(res: DecisionResult, build: AskRequestBuild, inpu
   } else if (rm && rm !== 'open' && META_CLASS[rm] === answerClass) meta = rm;
   else if (answerClass === 'cannot' && flags.directAnswer >= 0.5) meta = 'askAnswer';
   else if (answerClass === 'irrelevant' && flags.offtopic >= 0.6 && qtype === 'meta') meta = 'offtopic';
-  else if (answerClass === 'vague' && qtype === 'open') meta = 'open';
+  // Any 'vague' to a wh-question is the rephrasing advice (lines.ts OPEN_LINES), not 「具体的に」.
+  else if (answerClass === 'vague' && (qtype === 'open' || forcedOpen || wh || rm === 'open')) meta = 'open';
 
   let ids = factIds;
   if (flags.selfHarm >= SELF_HARM_THRESHOLD) {
@@ -259,6 +321,8 @@ export function mapAskDecision(res: DecisionResult, build: AskRequestBuild, inpu
       closeness: sc && sc.type === 'score' ? r3(sc.score) : undefined,
       flags: flagsRaw,
       candidates: build.candidateIds.length,
+      forcedOpen: forcedOpen || undefined,
+      qualifierGuard: qualifierGuard || undefined,
       provider: res.raw,
     },
   };
@@ -267,21 +331,39 @@ export function mapAskDecision(res: DecisionResult, build: AskRequestBuild, inpu
 export class JevJudge implements Judge {
   readonly name: string;
   readonly strategy: CandidateStrategy;
+  readonly prompt: AskPromptOptions;
   private readonly provider: DecisionProvider;
 
   constructor(opts: JevJudgeOptions) {
     if (!opts?.provider) throw new ProviderError('jev', 'config', 'JevJudge needs a DecisionProvider');
     this.provider = opts.provider;
     this.strategy = opts.strategy ?? DEFAULT_STRATEGY;
+    this.prompt = { ...DEFAULT_PROMPT, ...(opts.prompt ?? {}) };
     this.name = `jev-judge:${this.strategy}`;
   }
 
   async judge(input: JudgeInput): Promise<JudgeDecision> {
-    const build = buildAskRequest(input, this.strategy);
+    const build = buildAskRequest(input, this.strategy, this.prompt);
     const res = await this.provider.decide(build.state, build.questions, { signal: input.signal, timeoutMs: input.timeoutMs });
     return mapAskDecision(res, build, input, this.strategy);
   }
+
+  /**
+   * Wake-up call (≈ 60 tokens, ≈ $0.000003). Measured 2026-09-25: after ~25 min without traffic
+   * the first three all+prior calls of a session each exceeded the 4.5 s judge timeout, so the
+   * player's first question fell back to the rules judge (notice 'degraded'). Never throws.
+   */
+  async warm(signal?: AbortSignal): Promise<Usage | undefined> {
+    try {
+      const r = await this.provider.decide({ 質問: '準備はできましたか？' }, { ok: { type: 'noul', instructions: '質問が日本語である' } }, { signal, timeoutMs: WARM_TIMEOUT_MS });
+      return r.usage;
+    } catch {
+      return undefined;
+    }
+  }
 }
+
+export const WARM_TIMEOUT_MS = 15000;
 
 /* ------------------------------------------------------------------ */
 /* Verdict                                                             */

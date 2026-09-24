@@ -4,7 +4,11 @@
  * - renders at half resolution, ~30 fps
  * - pauses when the tab is hidden
  * - reduced motion → one static frame
- * - low-FPS detection → drops to a static frame automatically
+ * - low-FPS detection → lower resolution, then a static frame; judged on the MEDIAN of a
+ *   60-frame window, two bad windows in a row, never in the 2 s after a scene/tone change or a
+ *   tab resume (image decodes and font swaps are not the GPU's fault); recovers when smooth
+ * - the shader compiles in parallel (KHR_parallel_shader_compile) when available
+ * - WebGL context loss → stops; restore → recompiles and resumes
  */
 export type BackdropTone = 'formalin' | 'alarm' | 'cyan' | 'amber' | 'violet' | 'dim' | 'truth';
 
@@ -87,6 +91,13 @@ export class Backdrop {
   private lowPower = false;
   private ro: ResizeObserver | null = null;
   private scale = 0.5;
+  /** frame times are ignored until this timestamp (scene change, tone change, tab resume) */
+  private graceUntil = 0;
+  private badWindows = 0;
+  private goodWindows = 0;
+  /** program linked but maybe still compiling (KHR_parallel_shader_compile) */
+  private pendingProg: WebGLProgram | null = null;
+  private parallel: { COMPLETION_STATUS_KHR: number } | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -106,7 +117,16 @@ export class Backdrop {
     document.addEventListener('visibilitychange', this.onVis);
     canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
+      this.prog = null;
+      this.pendingProg = null;
       this.stop();
+    });
+    canvas.addEventListener('webglcontextrestored', () => {
+      if (!this.gl || !this.initGl(this.gl)) return;
+      this.resize();
+      this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+      if (this.animated && !this.lowPower) this.play();
+      else this.draw(performance.now());
     });
   }
 
@@ -114,22 +134,48 @@ export class Backdrop {
     return this.gl ? 'webgl' : this.ctx2d ? 'canvas2d' : 'none';
   }
 
+  /**
+   * Compile + link. Status queries force a synchronous compile (≈160 ms on first paint), so
+   * with KHR_parallel_shader_compile they are deferred until the driver reports completion;
+   * frames drawn meanwhile just clear to the ink colour.
+   */
   private initGl(gl: WebGLRenderingContext): boolean {
+    this.parallel = (gl.getExtension('KHR_parallel_shader_compile') as { COMPLETION_STATUS_KHR: number } | null) ?? null;
     const sh = (type: number, src: string) => {
-      const s = gl.createShader(type)!;
+      const s = gl.createShader(type);
+      if (!s) return null;
       gl.shaderSource(s, src);
       gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) return null;
       return s;
     };
     const vs = sh(gl.VERTEX_SHADER, VERT);
     const fs = sh(gl.FRAGMENT_SHADER, FRAG);
     if (!vs || !fs) return false;
-    const prog = gl.createProgram()!;
+    const prog = gl.createProgram();
+    if (!prog) return false;
     gl.attachShader(prog, vs);
     gl.attachShader(prog, fs);
     gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
+    gl.clearColor(0.043, 0.051, 0.071, 1);
+    this.prog = null;
+    this.pendingProg = prog;
+    if (!this.parallel) return this.finishGl(gl);
+    return true;
+  }
+
+  /** Program ready? Finishes the setup the first time the link has completed. */
+  private glReady(gl: WebGLRenderingContext): boolean {
+    if (this.prog) return true;
+    const prog = this.pendingProg;
+    if (!prog) return false;
+    if (this.parallel && !gl.getProgramParameter(prog, this.parallel.COMPLETION_STATUS_KHR)) return false;
+    return this.finishGl(gl);
+  }
+
+  private finishGl(gl: WebGLRenderingContext): boolean {
+    const prog = this.pendingProg;
+    this.pendingProg = null;
+    if (!prog || !gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
     gl.useProgram(prog);
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
@@ -159,7 +205,14 @@ export class Backdrop {
     else if (this.animated && !this.lowPower) this.play();
   };
 
+  /** Don't judge the GPU on the next 2 s (scene changes decode images, swap fonts…). */
+  private grace(ms = 2000) {
+    this.graceUntil = performance.now() + ms;
+    this.frameTimes = [];
+  }
+
   setTone(name: BackdropTone) {
+    this.grace();
     this.target = { ...(TONES[name] ?? TONES.formalin) };
     if (!this.running) {
       this.tone = { ...this.target };
@@ -181,14 +234,14 @@ export class Backdrop {
   play() {
     if (this.running || document.visibilityState === 'hidden') return;
     this.running = true;
-    this.frameTimes = [];
+    this.grace();
     const loop = (now: number) => {
       if (!this.running) return;
       this.raf = requestAnimationFrame(loop);
       if (now - this.last < 32) return; // ~30 fps
       const dt = now - this.last;
       this.last = now;
-      if (dt < 500) this.watchFps(dt);
+      if (dt < 500 && now > this.graceUntil) this.watchFps(dt);
       this.stepTone();
       this.draw(now);
     };
@@ -213,16 +266,30 @@ export class Backdrop {
   private watchFps(dt: number) {
     this.frameTimes.push(dt);
     if (this.frameTimes.length < 60) return;
-    const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
+    const sorted = this.frameTimes.slice().sort((a, b) => a - b);
+    const median = sorted[sorted.length >> 1];
     this.frameTimes = [];
-    if (avg > 55) {
+    if (median > 55) {
+      this.goodWindows = 0;
+      if (++this.badWindows < 2) return; // one bad window is noise
+      this.badWindows = 0;
       if (this.scale > 0.34) {
         this.scale = 0.33;
         this.resize();
+        this.grace(1000);
       } else {
         this.lowPower = true;
         this.pause();
         this.draw(performance.now());
+      }
+    } else {
+      this.badWindows = 0;
+      // sustained smooth frames at the reduced resolution → back to the normal one
+      if (median < 38 && this.scale < 0.5 && ++this.goodWindows >= 3) {
+        this.goodWindows = 0;
+        this.scale = 0.5;
+        this.resize();
+        this.grace(1000);
       }
     }
   }
@@ -236,6 +303,11 @@ export class Backdrop {
   private draw(now: number) {
     const t = (now - this.start) / 1000;
     const gl = this.gl;
+    if (gl && !this.glReady(gl)) {
+      if (!this.pendingProg) return; // link failed: leave the ink background
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      return;
+    }
     if (gl && this.prog) {
       gl.uniform2f(this.u.uRes, this.canvas.width, this.canvas.height);
       gl.uniform1f(this.u.uTime, this.animated ? t : 12.5);

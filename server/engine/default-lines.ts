@@ -3,7 +3,8 @@
  * is missing or a section fails validation, so the engine always has something in
  * character to say. Keep these short, case-agnostic and fact-free.
  */
-import type { HolmaLines } from '../../shared/lines-schema.js';
+import type { HolmaLines, Line } from '../../shared/lines-schema.js';
+import type { WhKind } from './normalize.js';
 
 export const DEFAULT_LINES: HolmaLines = {
   answer: {
@@ -106,4 +107,38 @@ export const DEFAULT_LINES: HolmaLines = {
     complete: [{ text: 'よろしい。記憶に刻まれましたねェ。', mood: 'laugh' }],
   },
   title: { idle: ['さァ、次の魂がお待ちかねですよ。'] },
+};
+
+/**
+ * Holma's answer to a question that cannot be answered はい／いいえ (meta 'open': 「なぜ倒れたの？」
+ * 「どこに当たったんですか」「犯人は誰？」). One consistent coaching move per wh-word, with a
+ * fact-free template of the yes/no form (『〜のせいですか？』). Used instead of the generic
+ * answer.vague pool, whose 「具体的に」 lines misread an already specific question. The content
+ * line bank may override a kind with meta.open.<kind> once the schema carries it.
+ */
+export const OPEN_LINES: Record<WhKind, Line[]> = {
+  why: [
+    '「なぜ」を解くのは審問官の役目。『〜のせいですか？』と訊きなさい。',
+    '理由は、ひとつ挙げてごらんなさい。『〜が原因ですか？』と。',
+  ],
+  how: [
+    '「どうやって」は語れません。『〜しましたか？』と、ひとつずつ。',
+    '仕組みは二択の積み重ねで解くもの。『〜でしたか？』の形でどうぞ。',
+  ],
+  where: [
+    '場所は、候補を挙げて訊きなさい。『〜でしたか？』と、ひとつずつ。',
+    { text: 'ククッ、「どこ」には答えられません。『〜のあたりですか？』の形で。', mood: 'laugh' },
+  ],
+  when: [
+    '「いつ」ではなく、区切って訊きなさい。『〜より前ですか？』と。',
+    '時を当てるなら、ひとつ挙げて。『〜の頃でしたか？』と。',
+  ],
+  who: [
+    '「誰」とは申せません。『〜はそこにいましたか？』と、ひとりずつ。',
+    '人を訊くなら、ひとりずつ名指しで。『〜はいましたか？』と。',
+  ],
+  what: [
+    '「何」を当てるのは審問官。『それは〜ですか？』と挙げてごらんなさい。',
+    '問いの形を変えましょう。『〜でしたか？』なら、必ず答えますとも。',
+  ],
 };

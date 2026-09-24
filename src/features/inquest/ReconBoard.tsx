@@ -22,7 +22,7 @@ export function panelState(s: InquestSession, p: ReconPanel): PanelState {
   return typeof s.picks.value[p.id] === 'number' ? 'picked' : 'blank';
 }
 
-export function ChoicePicker({ session: s, panelId, onPicked }: { session: InquestSession; panelId: string; onPicked?: () => void }) {
+export function ChoicePicker({ session: s, panelId, onPicked }: { session: InquestSession; panelId: string; onPicked?: (panelId: string) => void }) {
   const view = s.recon.value;
   const idx = view?.panels.findIndex((p) => p.id === panelId) ?? -1;
   const p = idx >= 0 ? view!.panels[idx] : null;
@@ -47,7 +47,7 @@ export function ChoicePicker({ session: s, panelId, onPicked }: { session: Inque
               onClick={() => {
                 audio.sfx('page');
                 s.pick(p.id, i);
-                onPicked?.();
+                onPicked?.(p.id);
               }}
             >
               <span class="choice__num">{String.fromCharCode(65 + i)}</span>
@@ -66,12 +66,14 @@ export interface ReconBoardProps {
   onOpenPanel: (id: string) => void;
   onSubmit: () => void;
   onFinish: () => void;
+  /** After a piece was picked in the side panel (the scene moves on to the next blank). */
+  onPicked?: (panelId: string) => void;
   choosing: string | null;
   /** Increment to shake the wrong frames. */
   shakeKey: number;
 }
 
-export function ReconBoard({ session: s, narrow, onOpenPanel, onSubmit, onFinish, choosing, shakeKey }: ReconBoardProps) {
+export function ReconBoard({ session: s, narrow, onOpenPanel, onSubmit, onFinish, onPicked, choosing, shakeKey }: ReconBoardProps) {
   const view = s.recon.value;
   const page = useRef<HTMLDivElement>(null);
   const phase = s.phase.value;
@@ -100,11 +102,14 @@ export function ReconBoard({ session: s, narrow, onOpenPanel, onSubmit, onFinish
     if (!el) return;
     if (!finale || !active) {
       gsap.to(el, { scale: 1, x: 0, y: 0, duration: 0.6, ease: 'power3.out' });
+      // phone: the narration starts from the first frame, not where 確定 was pressed
+      if (finale && narrow) el.parentElement?.scrollTo({ top: 0, behavior: motionReduced() ? 'auto' : 'smooth' });
       return;
     }
     const target = el.querySelector<HTMLElement>(`[data-panel-id="${active}"]`);
     if (!target) return;
     if (narrow) {
+      // the scroller keeps room under the lit frame for Holma's (measured) box: scroll-padding
       target.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth', block: 'center' });
       return;
     }
@@ -159,7 +164,7 @@ export function ReconBoard({ session: s, narrow, onOpenPanel, onSubmit, onFinish
         {!narrow && !finale && !done && (
           <aside class="recon__side">
             {choosing ? (
-              <ChoicePicker session={s} panelId={choosing} />
+              <ChoicePicker key={choosing} session={s} panelId={choosing} onPicked={onPicked} />
             ) : (
               <div class="choice choice--idle">
                 <span class="choice__k">

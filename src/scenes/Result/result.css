@@ -165,6 +165,29 @@
   background: rgba(20, 24, 33, 0.9);
   border: 1px solid var(--bone-a14);
 }
+.rs-rank__advice {
+  display: block;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--bone-a14);
+  color: var(--bone);
+}
+.rs-rank__cond {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--bone-3);
+}
+.rs-rank__cond-k {
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--formalin) 55%, transparent);
+  font-size: 0.64rem;
+  letter-spacing: 0.18em;
+  color: var(--formalin);
+}
 .rs-rank__name {
   display: block;
   font-weight: 700;
@@ -173,18 +196,39 @@
   color: var(--formalin);
 }
 .rs-rank__best {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
   font-size: 0.72rem;
   letter-spacing: 0.2em;
   color: var(--bone-3);
 }
 .rs-rank__best strong {
-  margin-left: 6px;
   padding: 0 8px;
   font-family: var(--font-en);
   font-size: 1rem;
   letter-spacing: 0.04em;
   color: var(--ink);
   background: var(--formalin);
+}
+.rs-rank__prev {
+  font-family: var(--font-en);
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  color: var(--mute);
+  text-decoration-color: var(--alarm);
+}
+.rs-rank__best em {
+  padding: 1px 8px;
+  font-style: normal;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  background: var(--alarm);
+  transform: skewX(var(--skew));
 }
 
 /* stats */
@@ -228,11 +272,24 @@
   margin: 0;
 }
 .rs-stat__value {
-  font-family: 'Anton', 'Dela Gothic One', sans-serif;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.16em;
   font-size: 1.75rem;
   line-height: 1.15;
-  letter-spacing: 0.02em;
   color: var(--bone);
+  white-space: nowrap;
+}
+.rs-stat__num {
+  font-family: var(--font-en);
+  letter-spacing: 0.02em;
+}
+/* regular weight at ~14px: in a heavy face 回 closes up into a box that reads as a missing glyph */
+.rs-stat__unit {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: max(0.5em, 12px);
+  letter-spacing: 0.06em;
 }
 .rs-stat.is-good .rs-stat__value {
   color: var(--formalin);
@@ -245,14 +302,20 @@
   color: var(--mute);
 }
 
-/* actions */
+/* actions: under the stat grid, the next case as a full-width CTA */
+.rs-side {
+  display: grid;
+  min-width: 0;
+}
 .rs-actions {
   display: grid;
-  justify-items: start;
-  gap: 16px;
-  margin-top: 36px;
-  padding-top: 24px;
-  border-top: 1px solid var(--bone-a14);
+  justify-items: stretch;
+  gap: 14px;
+  margin-top: 22px;
+}
+.rs-actions .btn--big-cta {
+  display: flex;
+  width: 100%;
 }
 .rs-actions__row {
   display: flex;
@@ -318,6 +381,10 @@
 }
 [data-layout='narrow'] .rs-rank__holma {
   text-align: left;
+}
+[data-layout='narrow'] .rs-rank__cond,
+[data-layout='narrow'] .rs-rank__best {
+  justify-content: center;
 }
 [data-layout='narrow'] .rs-stat__value {
   font-size: 1.45rem;

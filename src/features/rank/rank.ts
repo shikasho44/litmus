@@ -172,3 +172,116 @@ export function computeRank(input: RankInput): RankResult {
   const t = RANK_TITLES.find((x) => x.id === pick())!;
   return { rank, score, title: t.title, titleId: t.id, comment: t.comment, keyRate, par, penalties };
 }
+
+/* ------------------------------------------------------------------ */
+/* What cost the rank (result screen, in Holma's voice)                */
+/* ------------------------------------------------------------------ */
+
+export interface RankAdvice {
+  /** Holma's one-liner: what stood between this run and the next rank up (or a nod for a clean S). */
+  line: string;
+  /** The rank the line talks about (undefined for S). */
+  target?: Rank;
+  /** The 1–2 penalties the line names, heaviest first (label with the player's count). */
+  blockers: { id: PenaltyId; text: string; points: number }[];
+  /** How S is earned, in one short sentence. */
+  sCondition: string;
+}
+
+const RANK_ORDER: Rank[] = ['S', 'A', 'B', 'C'];
+const better = (a: Rank, b: Rank) => RANK_ORDER.indexOf(a) < RANK_ORDER.indexOf(b);
+
+/** The same run with one kind of penalty erased (used to test "without X you'd have had S"). */
+function withoutPenalty(input: RankInput, id: PenaltyId): RankInput {
+  const d = clamp(Math.round(n(input.difficulty)) || 1, 1, 3);
+  const est = n(input.estimatedMinutes) || 10 + 5 * d;
+  switch (id) {
+    case 'questions':
+      return { ...input, asked: Math.min(n(input.asked), questionPar(d)) };
+    case 'keyRate':
+      return { ...input, keyQuestions: Math.max(n(input.keyQuestions), Math.ceil(keyRateTarget(d) * n(input.answered))) };
+    case 'hints':
+      return { ...input, hintsUsed: 0 };
+    case 'misses':
+      return { ...input, debateMisses: 0 };
+    case 'grants':
+      return { ...input, grants: 0 };
+    case 'verdict':
+      return { ...input, verdictAttempts: 1 };
+    case 'suspensions':
+      return { ...input, suspensions: 0 };
+    case 'time':
+      return { ...input, elapsedMs: Math.min(n(input.elapsedMs), est * 2 * 60000) };
+  }
+}
+
+/** 「囁き1回」「撃ち損じ2回」… — the player's own numbers, not points. */
+export function penaltyText(id: PenaltyId, input: RankInput): string {
+  const d = clamp(Math.round(n(input.difficulty)) || 1, 1, 3);
+  switch (id) {
+    case 'questions':
+      return `目安より${Math.max(1, Math.round(n(input.asked) - questionPar(d)))}問多い質問`;
+    case 'keyRate':
+      return '空振りの質問';
+    case 'hints':
+      return `囁き${n(input.hintsUsed)}回`;
+    case 'misses':
+      return `撃ち損じ${n(input.debateMisses)}回`;
+    case 'grants':
+      return `泣きつき${n(input.grants)}回`;
+    case 'verdict':
+      return `宣告のやり直し${Math.max(1, n(input.verdictAttempts) - 1)}回`;
+    case 'suspensions':
+      return `審問の中断${n(input.suspensions)}回`;
+    case 'time':
+      return `長い夜（${Math.round(n(input.elapsedMs) / 60000)}分）`;
+  }
+}
+
+export const S_CONDITION = `減点${100 - RANK_THRESHOLDS.S}点以内、囁きと泣きつきなし`;
+
+/**
+ * Names the 1–2 heaviest penalties whose removal would have lifted the run to S (or, when S
+ * is out of reach, to the next rank up). Pure: recomputes the rank with each penalty erased.
+ */
+export function rankAdvice(input: RankInput, result: RankResult = computeRank(input)): RankAdvice {
+  const sorted = [...result.penalties].sort((a, b) => b.points - a.points);
+  const pack = (ids: PenaltyId[]) => ids.map((id) => ({ id, text: penaltyText(id, input), points: sorted.find((p) => p.id === id)?.points ?? 0 }));
+  const join = (ids: PenaltyId[]) => ids.map((id) => penaltyText(id, input)).join('と');
+
+  if (result.rank === 'S') {
+    if (!sorted.length) return { line: '減点なし。……文句のつけようがありませんねェ。', blockers: [], sCondition: S_CONDITION };
+    return { line: `強いて言えば、${join([sorted[0].id])}。……贅沢な悩みですとも。`, blockers: pack([sorted[0].id]), sCondition: S_CONDITION };
+  }
+
+  const reaches = (ids: PenaltyId[], target: Rank) => {
+    const fixed = ids.reduce((inp, id) => withoutPenalty(inp, id), input);
+    const r = computeRank(fixed).rank;
+    return r === target || better(r, target);
+  };
+  const find = (target: Rank): PenaltyId[] | null => {
+    const top = sorted.slice(0, 4).map((p) => p.id);
+    // S also needs no hints / grants: those are forced into the set when present
+    const forced = target === 'S' ? top.filter((id) => id === 'hints' || id === 'grants') : [];
+    for (const a of top) {
+      const set = [...new Set([...forced, a])];
+      if (set.length <= 2 && reaches(set, target)) return set;
+    }
+    for (let i = 0; i < top.length; i++)
+      for (let j = i + 1; j < top.length; j++) {
+        const set = [...new Set([...forced, top[i], top[j]])];
+        if (set.length <= 2 && reaches(set, target)) return set;
+      }
+    return null;
+  };
+
+  const order = (ids: PenaltyId[]) => [...ids].sort((a, b) => (sorted.find((p) => p.id === b)?.points ?? 0) - (sorted.find((p) => p.id === a)?.points ?? 0));
+  const toS = find('S');
+  if (toS) return { line: `${join(order(toS))}がなければ、Sでしたねェ。`, target: 'S', blockers: pack(order(toS)), sCondition: S_CONDITION };
+  const up = RANK_ORDER[RANK_ORDER.indexOf(result.rank) - 1];
+  const toUp = up && up !== 'S' ? find(up) : null;
+  if (toUp) return { line: `${join(order(toUp))}がなければ、${up}でしたねェ。`, target: up, blockers: pack(order(toUp)), sCondition: S_CONDITION };
+  const top2 = sorted.slice(0, 2).map((p) => p.id);
+  if (!top2.length) return { line: 'もう少し、手際よく。……次は期待していますよ。', blockers: [], sCondition: S_CONDITION };
+  return { line: `いちばん響いたのは、${join(top2)}。……次は期待していますよ。`, blockers: pack(top2), sCondition: S_CONDITION };
+}

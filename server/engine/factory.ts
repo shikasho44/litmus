@@ -7,7 +7,10 @@
  *   LLM_PROVIDER       openrouter | codex | none
  *   LLM_MODEL          OpenRouter chat model (default providers/openrouter-llm DEFAULT_LLM_MODEL)
  *   JEV_MODEL          default 'typesafe/jev-1.13'
- *   JEV_CANDIDATES     topk | all | all+prior   (JevJudge candidate strategy, default topk)
+ *   JEV_CANDIDATES     topk | wide | all | topk+prior | wide+prior | all+prior
+ *                      (JevJudge candidate strategy, default all+prior — full bench 2026-09-25)
+ *   JEV_PROMPT         v2 | v1   (answer criteria + rules-prior wording, default v2; v1 = the
+ *                      2026-09-24 prompt, kept for comparison / rollback)
  *
  * Every component that cannot be built (missing key, not a Node server for codex …) is left
  * out with a warning and the mode is degraded component by component — the game always runs
@@ -26,7 +29,7 @@ import type { DecisionProvider, LlmProvider } from './providers/types.js';
 import { createJevProvider } from './providers/jev.js';
 import { createOpenRouterLlm } from './providers/openrouter-llm.js';
 import { createCodexLlm } from './providers/codex.js';
-import { CANDIDATE_STRATEGIES, DEFAULT_STRATEGY, JevJudge, JevPostChecker, JevVerdictJudge, type CandidateStrategy } from './ai/jev-judge.js';
+import { CANDIDATE_STRATEGIES, DEFAULT_PROMPT, DEFAULT_STRATEGY, JevJudge, JevPostChecker, JevVerdictJudge, type AskPromptOptions, type CandidateStrategy } from './ai/jev-judge.js';
 import { LlmRenderer } from './ai/llm-renderer.js';
 import { LlmJudge } from './ai/llm-judge.js';
 
@@ -43,6 +46,7 @@ export interface ComponentOverrides {
   decisionProvider?: DecisionProvider;
   llm?: LlmProvider;
   strategy?: CandidateStrategy;
+  prompt?: AskPromptOptions;
 }
 
 /* ------------------------------------------------------------------ */
@@ -70,6 +74,10 @@ function cached<T extends DecisionProvider | LlmProvider>(kind: string, key: str
 /** Test hook: forget cached providers. */
 export function clearProviderCache(): void {
   providerCache.clear();
+}
+
+export function promptFrom(env: EnvLike): AskPromptOptions {
+  return (env.JEV_PROMPT ?? '').trim().toLowerCase() === 'v1' ? { prior: 'plain', criteria: 'v1' } : DEFAULT_PROMPT;
 }
 
 export function strategyFrom(env: EnvLike): CandidateStrategy {
@@ -127,7 +135,7 @@ export function createComponents(env: EnvLike, mode?: PipelineMode, overrides: C
     if (llm) judge = attempt('LlmJudge', warnings, () => new LlmJudge({ llm: llm! }));
   } else {
     if (decision && wantJev) {
-      judge = attempt('JevJudge', warnings, () => new JevJudge({ provider: decision!, model: cfg.jevModel, strategy }));
+      judge = attempt('JevJudge', warnings, () => new JevJudge({ provider: decision!, model: cfg.jevModel, strategy, prompt: overrides.prompt ?? promptFrom(env) }));
       verdictJudge = attempt('JevVerdictJudge', warnings, () => new JevVerdictJudge({ provider: decision!, model: cfg.jevModel }));
     }
     if (needsLlm && llm) renderer = attempt('LlmRenderer', warnings, () => new LlmRenderer({ llm: llm! }));

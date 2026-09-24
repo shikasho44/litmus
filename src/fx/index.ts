@@ -27,6 +27,7 @@ import type { ShatterCanvas } from './shatter';
 export interface CutInRequest {
   id: number;
   text: string;
+  lead?: string;
   en?: string;
   tone?: CutInTone;
   character?: 'holma' | 'jane' | null;
@@ -112,10 +113,10 @@ export const fx = {
     fxRefs.shatter?.burst(x ?? c.x, y ?? c.y, opts);
   },
 
-  cutIn(opts: { text: string; en?: string; tone?: CutInTone; character?: 'holma' | 'jane' | null; mood?: HolmaMood; hold?: number; sound?: boolean }): Promise<void> {
+  cutIn(opts: { text: string; lead?: string; en?: string; tone?: CutInTone; character?: 'holma' | 'jane' | null; mood?: HolmaMood; hold?: number; sound?: boolean }): Promise<void> {
     return new Promise((resolve) => {
       if (opts.sound !== false) audio.sfx('cutin');
-      fxAnnounce.value = opts.text;
+      fxAnnounce.value = `${opts.lead ?? ''}${opts.text}`;
       pendingCutIns.push({ ...opts, resolve });
       nextCutIn();
     });

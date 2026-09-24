@@ -1,9 +1,9 @@
 /** Admin console shell: auth gate, side navigation, section host. */
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from '../ui/Icon';
 import { Badge, Btn, ErrorBox } from './components';
 import { fmtAgo } from './format';
-import { auth, authError, cases, connect, go, hasToken, health, lastRefresh, refreshAll, route, SECTIONS, signIn, signOut, status } from './store';
+import { auth, authError, cases, connect, go, hasToken, health, healthFailure, lastRefresh, refreshAll, route, SECTIONS, signIn, signOut, status } from './store';
 import { OverviewSection } from './sections/Overview';
 import { CasesSection } from './sections/Cases';
 import { AskSection } from './sections/Ask';
@@ -33,6 +33,8 @@ function Brand() {
 function Gate() {
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
+  const [empty, setEmpty] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const h = health.value;
   const state = auth.value;
   return (
@@ -57,7 +59,13 @@ function Gate() {
             class="adm-gate__form"
             onSubmit={async (e) => {
               e.preventDefault();
-              if (!value.trim()) return;
+              if (!value.trim()) {
+                // The button stays live (a dimmed primary reads as broken); an empty submit
+                // explains itself instead.
+                setEmpty(true);
+                inputRef.current?.focus();
+                return;
+              }
               setBusy(true);
               await signIn(value);
               setBusy(false);
@@ -68,27 +76,51 @@ function Gate() {
               <code>x-admin-token</code> ヘッダーで送られます。
             </p>
             {authError.value && <ErrorBox>{authError.value}</ErrorBox>}
-            <label class="adm-field">
+            <label class={`adm-field ${empty ? 'is-invalid' : ''}`}>
               <span class="adm-field__label">ADMIN_TOKEN</span>
               <input
+                ref={inputRef}
                 type="password"
                 autocomplete="off"
                 spellcheck={false}
                 value={value}
-                onInput={(e) => setValue((e.target as HTMLInputElement).value)}
+                onInput={(e) => {
+                  setValue((e.target as HTMLInputElement).value);
+                  setEmpty(false);
+                }}
                 placeholder="管理トークン"
+                aria-invalid={empty || undefined}
+                aria-describedby={empty ? 'adm-gate-empty' : undefined}
                 autofocus
               />
+              {empty && (
+                <span class="adm-field__hint adm-warn-text" id="adm-gate-empty">
+                  トークンを入力してください。
+                </span>
+              )}
             </label>
-            <Btn variant="primary" icon="lock" type="submit" disabled={busy || !value.trim()}>
+            <Btn variant="primary" icon="lock" type="submit" disabled={busy} aria-busy={busy || undefined}>
               {busy ? '確認中…' : '接続'}
             </Btn>
           </form>
         )}
-        {h && (
+        {h ? (
           <p class="adm-gate__health adm-small adm-dim">
-            /api/health: mode <b class="adm-mono">{h.mode}</b> · 事件 {h.cases} · {h.dev ? 'development' : 'production'} · API v{h.version}
+            {/* public health is liveness only; mode / cases appear once the token is accepted */}
+            /api/health: <span class={h.ok ? 'adm-ok-text' : 'adm-bad-text'}>{h.ok ? '応答あり' : '異常'}</span>
+            {h.mode && (
+              <>
+                {' '}
+                · mode <b class="adm-mono">{h.mode}</b>
+              </>
+            )}
+            {h.cases !== undefined && <> · 事件 {h.cases}</>}
+            {h.dev !== undefined && <> · {h.dev ? 'development' : 'production'}</>} · API v{h.version}
           </p>
+        ) : (
+          healthFailure.value === 503 && (
+            <p class="adm-gate__health adm-small adm-bad-text">/api/health: 503 — 本番サーバーの設定に不備があります（SESSION_SECRET の未設定・短すぎ など）。</p>
+          )
         )}
         <a class="adm-link adm-small" href="./">
           ← ゲームに戻る
@@ -98,14 +130,58 @@ function Gate() {
   );
 }
 
+/**
+ * On phones the section menu becomes a horizontal strip. Keep the current tab in view and fade
+ * whichever edge still has tabs beyond it, so a cut-off tab reads as "scroll for more".
+ */
+function useNavStrip(section: string) {
+  const ref = useRef<HTMLElement>(null);
+  const [edge, setEdge] = useState({ l: false, r: false });
+  const first = useRef(true);
+  useEffect(() => {
+    const n = ref.current;
+    if (!n) return;
+    const measure = () => {
+      const max = n.scrollWidth - n.clientWidth;
+      const l = max > 1 && n.scrollLeft > 2;
+      const r = max > 1 && n.scrollLeft < max - 2;
+      setEdge((e) => (e.l === l && e.r === r ? e : { l, r }));
+    };
+    n.addEventListener('scroll', measure, { passive: true });
+    // Tabs change width after load (the case-issue badge), which fires no scroll/resize event.
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : undefined;
+    if (ro) for (const el of [n, ...Array.from(n.children)]) ro.observe(el);
+    else window.addEventListener('resize', measure);
+    measure();
+    return () => {
+      n.removeEventListener('scroll', measure);
+      ro?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
+  useEffect(() => {
+    const n = ref.current;
+    const on = n?.querySelector<HTMLElement>('.is-on');
+    if (!n || !on || n.scrollWidth <= n.clientWidth + 1) return;
+    const a = on.getBoundingClientRect();
+    const b = n.getBoundingClientRect();
+    const left = n.scrollLeft + (a.left - b.left) - (b.width - a.width) / 2;
+    const calm = first.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    n.scrollTo({ left: Math.max(0, left), behavior: calm ? 'auto' : 'smooth' });
+    first.current = false;
+  }, [section]);
+  return { ref, cls: `${edge.l ? 'has-more-l' : ''} ${edge.r ? 'has-more-r' : ''}` };
+}
+
 function Side() {
   const r = route.value;
   const s = status.value;
+  const strip = useNavStrip(r.section);
   const issues = (cases.value?.issues ?? []).filter((i) => i.level === 'error').length + (cases.value?.cases ?? []).filter((c) => !c.validation.ok).length;
   return (
     <aside class="adm-side">
       <Brand />
-      <nav class="adm-nav" aria-label="セクション">
+      <nav class={`adm-nav ${strip.cls}`} aria-label="セクション" ref={strip.ref}>
         {SECTIONS.map((x) => (
           <a
             key={x.id}
@@ -126,19 +202,19 @@ function Side() {
           </a>
         ))}
       </nav>
-      <div class="adm-side__foot">
+      <div class={`adm-side__foot ${hasToken.value ? 'has-token' : ''}`}>
         {s && (
           <div class="adm-side__env">
             <Badge tone={s.dev ? 'info' : 'amber'}>{s.dev ? 'DEV' : 'PRODUCTION'}</Badge>
             <span class="adm-mono">{s.mode}</span>
           </div>
         )}
-        <a class="adm-link" href="./" target="_blank" rel="noopener">
+        <a class="adm-link adm-side__game" href="./" target="_blank" rel="noopener">
           <Icon name="external" size={14} /> ゲームを開く
         </a>
         {hasToken.value && (
-          <button type="button" class="adm-link" onClick={() => signOut()}>
-            <Icon name="lock" size={14} /> トークンを消す
+          <button type="button" class="adm-link adm-side__signout" onClick={() => signOut()} title="トークンを消す" aria-label="トークンを消す">
+            <Icon name="lock" size={14} /> <span class="adm-side__signout-label">トークンを消す</span>
           </button>
         )}
       </div>

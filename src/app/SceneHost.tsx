@@ -5,29 +5,76 @@ import { audio } from '../audio';
 import { fx } from '../fx';
 import { motionReduced } from '../fx/motion';
 import { Button } from '../ui/Button';
-import { route, transitioning, type Route, type SceneProps, goto } from './router';
+import { DEBUG } from '../lib/env';
+import { route, transitioning, type Route, type SceneName, type SceneProps, goto } from './router';
 import { SCENES } from './scenes';
 import './shell.css';
 
-function ErrorScene({ params }: SceneProps) {
-  return (
-    <section class="scene center">
-      <div class="scene-error">
-        <p class="eyebrow">LOAD ERROR</p>
-        <h1 class="t-display t-xl">画面を読み込めませんでした</h1>
-        <p class="t-sm t-bone2">通信状況を確かめて、もう一度お試しください。</p>
-        <div class="row" style={{ justifyContent: 'center', marginTop: 16 }}>
-          <Button onClick={() => location.reload()} icon="refresh">
-            再読み込み
-          </Button>
-          <Button variant="ghost" onClick={() => goto('title')} icon="back" sfx="cancel">
-            タイトルへ
-          </Button>
+/**
+ * Shown when a scene's code chunk could not be fetched (connection lost at a transition).
+ * The primary action retries the chunk in place — a full reload while offline would replace
+ * the game with the browser's offline page and lose nothing but also recover nothing.
+ */
+function makeErrorScene(retry: () => void) {
+  return function ErrorScene({ params }: SceneProps) {
+    const [busy, setBusy] = useState(false);
+    return (
+      <section class="scene center scene-error-wrap">
+        <div class="scene-error" role="alert">
+          <p class="eyebrow">LOAD ERROR</p>
+          <h1 class="t-display t-xl">画面を読み込めませんでした</h1>
+          <p class="t-sm t-bone2">通信が切れているようです。つながったら「もう一度」を押してください。進み具合は保存されています。</p>
+          <div class="row row--wrap" style={{ justifyContent: 'center', marginTop: 16 }}>
+            <Button
+              onClick={() => {
+                setBusy(true);
+                retry();
+              }}
+              icon="refresh"
+              disabled={busy}
+              data-autofocus
+            >
+              もう一度
+            </Button>
+            <Button variant="ghost" onClick={() => location.reload()} icon="refresh" sfx="cancel">
+              ページを再読み込み
+            </Button>
+            <Button variant="quiet" onClick={() => goto('title')} icon="back" sfx="cancel">
+              タイトルへ
+            </Button>
+          </div>
+          {DEBUG && <p class="t-2xs t-muted t-mono">{JSON.stringify(params)}</p>}
         </div>
-        <p class="t-2xs t-muted t-mono">{JSON.stringify(params)}</p>
-      </div>
-    </section>
-  );
+      </section>
+    );
+  };
+}
+
+/**
+ * Scene chunks are fetched ahead of need, at idle, so a connection drop mid-case only affects
+ * API calls (which recover on their own): the case scenes once the title/files are on screen,
+ * the ending scenes once a case is under way (they are not needed — or fetched — before that).
+ */
+const PREFETCH: Partial<Record<SceneName, SceneName[]>> = {
+  title: ['prologue', 'files', 'intro', 'investigation', 'inquest'],
+  files: ['intro', 'investigation', 'inquest'],
+  investigation: ['inquest', 'resolution', 'science', 'quiz', 'result'],
+  inquest: ['resolution', 'science', 'quiz', 'result'],
+};
+const prefetched = new Set<SceneName>();
+function prefetchAfter(scene: SceneName) {
+  const list = (PREFETCH[scene] ?? []).filter((s) => !prefetched.has(s));
+  if (!list.length) return;
+  const run = () => {
+    for (const s of list) {
+      if (prefetched.has(s)) continue;
+      prefetched.add(s);
+      // a failed prefetch is retried by the real navigation (and its error screen)
+      void SCENES[s].load().catch(() => prefetched.delete(s));
+    }
+  };
+  if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(run, { timeout: 4000 });
+  else setTimeout(run, 1500);
 }
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
@@ -81,7 +128,7 @@ export function SceneHost() {
       const def = SCENES[r.scene];
       transitioning.value = true;
       setLabel({ jp: def.label, en: r.scene.toUpperCase() });
-      const load = def.load().catch(() => ErrorScene as ComponentType<SceneProps>);
+      const load = def.load().catch(() => makeErrorScene(() => void run(r)) as ComponentType<SceneProps>);
       const [Comp] = await Promise.all([load, hasView ? cover() : Promise.resolve()]);
       if (my !== token) return;
       fx.reset();
@@ -100,6 +147,7 @@ export function SceneHost() {
       setAnnounce(def.label);
       await reveal();
       if (my === token) transitioning.value = false;
+      if (my === token) prefetchAfter(r.scene);
     };
     run(route.peek());
     let last = routeKey(route.peek());

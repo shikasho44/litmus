@@ -8,18 +8,21 @@
  *   3. other metas (asks for the answer / a hint, small talk, about Holma, insults)
  *   4. an authored probe above PROBE_THRESHOLD (label flipped when negation differs)
  *   5. open wh-questions → 'vague' (please ask yes/no)   [before keywords on purpose:
- *      "何時に死んだ？" must not become "はい" because 時間 is a keyword]
+ *      "何時に死んだ？" must not become "はい" because 時間 is a keyword]. A question that
+ *      cannot be answered はい／いいえ at all (isWhQuestion: 「犯人は誰？」「どこで見つかったの？」)
+ *      never gets a polar label, not even from a near-verbatim probe (same guard as Jev).
  *   6. 「〜は関係ありますか」 relevance questions → 'yes' when the fact pointed at matters
  *      (importance ≥ 2), otherwise 'irrelevant' ('no' / 'irrelevant' for 「関係ないですよね」)
  *   7. keyword facts (most specific): compare the question's proposition with the fact's
- *      statement polarity; else fact.ifAsked (flipped for negated confirmations)
+ *      statement polarity; else fact.ifAsked (flipped for negated confirmations). A qualifier
+ *      the case rules out (「毒ガスが出ていた？」: gas yes, poison no) turns はい into 一部そう.
  *   8. a mid-similarity probe labelled 'irrelevant' → 'irrelevant'
  *   9. otherwise 'vague'
  */
 import type { AnswerClass } from '../../shared/case-schema.js';
-import { factPolarityFor, type CaseIndex, type IndexedFact } from './case-index.js';
+import { factPolarityFor, secretNamesIn, type CaseIndex, type IndexedFact } from './case-index.js';
 import type { AnalyzedQuestion, MetaKind } from './normalize.js';
-import { detectMeta } from './normalize.js';
+import { containsAffirmed, detectMeta, marksPolarity } from './normalize.js';
 import type { Candidates, ScoredFact, ScoredProbe } from './retrieve.js';
 import { retrieve } from './retrieve.js';
 import type { Judge, JudgeDecision, JudgeInput } from './judge-types.js';
@@ -82,6 +85,20 @@ function metaDecision(meta: MetaKind, best?: ScoredProbe): JudgeDecision {
   };
 }
 
+const isPolar = (a: AnswerClass) => a === 'yes' || a === 'no' || a === 'partial';
+
+/**
+ * A question that cannot be answered はい／いいえ (「犯人は誰ですか」「どこで見つかったの？」) gets
+ * 'vague' + meta 'open' (Holma's rephrasing lines) instead of a polar label — even an authored
+ * one. A 'vague' answer to such a question is also marked 'open'.
+ */
+function openGuard(d: JudgeDecision, q: AnalyzedQuestion): JudgeDecision {
+  if (!q.wh) return d;
+  if (isPolar(d.answerClass)) return { ...d, answerClass: 'vague', factIds: [], factStrength: undefined, closeness: 0, qtype: 'open', meta: 'open' };
+  if (d.answerClass === 'vague' && !d.meta) return { ...d, qtype: 'open', meta: 'open' };
+  return d;
+}
+
 export function judgeRules(q: AnalyzedQuestion, cand: Candidates, index: CaseIndex): JudgeDecision {
   const best = cand.probes[0];
   const keywordFacts = cand.facts.filter((f) => f.hits.length > 0);
@@ -89,9 +106,11 @@ export function judgeRules(q: AnalyzedQuestion, cand: Candidates, index: CaseInd
   const probeInfo = best ? { q: best.entry.probe.q, score: best.score, kind: best.entry.probe.kind, flipped: best.flip } : undefined;
 
   if (meta === 'tooLong' || meta === 'empty') return metaDecision(meta, best);
-  if (best && best.score >= PROBE_OVERRIDE && meta !== 'rude') return fromProbe(best, index);
+  // The victim's real name is secret until solved: never confirm or deny it (no model either).
+  if (secretNamesIn(q.norm, index.secretNames ?? []).length > 0) return { ...metaDecision('askAnswer', best), confidence: 1, guard: 'secretName' };
+  if (best && best.score >= PROBE_OVERRIDE && meta !== 'rude') return openGuard(fromProbe(best, index), q);
   if (meta) return metaDecision(meta, best);
-  if (best && best.score >= PROBE_THRESHOLD) return fromProbe(best, index);
+  if (best && best.score >= PROBE_THRESHOLD) return openGuard(fromProbe(best, index), q);
 
   if (q.open) {
     return { answerClass: 'vague', factIds: [], confidence: 0.7, closeness: 0, qtype: 'open', source: 'open', meta: 'open', probe: probeInfo };
@@ -135,6 +154,49 @@ export function judgeRules(q: AnalyzedQuestion, cand: Candidates, index: CaseInd
     if (routed.route === 'keyword' && q.prop.determinate && q.prop.family === 'broken' && !fPol && f.ifAsked !== 'partial') {
       const working = factPolarityFor(top.entry, top.hits, 'state', true);
       answerClass = working === 'neg' ? 'partial' : q.prop.polarity === 'pos' ? 'yes' : 'no';
+    }
+    // 「酸素の計器は動いていましたか？」 routed to 「酸素濃度計が取り付けられていた」: that fact says
+    // nothing about working, and its ifAsked (yes: there was one) would answer the wrong question.
+    // A sibling fact about the same object that does state it (「酸素濃度計は電池が切れて…」) decides.
+    let sibling: IndexedFact | undefined;
+    if (routed.route === 'keyword' && q.prop.determinate && q.prop.family !== 'broken' && !fPol && f.ifAsked !== 'partial') {
+      const sib = stateSibling(q, top, index);
+      if (sib) {
+        sibling = sib.entry;
+        answerClass = q.prop.polarity === sib.polarity ? 'yes' : 'no';
+      }
+    }
+    if (sibling) {
+      const ids = [sibling.fact.id, f.id];
+      return {
+        answerClass,
+        factIds: ids,
+        confidence: round(0.45 + 0.5 * top.keywordStrength),
+        closeness: closenessOf(answerClass, ids, index),
+        qtype: 'yesno',
+        source: 'keyword',
+        factStrength: { [sibling.fact.id]: top.keywordStrength, [f.id]: top.keywordStrength },
+        probe: probeInfo,
+      };
+    }
+    // 「毒ガスが出ていましたか？」: the gas fact says yes, but the case rules the qualifier out
+    // (「窒素は…毒はない」). Confirming would be a lie → 一部そう, with the ruling-out card first.
+    const ruled = answerClass === 'yes' && !q.negated ? ruledOutQualifier(q, keywordFacts, top) : undefined;
+    if (ruled) {
+      // Modifier (「毒ガスが出ていた？」: the gas part is true) → 一部そう. Predicate (「窒素ガスは
+      // 有毒ですか？」: the question IS the qualifier) → いいえ.
+      const ids = [ruled.fact.id, f.id];
+      return {
+        answerClass: ruled.predicate ? 'no' : 'partial',
+        factIds: ids,
+        confidence: round(0.45 + 0.5 * Math.min(top.keywordStrength, ruled.fact.keywordStrength)),
+        closeness: closenessOf(ruled.predicate ? 'no' : 'partial', ids, index),
+        qtype: 'yesno',
+        source: 'keyword',
+        factStrength: { [ruled.fact.id]: ruled.fact.keywordStrength, [f.id]: top.keywordStrength },
+        probe: probeInfo,
+        qualifier: ruled.hit,
+      };
     }
     return {
       answerClass,
@@ -358,6 +420,62 @@ function pickKeywordFact(q: AnalyzedQuestion, facts: ScoredFact[], index: CaseIn
     return { fact: best, route: 'keyword' };
   }
   return { fact: top, route: 'keyword' };
+}
+
+/**
+ * Qualifiers that change what a thing IS (toxic, harmful, flammable…). When the question pairs
+ * one with a topic the case affirms, and a ruled-out fact (ifAsked 'no') carries the qualifier as
+ * its own keyword, the proposition is only partly true: 「毒ガスが出ていましたか？」 → gas came
+ * out (F23 yes) but nitrogen is not poisonous (F24 no). Plain 危険 is not here — the nitrogen gas
+ * WAS dangerous, just not toxic.
+ */
+const QUALIFIER = /(?:毒|有害|ゆうがい|ゆうどく|どくせい|劇物|劇薬|可燃|燃え|燃や|もえ|引火|爆発性|放射)/u;
+
+function ruledOutQualifier(q: AnalyzedQuestion, facts: ScoredFact[], routed: ScoredFact): { fact: ScoredFact; hit: string; predicate: boolean } | undefined {
+  const own = routed.entry.norm;
+  for (const f of facts) {
+    const e = f.entry.fact;
+    if (f.id === routed.id || e.ifAsked !== 'no' || e.importance < 1 || e.spoilerLevel >= 4) continue;
+    for (const h of f.hits) {
+      const m = QUALIFIER.exec(h);
+      if (!m) continue;
+      // The routed fact itself speaks about the qualifier → it already answers the question.
+      if (own.includes(m[0])) continue;
+      // The same words of the question matched both facts: not an extra qualifier.
+      if (routed.hits.some((r) => r.includes(h) || h.includes(r))) continue;
+      // 「毒じゃないガスが出た？」 asks for the opposite — nothing to correct.
+      if (!containsAffirmed(q.norm, h)) continue;
+      // Japanese modifiers precede their noun, the predicate comes last: a qualifier after every
+      // topic word is what the question asks (「湯気は有毒ですか」), before it a modifier.
+      const at = q.norm.lastIndexOf(h);
+      const topicAt = Math.max(...routed.hits.map((r) => q.norm.indexOf(r)));
+      return { fact: f, hit: h, predicate: at > topicAt };
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The fact that states the question's state (on its axis) about the object the routed fact
+ * introduces. Objects are the routed fact's own keywords (≥ 3 chars) that appear in its text
+ * (「酸素濃度計」); a sibling fact must name one in a clause with a unanimous polarity. All such
+ * siblings must agree, else undefined (the author's ifAsked stays the answer).
+ */
+function stateSibling(q: AnalyzedQuestion, routed: ScoredFact, index: CaseIndex): { entry: IndexedFact; polarity: 'pos' | 'neg' } | undefined {
+  const objects = routed.entry.keywords.filter((k) => [...k].length >= 3 && routed.entry.norm.includes(k));
+  if (objects.length === 0) return undefined;
+  const found: { entry: IndexedFact; polarity: 'pos' | 'neg' }[] = [];
+  for (const e of index.facts) {
+    if (e === routed.entry || e.fact.spoilerLevel >= 4) continue;
+    const named = objects.filter((o) => e.norm.includes(o));
+    if (named.length === 0) continue;
+    const cl = e.clauses.filter((c) => named.some((o) => c.norm.includes(o)));
+    const ps = cl.map((c) => marksPolarity(c.marks, q.prop.family, true));
+    if (ps.length === 0 || ps.some((p) => p === undefined) || ps.some((p) => p !== ps[0])) continue;
+    found.push({ entry: e, polarity: ps[0]! });
+  }
+  if (found.length === 0 || found.some((x) => x.polarity !== found[0].polarity)) return undefined;
+  return found.sort((a, b) => b.entry.fact.importance - a.entry.fact.importance)[0];
 }
 
 /** No keyword fact at all: an agent / blame question can still reach the "no crime" fact. */

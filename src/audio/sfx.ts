@@ -1,6 +1,6 @@
 /** Sound effects — all synthesized, routed to the sfx bus. */
 import type { AnswerClass } from '../../shared/case-schema';
-import { getBuses } from './engine';
+import { duckBgm, getBuses } from './engine';
 import { GLOCK, bell, kick, mtof, pluck, snare, sweep, tick, type Out } from './synth';
 
 export type SfxName =
@@ -62,15 +62,16 @@ export function playSfx(name: SfxName, opts: { answerClass?: AnswerClass } = {})
   if (!o) return;
   const t = o.ctx.currentTime + 0.005;
   switch (name) {
+    // UI ticks: +8 dB over the first mix, which sat 15–40 dB under the BGM (inaudible)
     case 'hover': {
       if (t - lastHover < 0.045) return;
       lastHover = t;
-      tick(o, t, { vel: 0.05, pitch: 3200 });
+      tick(o, t, { vel: 0.125, pitch: 3200 });
       break;
     }
     case 'toggle':
-      tick(o, t, { vel: 0.12, pitch: 1800 });
-      tick(o, t + 0.04, { vel: 0.08, pitch: 2600 });
+      tick(o, t, { vel: 0.3, pitch: 1800 });
+      tick(o, t + 0.04, { vel: 0.2, pitch: 2600 });
       break;
     case 'confirm':
       pluck(o, t, 81, { vel: 0.16, decay: 0.16, type: 'square', cutoff: 5000 });
@@ -85,20 +86,21 @@ export function playSfx(name: SfxName, opts: { answerClass?: AnswerClass } = {})
       pluck(o, t + 0.06, 69, { vel: 0.11, decay: 0.22, type: 'square', cutoff: 2400 });
       break;
     case 'open':
-      sweep(o, t, 0.22, { vel: 0.1, from: 500, to: 3500, shape: 'swell' });
-      pluck(o, t + 0.05, 84, { vel: 0.06, decay: 0.2, type: 'triangle', wet: 0.3 });
+      sweep(o, t, 0.22, { vel: 0.25, from: 500, to: 3500, shape: 'swell' });
+      pluck(o, t + 0.05, 84, { vel: 0.15, decay: 0.2, type: 'triangle', wet: 0.3 });
       break;
     case 'close':
-      sweep(o, t, 0.18, { vel: 0.08, from: 3000, to: 500, shape: 'swell' });
+      sweep(o, t, 0.18, { vel: 0.2, from: 3000, to: 500, shape: 'swell' });
       break;
     case 'page':
-      sweep(o, t, 0.12, { vel: 0.1, from: 2500, to: 6000, q: 0.8, shape: 'swell' });
+      sweep(o, t, 0.12, { vel: 0.25, from: 2500, to: 6000, q: 0.8, shape: 'swell' });
       break;
     case 'error':
       tone(o, t, 110, 0.26, 'square', 0.1, 0.9, 0);
       tone(o, t, 116.5, 0.26, 'square', 0.1, 0.9, 0);
       break;
     case 'stamp': {
+      duckBgm(-3, 0.25);
       kick(o, t, { vel: 0.8, tone: 120 });
       sweep(o, t, 0.1, { vel: 0.35, from: 900, to: 300, q: 0.6, shape: 'fall', wet: 0.1 });
       sweep(o, t + 0.005, 0.05, { vel: 0.25, from: 4000, to: 2000, q: 0.5, shape: 'fall', wet: 0 });
@@ -114,6 +116,7 @@ export function playSfx(name: SfxName, opts: { answerClass?: AnswerClass } = {})
       sweep(o, t, 0.4, { vel: 0.05, from: 2000, to: 9000, shape: 'swell' });
       break;
     case 'findingCore':
+      duckBgm(-4, 0.6);
       [64, 71, 76, 80, 83, 88, 92].forEach((m, i) => bell(o, t + i * 0.05, m, { vel: 0.11, decay: 1.8, partials: GLOCK, wet: 0.5 }));
       kick(o, t, { vel: 0.5, tone: 90 });
       sweep(o, t, 0.7, { vel: 0.08, from: 1500, to: 10000, shape: 'swell' });
@@ -128,6 +131,7 @@ export function playSfx(name: SfxName, opts: { answerClass?: AnswerClass } = {})
       break;
     }
     case 'refute':
+      duckBgm(-4, 0.4);
       kick(o, t, { vel: 1, tone: 170 });
       snare(o, t, { vel: 0.5 });
       sweep(o, t, 0.6, { vel: 0.4, from: 7000, to: 1500, q: 0.4, shape: 'fall', wet: 0.4 });
@@ -137,6 +141,7 @@ export function playSfx(name: SfxName, opts: { answerClass?: AnswerClass } = {})
       sweep(o, t, 0.32, { vel: 0.22, from: 300, to: 3200, q: 1.2, shape: 'swell', wet: 0.1 });
       break;
     case 'cutin':
+      duckBgm(-4, 0.4);
       sweep(o, t, 0.28, { vel: 0.26, from: 400, to: 5000, q: 1, shape: 'swell' });
       kick(o, t + 0.2, { vel: 0.6, tone: 130 });
       snare(o, t + 0.2, { vel: 0.18 });
@@ -167,21 +172,22 @@ export function playBlip(speaker: Speaker) {
   lastBlip = t;
   const r = Math.random();
   switch (speaker) {
+    // voice blips: ~+8 dB so the typewriter voice is heard over the music (was 15–23 LU under)
     case 'holma': {
       const f = 740 * Math.pow(2, (Math.floor(r * 5) - 2) / 12);
-      tone(o, t, f, 0.045, 'square', 0.045, 1.08, 0);
+      tone(o, t, f, 0.045, 'square', 0.11, 1.08, 0);
       break;
     }
     case 'jane': {
       const f = 1244 * Math.pow(2, (Math.floor(r * 3) * 2) / 12);
-      tone(o, t, f, 0.12, 'sine', 0.05, 1, 0.5);
-      tone(o, t, f * 2.01, 0.06, 'sine', 0.015, 1, 0.5);
+      tone(o, t, f, 0.12, 'sine', 0.12, 1, 0.5);
+      tone(o, t, f * 2.01, 0.06, 'sine', 0.036, 1, 0.5);
       break;
     }
     case 'narration':
-      tone(o, t, 330 + r * 30, 0.03, 'triangle', 0.035, 1, 0);
+      tone(o, t, 330 + r * 30, 0.03, 'triangle', 0.09, 1, 0);
       break;
     default:
-      tick(o, t, { vel: 0.04, pitch: 2800 });
+      tick(o, t, { vel: 0.1, pitch: 2800 });
   }
 }

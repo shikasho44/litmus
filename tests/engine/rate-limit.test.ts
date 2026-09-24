@@ -35,6 +35,20 @@ describe('rate limiter', () => {
   });
 });
 
+describe('rate limiter peek', () => {
+  it('reports the verdict without recording a hit', () => {
+    let now = 0;
+    const rl = new RateLimiter({ f: [{ limit: 2, windowMs: 60_000 }] }, () => now);
+    expect(rl.peek('f', 'ip').ok).toBe(true);
+    expect(rl.peek('f', 'ip').ok).toBe(true);
+    rl.check('f', 'ip');
+    rl.check('f', 'ip');
+    expect(rl.peek('f', 'ip').ok).toBe(false);
+    now = 61_000;
+    expect(rl.peek('f', 'ip').ok).toBe(true);
+  });
+});
+
 describe('budget guard', () => {
   it('trips at the limit and resets daily', () => {
     let now = Date.UTC(2026, 8, 24, 12);

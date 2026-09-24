@@ -4,7 +4,7 @@
  */
 import { useState } from 'preact/hooks';
 import type { PublicFact } from '../../shared/api';
-import { ANSWER_CLASSES } from '../../shared/case-schema';
+import { ANSWER_CLASSES } from '../../shared/constants';
 import { audio } from '../audio';
 import { fx } from '../fx';
 import { Button, CutIn, DialogueBox, EvidenceCard, HolmaSprite, HolmaVector, IconButton, Panel, ShardPortrait, Stamp, TabPanel, Tabs, toast } from '../ui';

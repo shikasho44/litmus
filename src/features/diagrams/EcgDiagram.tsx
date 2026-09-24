@@ -17,6 +17,10 @@ export function EcgDiagram({ d, index }: { d: EcgData; index?: number }) {
   const h = Math.round(Math.min(270, Math.max(200, w * 0.34)));
   const m = useMemo(() => (w > 0 ? ecgModel(w, h) : null), [w, h]);
   const tag = windowTag(d.title);
+  // The rhythm's name comes from case data (served only after the verdict), never from this
+  // chunk: src/build/release-guard.ts fails the build on a case's leakTerms in shipped JS.
+  const rhythm = d.rhythmLabel || '乱れた波形';
+  const rhythmDetail = d.rhythmDetail || '衝撃が加わったあとの波形。';
   const small = w < 520;
   const grid = small ? 6 : 8;
 
@@ -24,7 +28,7 @@ export function EcgDiagram({ d, index }: { d: EcgData; index?: number }) {
     <DiagramFrame frameRef={viewRef} kind="ecg" title={d.title} en="ELECTROCARDIOGRAM" source={d.source} index={index} seen={seen}>
       <div class="ecg__plot" ref={plotRef} style={{ height: `${h}px` }}>
         {m && (
-          <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`心電図の模式図。1拍目と2拍目のT波の頂上の少し手前に「${tag}」があり、2拍目のその瞬間に衝撃が加わると、波形が心室細動の細かく乱れた波に変わる。`}>
+          <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`心電図の模式図。1拍目と2拍目に「${tag}」（${d.windowLabel}）があり、2拍目のその瞬間に衝撃が加わると、波形が${rhythm}の細かく乱れた波に変わる。`}>
             <defs>
               <pattern id={`${id}-s`} width={grid} height={grid} patternUnits="userSpaceOnUse">
                 <path d={`M${grid} 0V${grid}H0`} fill="none" class="ecg__grid-s" />
@@ -79,7 +83,7 @@ export function EcgDiagram({ d, index }: { d: EcgData; index?: number }) {
 
             {/* VF label */}
             <text class="ecg__vf-label" x={w - 14} y={small ? 18 : 22} text-anchor="end">
-              心室細動
+              {rhythm}
             </text>
           </svg>
         )}
@@ -105,9 +109,9 @@ export function EcgDiagram({ d, index }: { d: EcgData; index?: number }) {
         <div class="ecg__legend-row">
           <dt>
             <span class="ecg__swatch ecg__swatch--vf" aria-hidden="true" />
-            心室細動
+            {rhythm}
           </dt>
-          <dd>心室が細かく震えるだけになり、血液を送り出せない状態。この震えを止めるには電気ショック（AED）が要る。</dd>
+          <dd>{rhythmDetail}</dd>
         </div>
       </dl>
       <p class="dg__aside">※ 見やすくするため、窓の幅は実際より広く描いています。</p>

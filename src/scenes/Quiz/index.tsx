@@ -2,7 +2,7 @@
  * 記憶の定着 RECALL TEST (design bible §3-5). One question at a time, 3–4 choices, immediate
  * feedback with the explanation. A wrong pick greys that choice out and shows the
  * explanation; the player simply tries again (the retry count is kept, nothing else).
- * All correct → a giant 「CASE COMPLETE」 stamp; the run is ranked and saved (completeCase)
+ * All correct → a giant 「RECORD SEALED」 stamp; the run is ranked and saved (completeCase)
  * right there, then 結果へ.
  *
  * Save: CaseProgress.quiz = { answers: { [questionIndex]: wrongAttempts }, correct: [questionIndex…] }
@@ -175,7 +175,7 @@ function Quiz({ caseId, sol, summary }: { caseId: string; sol: SolutionResponse;
             <div class="qz-card" ref={cardRef} key={idx}>
               <p class="qz-card__num t-mono">
                 QUESTION {pad2(idx + 1)} / {pad2(quiz.length)}
-                {totalMisses > 0 && <span class="qz-card__miss">やり直し {totalMisses}</span>}
+                {(misses[key] ?? 0) > 0 && <span class="qz-card__miss">この問題のやり直し {misses[key]}</span>}
               </p>
               <h2 class="qz-card__q">{q.q}</h2>
               <ul class="qz-choices" role="list">
@@ -273,9 +273,10 @@ function CompletePanel({ caseId, stampKey, misses, total }: { caseId: string; st
   }, [stampKey]);
   return (
     <div class="qz-done">
-      <div class="qz-done__stamp" ref={stamp} role="img" aria-label="CASE COMPLETE">
-        <span class="qz-done__kicker t-mono">RECORD SEALED</span>
-        <span class="qz-done__big">CASE COMPLETE</span>
+      {/* the next screen's header is 「CASE COMPLETE」: the stamp seals the record instead of repeating it */}
+      <div class="qz-done__stamp" ref={stamp} role="img" aria-label="記録、封緘。記憶、定着">
+        <span class="qz-done__kicker t-mono">RECALL TEST — ALL CLEAR</span>
+        <span class="qz-done__big">RECORD SEALED</span>
         <span class="qz-done__jp">記憶、定着</span>
       </div>
       <p class="qz-done__sum">

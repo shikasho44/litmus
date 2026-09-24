@@ -21,6 +21,10 @@ export function App() {
   useSettingsSync();
   useEffect(() => {
     if (!storageOk.peek()) toast('この環境では進み具合を保存できません（プライベートモード等）', { tone: 'warn', duration: 6000 });
+    // The boot splash (index.html) has faded out by now: drop it so nothing invisible keeps
+    // animating / compositing for the whole session.
+    const t = setTimeout(() => document.getElementById('boot')?.remove(), 900);
+    return () => clearTimeout(t);
   }, []);
   return (
     <div class="app-shell">

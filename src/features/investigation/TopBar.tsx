@@ -99,7 +99,15 @@ export function TopBar({ ctl, pub, progress, elapsed, newFacts, notebookOpen, on
         {!narrow && <span class="ivtop__btn-label">捜査ノート</span>}
         {newFacts > 0 && <span class="ivtop__badge">{newFacts}</span>}
       </button>
-      <button type="button" class="ivtop__inquest" onClick={onInquest} disabled={busy} aria-label="審問を開く">
+      {/* Busy (Holma answering): stays at full strength — no per-turn flicker — but ignores
+          clicks until the answer is over (onInquest also checks). */}
+      <button
+        type="button"
+        class={`ivtop__inquest ${busy ? 'is-busy' : ''}`}
+        onClick={() => !busy && onInquest()}
+        aria-disabled={busy || undefined}
+        aria-label={busy ? '審問を開く（ホルマの返答のあとで押せます）' : '審問を開く'}
+      >
         <span class="ivtop__inquest-bg" aria-hidden="true" />
         <Icon name="gavel" size={20} />
         <span class="ivtop__inquest-label">{narrow ? '審問' : '審問を開く'}</span>

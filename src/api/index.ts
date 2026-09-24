@@ -13,6 +13,12 @@ import type { GameApi } from '../../shared/api';
 import { APP_CONFIG } from '../config/app';
 import { httpApi } from './http';
 
+/**
+ * HTTP calls waiting longer than 5 s (always 0 in the embedded build). The investigation UI can
+ * show a Holma "still examining" line while it is > 0 (e.g. reuse the error.network pool).
+ */
+export { slowRequests } from './http';
+
 declare const __JANEDOE_EMBEDDED__: boolean | undefined;
 
 export const API_MODE: 'http' | 'embedded' =

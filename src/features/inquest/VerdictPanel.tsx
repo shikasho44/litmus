@@ -4,7 +4,7 @@
  * the answer), and the result stamp. The scene runs the suspense beat and Holma's lines.
  */
 import { gsap } from 'gsap';
-import { useEffect, useLayoutEffect, useRef } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { VerdictResult } from '../../../shared/api';
 import { motionReduced } from '../../fx/motion';
 import { Button } from '../../ui/Button';
@@ -12,6 +12,30 @@ import { Icon } from '../../ui/Icon';
 import { SUPPORT_URL, VERDICT_MAX, type InquestSession, type VerdictView } from './session';
 
 export const VERDICT_PROMPT = '彼女に、何が起きたのか。なぜ死んだのか。あなたの言葉で。';
+
+/** The submit shortcut as the player's keyboard names it (none on touch). */
+function isMac(): boolean {
+  try {
+    const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+    return /mac|iphone|ipad|ipod/i.test(nav.userAgentData?.platform || nav.platform || nav.userAgent);
+  } catch {
+    return false;
+  }
+}
+
+export function verdictPlaceholder(touch: boolean): string {
+  if (touch) return '例：何が起き、体に何が起こり、なぜ亡くなったのか。直接の死因・きっかけ・仕組みまで書くと、宣告が通りやすくなります。';
+  return `例：何が起き、体に何が起こり、なぜ亡くなったのか。\n（${isMac() ? '⌘' : 'Ctrl'}＋Enter で宣告）`;
+}
+
+/**
+ * Optional answer elements (not needed for a full solve). The server may send the required
+ * ids; until it does, the bible's situational element 「決定的な状況」 is the optional one.
+ */
+function isOptional(view: VerdictView, id: string): boolean {
+  if (view.required?.length) return !view.required.includes(id);
+  return /^決定的な状況/.test(view.labels[id] ?? '');
+}
 
 export const RESULT_META: Record<VerdictResult, { jp: string; en: string; color: string; tone: string }> = {
   correct: { jp: '正解', en: 'CORRECT', color: 'var(--formalin)', tone: 'formalin' },
@@ -73,13 +97,15 @@ export function ElementChecklist({ view, animate }: { view: VerdictView; animate
     <ul ref={ref} class="vchk" aria-label="宣告に含まれた要素">
       {ids.map((id) => {
         const ok = view.matched.includes(id);
+        const opt = isOptional(view, id);
         return (
-          <li key={id} class={`vchk__item ${ok ? 'is-ok' : 'is-miss'}`}>
+          <li key={id} class={`vchk__item ${ok ? 'is-ok' : 'is-miss'} ${opt ? 'is-optional' : ''}`}>
             <span class="vchk__mark" aria-hidden="true">
-              {ok ? '✔' : '？'}
+              {ok ? '✔' : opt ? '＋' : '？'}
             </span>
             <span class="vchk__label">{view.labels[id]}</span>
-            <span class="sr-only">{ok ? '：含まれている' : '：足りない'}</span>
+            {opt && <span class="vchk__opt">任意</span>}
+            <span class="sr-only">{ok ? '：含まれている' : opt ? '：なくても宣告は通ります' : '：足りない'}</span>
           </li>
         );
       })}
@@ -95,18 +121,26 @@ export interface VerdictPanelProps {
   stampKey: number;
   /** Focus the sheet when writing becomes possible (off on phones: no surprise keyboard). */
   autoFocus?: boolean;
+  /** Touch device: no keyboard-shortcut copy; the writing tip goes into the placeholder. */
+  touch?: boolean;
   onStampImpact?: () => void;
 }
 
-export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, stampKey, onStampImpact, autoFocus = true }: VerdictPanelProps) {
+export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, stampKey, onStampImpact, autoFocus = true, touch = false }: VerdictPanelProps) {
   const ta = useRef<HTMLTextAreaElement>(null);
   const step = s.verdictStep.value;
   const draft = s.draft.value;
   const view = s.verdict.value;
   const attempts = s.verdictAttempts.value;
   const count = [...draft].length;
-  const canSubmit = step === 'write' && draft.trim().length >= 4 && !s.dialogue.value;
+  const talking = !!s.dialogue.value;
+  const intro = s.verdictIntro.value;
+  /** Writing is possible (not while Holma talks, the cut-in plays or the judgement runs). */
+  const writable = step === 'write' && !talking && !intro && !s.tokenDead.value;
+  const canSubmit = writable && draft.trim().length >= 4;
   const promptRef = useRef<HTMLParagraphElement>(null);
+  /** ~1 s after the slam the stamp shrinks to a seal in the corner, so the sentence reads again. */
+  const [sealed, setSealed] = useState(false);
 
   useLayoutEffect(() => {
     const el = promptRef.current;
@@ -115,16 +149,24 @@ export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, stampKey, o
     return () => tw.kill();
   }, []);
 
+  // Never keep the caret while Holma talks: Enter must advance his line, not type a newline.
   useEffect(() => {
-    if (step !== 'write' && document.activeElement === ta.current) ta.current?.blur();
-  }, [step]);
+    if (!writable && document.activeElement === ta.current) ta.current?.blur();
+  }, [writable]);
 
   useEffect(() => {
-    if (autoFocus && step === 'write' && !s.dialogue.value) {
+    if (autoFocus && writable) {
       const t = setTimeout(() => ta.current?.focus({ preventScroll: true }), 60);
       return () => clearTimeout(t);
     }
-  }, [step, !!s.dialogue.value]);
+  }, [writable]);
+
+  useEffect(() => {
+    setSealed(false);
+    if (step !== 'result') return;
+    const t = setTimeout(() => setSealed(true), motionReduced() ? 900 : 1150);
+    return () => clearTimeout(t);
+  }, [stampKey, step]);
 
   return (
     <div class={`vpanel is-${step}`} data-verdict-step={step}>
@@ -135,9 +177,14 @@ export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, stampKey, o
         <span class="vpanel__attempt t-mono">{attempts > 0 ? `宣告 ${attempts}回` : '初回の宣告'}</span>
       </header>
       <p ref={promptRef} class="vprompt" aria-label={VERDICT_PROMPT}>
-        {[...VERDICT_PROMPT].map((ch, i) => (
-          <span key={i} class={`vprompt__ch ${ch === '。' ? 'is-stop' : ''}`} aria-hidden="true">
-            {ch}
+        {/* per-character spans for the reveal, grouped into phrases that never break inside */}
+        {(VERDICT_PROMPT.match(/[^、。]+[、。]?/g) ?? [VERDICT_PROMPT]).map((ph, pi) => (
+          <span key={pi} class="vprompt__ph" aria-hidden="true">
+            {[...ph].map((ch, i) => (
+              <span key={i} class={`vprompt__ch ${ch === '。' ? 'is-stop' : ''}`}>
+                {ch}
+              </span>
+            ))}
           </span>
         ))}
       </p>
@@ -157,8 +204,9 @@ export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, stampKey, o
           value={draft}
           maxLength={VERDICT_MAX}
           rows={5}
-          readOnly={step !== 'write'}
-          placeholder={'例：何が起きて、体に何が起き、なぜ亡くなったのか。\n（Ctrl＋Enter で宣告）'}
+          readOnly={!writable}
+          aria-readonly={!writable ? 'true' : undefined}
+          placeholder={verdictPlaceholder(touch)}
           onInput={(e) => {
             const v = [...(e.target as HTMLTextAreaElement).value].slice(0, VERDICT_MAX).join('');
             s.setDraft(v);
@@ -182,7 +230,7 @@ export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, stampKey, o
             <span class="vsheet__gavel" aria-hidden="true">
               <Icon name="gavel" size={40} />
             </span>
-            <span class="vsheet__judging-t">審理中</span>
+            <span class="vsheet__judging-t">判定中</span>
             <span class="vsheet__dots" aria-hidden="true">
               <i />
               <i />
@@ -191,7 +239,7 @@ export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, stampKey, o
           </div>
         )}
         {view && step === 'result' && (
-          <div class="vsheet__stamp">
+          <div class={`vsheet__stamp ${sealed ? 'is-sealed' : ''}`}>
             <ResultStamp key={stampKey} result={view.result} attempt={attempts} animate onImpact={onStampImpact} />
           </div>
         )}
@@ -212,6 +260,19 @@ export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, stampKey, o
             {step === 'result' ? '判定' : '前回の判定'}：<b style={{ color: RESULT_META[view.result].color }}>{RESULT_META[view.result].jp}</b>
           </span>
           <ElementChecklist key={`${stampKey}-${step}`} view={view} animate={step === 'result'} />
+          {step === 'write' && view.notes.length > 0 && (
+            <div class="vnote" role="note" aria-label="ホルマの指摘">
+              <span class="vnote__k">
+                <Icon name="whisper" size={15} />
+                ホルマの指摘
+              </span>
+              {view.notes.map((n, i) => (
+                <p key={i} class="vnote__t">
+                  {n}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -41,15 +41,46 @@ export function keywordWeight(k: string): number {
   return Math.min(0.9, 0.35 + 0.15 * len);
 }
 
-/** Keyword hits of `fact` in the normalised question (longest-match; nested hits removed). */
+/**
+ * Keyword hits of `fact` in the normalised question (longest-match; nested hits removed).
+ * A compound keyword also matches its spoken 「の」 form (「酸素のメーター」 for 酸素メーター); the hit
+ * is then the form found in the question.
+ */
 export function keywordHits(norm: string, fact: IndexedFact): string[] {
   const raw = fact.keywords.filter((k) => {
     const len = [...k].length;
     if (len === 1 && !HAN.test(k)) return norm === k; // single kana/latin only as the whole question
     return norm.includes(k);
   });
+  for (const v of fact.variants ?? []) if (norm.includes(v.form) && !raw.includes(v.form)) raw.push(v.form);
   // Drop hits contained in a longer hit (酸素 inside 酸素濃度).
   return raw.filter((k) => !raw.some((o) => o !== k && o.length > k.length && o.includes(k)));
+}
+
+/** Every [start, end) occurrence of `word` in `text`. */
+function spansOf(text: string, word: string): [number, number][] {
+  const out: [number, number][] = [];
+  for (let at = text.indexOf(word); at >= 0; at = text.indexOf(word, at + 1)) out.push([at, at + word.length]);
+  return out;
+}
+
+/**
+ * Longest match across facts: a hit whose every occurrence lies inside a hit of ANOTHER fact that
+ * is at least 2 characters longer is that fact's word, not this one's (「めーたー」 of the supply
+ * gauge inside 「酸素のめーたー」 of the oxygen meter). One extra character is usually a particle
+ * (「暑さが」 vs 「暑さ」 in 「暑さが原因ですか」) and decides nothing. Returns the pruned hit
+ * list per fact index.
+ */
+export function pruneShadowedHits(norm: string, hits: string[][]): string[][] {
+  const spans = hits.map((hs) => hs.map((h) => ({ h, at: spansOf(norm, h) })));
+  return hits.map((hs, i) =>
+    hs.filter((h) => {
+      const mine = spansOf(norm, h);
+      return !mine.every(([a, b]) =>
+        spans.some((other, j) => j !== i && other.some((o) => o.h.length >= h.length + 2 && o.at.some(([c, d]) => c <= a && b <= d))),
+      );
+    }),
+  );
 }
 
 export function keywordStrength(hits: string[]): number {
@@ -61,13 +92,14 @@ export function keywordStrength(hits: string[]): number {
 export function scoreFacts(q: AnalyzedQuestion, index: CaseIndex, limit = TOP_FACTS): ScoredFact[] {
   const qGrams = bigrams(q.core);
   const out: ScoredFact[] = [];
-  for (const entry of index.facts) {
-    const hits = keywordHits(q.norm, entry);
+  const allHits = pruneShadowedHits(q.norm, index.facts.map((entry) => keywordHits(q.norm, entry)));
+  index.facts.forEach((entry, i) => {
+    const hits = allHits[i];
     const ks = keywordStrength(hits);
     const overlap = containment(qGrams, entry.grams);
     const score = ks + 0.5 * overlap;
     if (hits.length > 0 || overlap >= 0.34) out.push({ id: entry.fact.id, score: round(score), keywordStrength: round(ks), hits, entry });
-  }
+  });
   out.sort((a, b) => b.score - a.score || b.keywordStrength - a.keywordStrength || a.entry.fact.spoilerLevel - b.entry.fact.spoilerLevel);
   return out.slice(0, limit);
 }
@@ -79,6 +111,7 @@ export function scoreFacts(q: AnalyzedQuestion, index: CaseIndex, limit = TOP_FA
  * texts do not share the same case keywords the keyword route is safer.
  */
 export const CONTENT_MISMATCH_PENALTY = 0.65;
+export const STATE_MISMATCH_PENALTY = 0.85;
 
 export function scoreProbes(q: AnalyzedQuestion, probes: IndexedProbe[], limit = TOP_PROBES, contentWords: readonly string[] = []): ScoredProbe[] {
   const qGrams = bigrams(q.core);
@@ -94,6 +127,9 @@ export function scoreProbes(q: AnalyzedQuestion, probes: IndexedProbe[], limit =
     const flip = !crossAxis && q.prop.polarity !== entry.prop.polarity;
     if (flip) s *= 0.95;
     if (crossAxis) s *= 0.85;
+    // One asks about a state (動いていた・止まっていた・鳴った), the other does not (ありましたか・
+    // でしたか): 「酸素のメーターはありましたか」 is not 「酸素のメーターは動いていましたか」.
+    else if (q.prop.determinate !== entry.prop.determinate) s *= STATE_MISMATCH_PENALTY;
     if (q.open !== entry.open) s *= 0.9;
     if (s < 1 && (qWords.some((w) => !entry.norm.includes(w)) || entry.keywords.some((w) => !q.norm.includes(w)))) s *= CONTENT_MISMATCH_PENALTY;
     out.push({ score: round(s), flip, entry });

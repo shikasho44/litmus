@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { createApiHandler } from '../../server/http/handler';
+import { createApiHandler, safeEqual } from '../../server/http/handler';
+import { signToken } from '../../server/engine/token';
+import { initialState } from '../../server/engine/state';
 import { createRuntime } from '../../server/http/runtime';
 import { FIXTURE_ID, fixtureRegistry } from './helpers';
 
 const caseId = FIXTURE_ID;
 const BASE = 'http://game.test';
+const PROD_SECRET = 'handler-test-secret-0123456789abcdef'; // ≥ 32 chars
+const ADMIN = 'sesame-admin-token-0123456789abcdef'; // ≥ 32 chars
 
 function setup(env: Record<string, string> = {}, rateRules?: Parameters<typeof createRuntime>[0]['rateRules']) {
   const registry = fixtureRegistry();
-  const rt = createRuntime({ env: { APP_ENV: 'production', SESSION_SECRET: 'handler-test-secret', ...env }, content: () => registry, rateRules });
+  const rt = createRuntime({ env: { APP_ENV: 'production', SESSION_SECRET: PROD_SECRET, ...env }, content: () => registry, rateRules });
   const handle = createApiHandler(rt);
   const get = (path: string, headers: Record<string, string> = {}) => handle(new Request(BASE + path, { headers }));
   const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
@@ -28,8 +32,10 @@ describe('HTTP handler (end to end)', () => {
     expect(h.headers.get('x-content-type-options')).toBe('nosniff');
     expect(h.headers.get('cache-control')).toBe('no-store');
     expect(h.headers.get('content-security-policy')).toContain("default-src 'none'");
-    const hb = await body(h);
-    expect(hb).toMatchObject({ ok: true, mode: 'rules', cases: 1, dev: false, secretConfigured: true });
+    // Public health says nothing about the server's internals (mode, secret, budget …).
+    expect(await body(h)).toEqual({ ok: true, version: '1' });
+    const dev = setup({ APP_ENV: 'development' });
+    expect(await body(await dev.get('/api/health'))).toMatchObject({ ok: true, mode: 'rules', cases: 1, dev: true, secretConfigured: true });
     const list = await body(await get('/api/cases'));
     expect(list.map((c: { id: string }) => c.id)).toEqual([caseId]);
     const one = await get(`/api/cases/${caseId}`);
@@ -92,31 +98,97 @@ describe('HTTP handler (end to end)', () => {
   });
 
   it('hides admin routes in production without the token', async () => {
-    const { get, post } = setup({ ADMIN_TOKEN: 'sesame' });
+    const { get, post } = setup({ ADMIN_TOKEN: ADMIN });
     expect((await get('/api/admin/cases')).status).toBe(404);
     expect((await get('/api/admin/cases', { 'x-admin-token': 'wrong' })).status).toBe(404);
-    const ok = await get('/api/admin/cases', { 'x-admin-token': 'sesame' });
+    const ok = await get('/api/admin/cases', { 'x-admin-token': ADMIN });
     expect(ok.status).toBe(200);
     const b = await body(ok);
     expect(b.cases[0].validation.ok).toBe(true);
     expect(b.cases[0].data.truth.causeOfDeath).toBe('一酸化炭素中毒');
     // admin callers get traces on normal routes and can override the mode
-    const ask = await body(await post('/api/ask', { caseId, question: '雨でしたか' }, { 'x-admin-token': 'sesame' }));
+    const ask = await body(await post('/api/ask', { caseId, question: '雨でしたか' }, { 'x-admin-token': ADMIN }));
     expect(ask.trace.mode).toBe('rules');
-    const dbg = await body(await post('/api/admin/ask-debug', { caseId, question: 'コンロは関係ありますか', mode: 'jev' }, { 'x-admin-token': 'sesame' }));
+    const dbg = await body(await post('/api/admin/ask-debug', { caseId, question: 'コンロは関係ありますか', mode: 'jev' }, { 'x-admin-token': ADMIN }));
     expect(dbg.trace.parts[0].source).toBe('keyword');
     expect(dbg.trace.requestedMode).toBe('rules'); // stubs → degraded to rules
-    const traces = await body(await get('/api/admin/traces?limit=5', { 'x-admin-token': 'sesame' }));
+    const traces = await body(await get('/api/admin/traces?limit=5', { 'x-admin-token': ADMIN }));
     expect(traces.length).toBeGreaterThanOrEqual(2);
     expect(traces[0].kind).toBe('ask');
-    const bench = await body(await get('/api/admin/bench', { 'x-admin-token': 'sesame' }));
+    const bench = await body(await get('/api/admin/bench', { 'x-admin-token': ADMIN }));
     expect(bench).toEqual([]);
-    const status = await body(await get('/api/admin/status', { 'x-admin-token': 'sesame' }));
+    const status = await body(await get('/api/admin/status', { 'x-admin-token': ADMIN }));
     expect(status.mode).toBe('rules');
-    expect(JSON.stringify(status)).not.toContain('handler-test-secret');
+    expect(JSON.stringify(status)).not.toContain(PROD_SECRET);
+    expect(JSON.stringify(status)).not.toContain(ADMIN);
+    // admin callers see the full health
+    expect(await body(await get('/api/health', { 'x-admin-token': ADMIN }))).toMatchObject({ ok: true, mode: 'rules', dev: false, secretConfigured: true });
     // no ADMIN_TOKEN configured → never admin in production
     const none = setup();
     expect((await none.get('/api/admin/status', { 'x-admin-token': '' })).status).toBe(404);
+  });
+
+  it('fails closed in production without a usable SESSION_SECRET (no forged tokens)', async () => {
+    for (const secret of ['', 'change-me-to-a-long-random-string', 'abc', 'x'.repeat(31)]) {
+      const { rt, get, post } = setup({ SESSION_SECRET: secret });
+      expect(rt.config.misconfigured).toBeTruthy();
+      expect(rt.config.sessionSecret).not.toBe('janedoe-dev-secret-NOT-FOR-PRODUCTION');
+      expect(rt.warnings.join(' ')).toContain('503');
+      // A token signed with the public dev key (what forge.mjs did) must not reach /api/solution.
+      const fx = fixtureRegistry().get(caseId, true)!.data;
+      const forged = await signToken({ ...initialState(fx, Date.now()), solved: true, verdictAttempts: 1 }, 'janedoe-dev-secret-NOT-FOR-PRODUCTION');
+      for (const [path, b] of [
+        ['/api/token', { caseId }],
+        ['/api/ask', { caseId, question: '雨でしたか', token: forged }],
+        ['/api/hint', { caseId, token: forged }],
+        ['/api/inquest/start', { caseId, token: forged }],
+        ['/api/inquest/verdict', { caseId, token: forged, text: '一酸化炭素中毒' }],
+        ['/api/reconstruction', { caseId, token: forged }],
+        ['/api/solution', { caseId, token: forged }],
+      ] as const) {
+        const r = await post(path, b);
+        expect(r.status, `${secret.length} ${path}`).toBe(503);
+        const e = (await body(r)).error;
+        expect(e).toEqual({ code: 'server', message: 'server misconfigured', retryable: false });
+        expect(JSON.stringify(e)).not.toContain(fx.victim.name);
+      }
+      const h = await get('/api/health');
+      expect(h.status).toBe(503);
+      expect(await body(h)).toEqual({ ok: false, version: '1' });
+      // Public case summaries still load (the title screen can say something useful).
+      expect((await get('/api/cases')).status).toBe(200);
+    }
+    // Development keeps the dev default; a long production secret works.
+    expect(setup({ APP_ENV: 'development', SESSION_SECRET: '' }).rt.config.misconfigured).toBeUndefined();
+    expect(setup({ SESSION_SECRET: 'y'.repeat(32) }).rt.config.misconfigured).toBeUndefined();
+  });
+
+  it('refuses short admin tokens in production and rate-limits wrong guesses', async () => {
+    const short = setup({ ADMIN_TOKEN: 'sesame' });
+    expect(short.rt.config.adminToken).toBeUndefined();
+    expect(short.rt.warnings.join(' ')).toContain('ADMIN_TOKEN');
+    expect((await short.get('/api/admin/status', { 'x-admin-token': 'sesame' })).status).toBe(404);
+
+    const { get } = setup({ ADMIN_TOKEN: ADMIN }, { adminFail: [{ limit: 3, windowMs: 60_000 }] });
+    const ip = { 'x-forwarded-for': '203.0.113.50' };
+    for (let i = 0; i < 3; i++) expect((await get('/api/admin/status', { ...ip, 'x-admin-token': `wrong-${i}` })).status).toBe(404);
+    const blocked = await get('/api/admin/status', { ...ip, 'x-admin-token': 'wrong-again' });
+    expect(blocked.status).toBe(429);
+    expect(Number(blocked.headers.get('retry-after'))).toBeGreaterThan(0);
+    // Locked out: even the right token is refused from that IP (else the limit only slows guessing).
+    expect((await get('/api/admin/status', { ...ip, 'x-admin-token': ADMIN })).status).toBe(429);
+    // Wrong guesses through any route count (health would reveal a correct token by its shape).
+    expect((await get('/api/health', { ...ip, 'x-admin-token': 'wrong' })).status).toBe(429);
+    // Other IPs and requests without the header are unaffected.
+    expect((await get('/api/admin/status', { 'x-forwarded-for': '198.51.100.7', 'x-admin-token': ADMIN })).status).toBe(200);
+    expect((await get('/api/cases', ip)).status).toBe(200);
+  });
+
+  it('compares admin tokens without leaking their length', () => {
+    expect(safeEqual('abc', 'abc')).toBe(true);
+    expect(safeEqual('abc', 'abd')).toBe(false);
+    expect(safeEqual('abc', 'abcd')).toBe(false);
+    expect(safeEqual('', '')).toBe(true);
   });
 
   it('opens admin routes and traces in dev', async () => {
@@ -160,9 +232,9 @@ describe('HTTP handler (end to end)', () => {
     expect(dflt.progress.unlocked.length).toBe(inv.progress.unlocked.length);
     expect((await post('/api/admin/mint-token', { caseId: 'c00-none', stage: 'fresh' })).status).toBe(404);
     // production without the admin token: the route does not exist
-    const prod = setup({ ADMIN_TOKEN: 'sesame' });
+    const prod = setup({ ADMIN_TOKEN: ADMIN });
     expect((await prod.post('/api/admin/mint-token', { caseId, stage: 'solved' })).status).toBe(404);
-    expect((await prod.post('/api/admin/mint-token', { caseId, stage: 'solved' }, { 'x-admin-token': 'sesame' })).status).toBe(200);
+    expect((await prod.post('/api/admin/mint-token', { caseId, stage: 'solved' }, { 'x-admin-token': ADMIN })).status).toBe(200);
   });
 
   it('returns notice support for a safety question over HTTP', async () => {

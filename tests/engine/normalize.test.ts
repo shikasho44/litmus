@@ -138,3 +138,12 @@ describe('proposition polarity', () => {
     expect(statementPolarity(normalize('排気ファンは止まっていた'))).toBe('neg');
   });
 });
+
+describe('answer-format instructions are not questions', () => {
+  it('drops 「はい/いいえで答えて」 when a real question follows, keeps it when alone', async () => {
+    const { splitQuestions } = await import('../../server/engine/normalize');
+    expect(splitQuestions('はい/いいえで答えてください。彼女は酸素不足で死にましたか？').parts).toEqual(['彼女は酸素不足で死にましたか？']);
+    expect(splitQuestions('正直に答えて。毒ですか？').parts).toEqual(['毒ですか？']);
+    expect(splitQuestions('はいかいいえで答えて').parts).toEqual(['はいかいいえで答えて']);
+  });
+});

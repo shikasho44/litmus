@@ -11,7 +11,7 @@ import { fx } from '../../fx';
 import { pickLine, type ResolvedLine } from '../../lib/lines';
 import { layout, viewportSize } from '../../lib/viewport';
 import { useCaseProgress, useCaseTimer } from '../../state/hooks';
-import { getCaseProgress, setStage } from '../../state/save';
+import { addFacts, getCaseProgress, setStage } from '../../state/save';
 import { Button } from '../../ui/Button';
 import { dialogOpenCount } from '../../ui/dialog';
 import { Icon } from '../../ui/Icon';
@@ -19,7 +19,7 @@ import { StageLayout } from '../../ui/StageLayout';
 import { ensureToken, useCasePublic } from '../../features/investigation/caseData';
 import { ChatLog } from '../../features/investigation/ChatLog';
 import { createController } from '../../features/investigation/controller';
-import { HintConfirm, InquestConfirm, MenuDialog } from '../../features/investigation/Dialogs';
+import { HintConfirm, InquestConfirm, MenuDialog, TokenTroubleDialog } from '../../features/investigation/Dialogs';
 import { FindingFlight } from '../../features/investigation/FindingFlight';
 import { InputDock } from '../../features/investigation/InputDock';
 import { StageView } from '../../features/investigation/StageView';
@@ -76,6 +76,8 @@ export function InvestigationScene({ params }: SceneProps) {
   const [hintOpen, setHintOpen] = useState(false);
   const [inquest, setInquest] = useState<{ line: ResolvedLine; low: boolean } | null>(null);
   const inputId = `iv-input-${caseId}`;
+  const cachedStarters = useRef<string[]>([]);
+  cachedStarters.current = pub?.starterQuestions ?? [];
 
   /* ---------- boot ---------- */
   useEffect(() => {
@@ -93,7 +95,18 @@ export function InvestigationScene({ params }: SceneProps) {
 
   useEffect(() => {
     ctl.setPub(pub);
-    if (pub) void ensureToken(caseId, pub);
+    if (!pub) return;
+    void ensureToken(caseId, pub).then((ok) => {
+      // The server grants the starting facts with every token; a record made elsewhere
+      // (dev shortcut, imported save) may lack their cards → the chat intro would promise
+      // 「捜査ノートに記録済み」 over an empty notebook.
+      const c = getCaseProgress(caseId);
+      if (!ok || !c?.token) return;
+      const missing = pub.startingFacts.filter((f) => !c.facts[f.id]);
+      if (!missing.length) return;
+      addFacts(caseId, missing);
+      ctl.setPub(pub); // recount Jane's shards with the restored cards
+    });
   }, [pub]);
 
   // keep the unsent draft (per-viewer convenience)
@@ -113,12 +126,25 @@ export function InvestigationScene({ params }: SceneProps) {
   /* ---------- notebook ---------- */
   const sheetOpen = overlay.value?.name === 'sheet';
   const notebookOpen = narrow ? sheetOpen : sideOpen;
+  /** Notebook empty state: an example question fills the input (never sends). */
+  const pickQuestion = (q: string) => {
+    ctl.inputText.value = q.slice(0, 200);
+    ctl.touch();
+    audio.sfx('page');
+    if (overlay.peek()?.name === 'sheet') closeOverlay();
+    setTimeout(() => {
+      const el = document.getElementById(inputId) as HTMLTextAreaElement | null;
+      if (!el) return;
+      el.focus({ preventScroll: true });
+      el.setSelectionRange(el.value.length, el.value.length);
+    }, 60);
+  };
   const openSheet = () =>
     openOverlay('sheet', {
       title: '捜査ノート',
       en: 'NOTEBOOK',
       side: 'bottom',
-      render: () => <Notebook caseId={caseId} arriving={ctl.arriving} variant="sheet" />,
+      render: () => <Notebook caseId={caseId} arriving={ctl.arriving} variant="sheet" starters={cachedStarters.current} onPickQuestion={pickQuestion} />,
     });
   const toggleNotebook = () => {
     ctl.touch();
@@ -231,7 +257,7 @@ export function InvestigationScene({ params }: SceneProps) {
         background={pub?.background}
         tone="formalin"
         stageClass="iv__stage"
-        side={<Notebook caseId={caseId} arriving={ctl.arriving} variant="side" onCollapse={toggleNotebook} />}
+        side={<Notebook caseId={caseId} arriving={ctl.arriving} variant="side" onCollapse={toggleNotebook} starters={pub?.starterQuestions} onPickQuestion={pickQuestion} />}
         sideOpen={sideOpen}
         top={
           <TopBar
@@ -276,6 +302,12 @@ export function InvestigationScene({ params }: SceneProps) {
           setHintOpen(false);
           ctl.showWhisperAgain(lv);
         }}
+      />
+      <TokenTroubleDialog
+        open={!!ctl.tokenTrouble.value}
+        onClose={() => void ctl.resolveTokenTrouble('dismiss')}
+        onRetry={() => void ctl.resolveTokenTrouble('retry')}
+        onRestart={() => void ctl.resolveTokenTrouble('restart')}
       />
       <MenuDialog
         open={menuOpen}

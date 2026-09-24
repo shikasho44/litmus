@@ -23,6 +23,10 @@ bench/reports/*.html
 !.env.example
 
 # editor / OS noise
+__pycache__/
 .DS_Store
 Thumbs.db
 *.log
+
+# playtest transcripts (scripts/playtest.ts): full Q&A logs with case spoilers, local only
+bench/reports/playtest/

@@ -34,7 +34,9 @@ export function InputDock({ ctl, starters, empty, disabled, inputId }: InputDock
   const len = [...text].length;
   const narrow = layout.value === 'narrow';
   const busy = asking || disabled;
+  const queued = ctl.queued.value && presenting;
   const canSend = !busy && !presenting && text.trim().length > 0 && waitLeft === 0;
+  const netError = ctl.transient.value.find((t) => t.kind === 'network');
 
   // chips follow the log state until the player toggles them
   const toggled = useRef(false);
@@ -62,7 +64,12 @@ export function InputDock({ ctl, starters, empty, disabled, inputId }: InputDock
 
   const send = () => {
     if (presenting) {
+      // fast-forward; a typed question goes out as soon as the presentation is over
       ctl.fastForward();
+      if (text.trim() && waitLeft === 0) {
+        ctl.queueSend();
+        if (!toggled.current) setChips(false);
+      }
       return;
     }
     if (!canSend) {
@@ -88,13 +95,31 @@ export function InputDock({ ctl, starters, empty, disabled, inputId }: InputDock
 
   return (
     <form
-      class={`dock ${busy ? 'is-busy' : ''} ${chips ? 'has-chips' : ''}`}
+      class={`dock ${busy ? 'is-busy' : ''} ${chips ? 'has-chips' : ''} ${queued ? 'is-queued' : ''}`}
       onSubmit={(e) => {
         e.preventDefault();
         send();
       }}
       aria-busy={asking}
     >
+      {netError && !asking && (
+        <div class="dock__alert" role="alert">
+          <Icon name="alert" size={16} />
+          <span class="dock__alert-text">
+            通信に失敗しました<span class="dock__alert-sub"> — Enter でもう一度</span>
+          </span>
+          <button type="button" class="dock__alert-btn" onClick={() => ctl.retry(netError.retryText)}>
+            <Icon name="refresh" size={14} />
+            もう一度送る
+          </button>
+        </div>
+      )}
+      {queued && (
+        <p class="dock__queued t-mono" aria-live="polite">
+          <span class="dock__spinner dock__spinner--sm" aria-hidden="true" />
+          演出のあとに送信します
+        </p>
+      )}
       {chips && starters.length > 0 && (
         <div class="dock__chips" role="group" aria-label="質問の例（押すと入力欄に入ります）">
           {starters.map((q) => (
@@ -165,8 +190,13 @@ export function InputDock({ ctl, starters, empty, disabled, inputId }: InputDock
             {len}/{MAX_QUESTION}
           </span>
         </div>
-        <button type="submit" class="dock__send" disabled={!canSend && !presenting} aria-label={waitLeft > 0 ? `あと${waitLeft}秒で送信できます` : '送信'}>
-          {asking ? <span class="dock__spinner" aria-hidden="true" /> : <Icon name="send" size={20} />}
+        <button
+          type="submit"
+          class="dock__send"
+          disabled={!canSend && !presenting}
+          aria-label={waitLeft > 0 ? `あと${waitLeft}秒で送信できます` : presenting ? (text.trim() ? '早送りして送信' : '早送り') : '送信'}
+        >
+          {asking || queued ? <span class="dock__spinner" aria-hidden="true" /> : <Icon name="send" size={20} />}
           <span class="dock__send-label">{waitLeft > 0 ? `${waitLeft}s` : '送信'}</span>
         </button>
       </div>

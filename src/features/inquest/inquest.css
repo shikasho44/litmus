@@ -170,10 +170,13 @@
   color: var(--bone);
 }
 
-/* noise — the targets */
+/* noise — the targets. inline-block: a noise never splits across lines (the lock brackets stay one
+   box); only a noise longer than a whole line wraps, inside its own box. */
 .noise {
   position: relative;
-  display: inline;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: baseline;
   padding: 0.04em 0.22em;
   margin: 0 0.06em;
   border-radius: 3px;
@@ -189,6 +192,19 @@
   animation: noise-glow 1.8s ease-in-out infinite;
   transition: color var(--dur-1), background var(--dur-1);
   outline-offset: 3px;
+}
+/* a stop / closing bracket after the noise (or an opening one before it) stays on its line */
+.noise-glue {
+  white-space: nowrap;
+}
+.noise-glue .noise {
+  white-space: normal;
+}
+.noise__txt::after {
+  /* invisible hit area: taller than the glyphs so a thumb finds it (≥ 44px on phones) */
+  content: '';
+  position: absolute;
+  inset: -7px -4px;
 }
 .noise:hover,
 .noise:focus-visible {
@@ -275,6 +291,9 @@
 @keyframes lock-in {
   from { transform: scale(1.8) rotate(12deg); opacity: 0; }
   to { transform: none; opacity: 1; }
+}
+.band__lock {
+  display: none;
 }
 .noise.is-broken {
   color: var(--bone-3);
@@ -620,6 +639,14 @@
   transform: none;
   box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.45);
 }
+.loaded--compact .loaded__kicker {
+  /* 「人物 · 装填中」 on one line (320px wrapped it as 装填 / 中) */
+  display: flex;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  letter-spacing: 0.08em;
+}
 .loaded--compact .loaded__title {
   font-size: var(--fs-sm);
   white-space: nowrap;
@@ -730,6 +757,7 @@
   font-family: var(--font-display);
   font-size: var(--fs-xs);
   letter-spacing: 0.1em;
+  white-space: nowrap;
 }
 .cmp__en {
   font-family: var(--font-en);
@@ -790,6 +818,7 @@
   white-space: nowrap;
 }
 .istrip__steps {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -848,6 +877,8 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  min-width: 0;
+  overflow: hidden;
   padding-left: 14px;
   border-left: 1px solid var(--bone-a14);
   font-size: var(--fs-2xs);
@@ -1127,6 +1158,12 @@
   font-weight: 700;
   font-size: clamp(12px, 1.2vw, 16px);
   letter-spacing: 0.2em;
+  text-wrap: balance;
+}
+/* a phrase breaks only when it is longer than the whole line */
+.tcard__ph {
+  display: inline-block;
+  max-width: 100%;
 }
 .tcard__badge {
   position: absolute;
@@ -1265,6 +1302,10 @@
   color: var(--bone);
   text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 46, 99, 0.25);
 }
+.vprompt__ph {
+  display: inline-block;
+  white-space: nowrap;
+}
 .vprompt__ch {
   display: inline-block;
 }
@@ -1358,12 +1399,21 @@
 }
 .vsheet__judging {
   position: absolute;
-  inset: 0;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(0.5deg);
   display: grid;
   place-items: center;
   align-content: center;
-  gap: 6px;
-  background: rgba(11, 13, 18, 0.82);
+  gap: 4px;
+  /* left: 50% would cap a shrink-to-fit box at half the sheet (「判定 / 中」 on phones) */
+  width: max-content;
+  min-width: 190px;
+  padding: 14px 30px 12px;
+  background: rgba(11, 13, 18, 0.94);
+  border: 1px solid rgba(255, 46, 99, 0.6);
+  border-top: 4px solid var(--alarm);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.45), 0 0 34px rgba(255, 46, 99, 0.35);
   color: var(--bone);
   animation: fade-in 0.3s ease both;
 }
@@ -1385,6 +1435,7 @@
   font-size: var(--fs-2xl);
   letter-spacing: 0.4em;
   padding-left: 0.4em;
+  white-space: nowrap;
 }
 .vsheet__dots {
   display: inline-flex;
@@ -1408,7 +1459,19 @@
   right: 4%;
   top: 50%;
   transform: translateY(-50%);
+  transform-origin: 100% 0;
   pointer-events: none;
+  transition: top 0.45s var(--ease-out), right 0.45s var(--ease-out), transform 0.45s var(--ease-out), opacity 0.45s;
+}
+/* the seal straddles the sheet's top-right corner: it never covers the written sentence */
+.vsheet__stamp.is-sealed {
+  top: -30px;
+  right: -22px;
+  transform: translateY(0) scale(0.3);
+  opacity: 0.92;
+}
+[data-reduce-motion='true'] .vsheet__stamp {
+  transition: none;
 }
 .vstamp .stamp__frame {
   background: rgba(11, 13, 18, 0.94);
@@ -1472,6 +1535,46 @@
 }
 .vchk__mark {
   color: var(--ink);
+}
+.vchk__item.is-miss.is-optional {
+  color: var(--bone-2);
+  border-color: var(--bone-a24);
+}
+.vchk__item.is-miss.is-optional .vchk__mark {
+  background: var(--bone-3);
+}
+.vchk__opt {
+  padding: 0 5px;
+  font-size: 10px;
+  line-height: 16px;
+  letter-spacing: 0.1em;
+  border: 1px solid currentColor;
+  opacity: 0.85;
+}
+.vnote {
+  flex-basis: 100%;
+  display: grid;
+  gap: 4px;
+  padding: 10px 14px 11px;
+  background: linear-gradient(90deg, rgba(155, 107, 255, 0.2), rgba(11, 13, 18, 0.92) 45%);
+  border: 1px solid rgba(155, 107, 255, 0.45);
+  border-left: 4px solid var(--violet);
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.4);
+  animation: hint-in 0.45s var(--ease-out) both;
+}
+.vnote__k {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  color: #C9B4FF;
+}
+.vnote__t {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  color: var(--bone);
 }
 .vpanel__actions {
   display: flex;
@@ -2010,21 +2113,110 @@ button.cpanel:focus-visible {
   animation-name: band-drift-n;
 }
 [data-layout='narrow'] .debate__nav {
-  top: 8px;
+  top: 6px;
   bottom: auto;
-  padding: 3px 4px;
-  gap: 2px;
+  left: 8px;
+  right: 8px;
+  transform: none;
+  padding: 0 2px;
+  gap: 0;
 }
+/* the numbered dots already jump anywhere: prev / next would squeeze every target below 44px */
 [data-layout='narrow'] .debate__navbtn {
-  width: 34px;
-  height: 34px;
+  display: none;
+}
+[data-layout='narrow'] .debate__dots {
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 0;
+}
+[data-layout='narrow'] .debate__dots > li {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
 }
 [data-layout='narrow'] .debate__dot {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  max-width: 60px;
+  height: 44px;
+  border: 0;
+  background: none;
+}
+[data-layout='narrow'] .debate__dot::before {
+  /* the visible 30px dot; the button around it is the 44px target */
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: 7px;
   width: 30px;
   height: 30px;
+  margin-left: -15px;
+  border: 1.5px solid color-mix(in srgb, var(--dot) 45%, transparent);
+  transition: background var(--dur-1), box-shadow var(--dur-1);
+}
+[data-layout='narrow'] .debate__dot.is-on {
+  background: none;
+}
+[data-layout='narrow'] .debate__dot.is-on::before {
+  background: var(--dot);
+  border-color: var(--dot);
+}
+[data-layout='narrow'] .debate__dot.is-target {
+  box-shadow: none;
+}
+[data-layout='narrow'] .debate__dot.is-target::before {
+  box-shadow: 0 0 0 2px var(--alarm), 0 0 12px rgba(255, 46, 99, 0.7);
+}
+[data-layout='narrow'] .debate__pause {
+  flex: none;
+  justify-content: center;
+  width: 46px;
+  height: 44px;
+  padding: 0;
+  margin-left: 2px;
 }
 [data-layout='narrow'] .debate__pause span:last-child {
   display: none;
+}
+/* LOCK tag in the band header (never over the name or the 01/05 counter) */
+[data-layout='narrow'] .noise__lock b {
+  display: none;
+}
+[data-layout='narrow'] .band__lock {
+  display: inline-block;
+  margin-left: auto;
+  padding: 0 7px;
+  font-family: var(--font-en);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  line-height: 17px;
+  color: var(--ink);
+  background: var(--alarm);
+  animation: lock-in 0.32s var(--ease-out) both;
+}
+[data-layout='narrow'] .band__lock + .band__idx {
+  margin-left: 10px;
+}
+@media (max-width: 359px) {
+  /* 320px: the composure meter keeps its pips (and its aria label), not the caption */
+  [data-layout='narrow'] .cmp--compact .cmp__label {
+    display: none;
+  }
+}
+/* tablets / touch laptops in the wide layout: 44px debate targets */
+@media (pointer: coarse) {
+  [data-layout='wide'] .debate__dot,
+  [data-layout='wide'] .debate__navbtn {
+    width: 44px;
+    height: 44px;
+  }
+  [data-layout='wide'] .debate__pause {
+    height: 44px;
+  }
 }
 [data-layout='narrow'] .istrip {
   gap: 0;
@@ -2090,9 +2282,13 @@ button.cpanel:focus-visible {
   display: none;
 }
 [data-layout='narrow'] .vsheet__stamp {
-  right: auto;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  right: 50%;
+  transform: translate(50%, -50%);
+}
+[data-layout='narrow'] .vsheet__stamp.is-sealed {
+  right: -6px;
+  top: -22px;
+  transform: translate(0, 0) scale(0.42);
 }
 [data-layout='narrow'] .vsheet__stamp .stamp--lg {
   --s: 52px;
@@ -2133,8 +2329,8 @@ button.cpanel:focus-visible {
 }
 [data-layout='narrow'] .recon.is-finale .recon__pagewrap,
 [data-layout='narrow'] .recon.is-done .recon__pagewrap {
-  padding-bottom: 200px;
-  scroll-padding: 12px 0 190px;
+  padding-bottom: calc(var(--iq-dlg-h, 180px) + 24px);
+  scroll-padding: 12px 0 calc(var(--iq-dlg-h, 180px) + 14px);
 }
 [data-layout='narrow'] .recon__page {
   height: auto;
@@ -2198,6 +2394,10 @@ button.cpanel:focus-visible {
 [data-reduce-motion='true'] .band__drift,
 [data-reduce-motion='true'] .vsheet__gavel,
 [data-reduce-motion='true'] .quip,
+[data-reduce-motion='true'] .band__lock,
+[data-reduce-motion='true'] .vnote,
+[data-reduce-motion='true'] .iqstat__gavel,
+[data-reduce-motion='true'] .iqstat__bar i,
 [data-reduce-motion='true'] .evl__row.is-fresh {
   animation: none !important;
 }
@@ -2252,4 +2452,108 @@ button.cpanel:focus-visible {
 }
 [data-layout='narrow'] .debate.is-paused .band:not(.is-leaving) .band__strip::after {
   right: calc(4% + 14px);
+}
+
+/* ------------------------------------------------------------ status card (loading / error) */
+.iqstat {
+  position: relative;
+  display: grid;
+  grid-template-columns: 136px minmax(0, 1fr);
+  align-items: center;
+  gap: 22px;
+  width: min(620px, 100%);
+  padding: 22px 26px 22px 18px;
+  background: var(--ink-2);
+  border: 1px solid var(--bone-a14);
+  border-left: 5px solid var(--alarm);
+  box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.5);
+  animation: hint-in 0.4s var(--ease-out) both;
+}
+.iqstat--loading {
+  border-left-color: var(--formalin);
+}
+.iqstat__holma {
+  position: relative;
+  width: 136px;
+  height: 160px;
+}
+.iqstat__body {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  min-width: 0;
+}
+.iqstat__k {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-en);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.3em;
+  color: var(--alarm);
+}
+.iqstat--loading .iqstat__k {
+  color: var(--formalin);
+}
+.iqstat__gavel {
+  display: inline-grid;
+  color: var(--formalin);
+  transform-origin: 80% 80%;
+  animation: gavel-swing 1.15s var(--ease-in) infinite;
+}
+.iqstat__t {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--fs-xl);
+  line-height: 1.3;
+}
+.iqstat__p {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.8;
+  color: var(--bone-2);
+}
+.iqstat__bar {
+  position: relative;
+  width: min(260px, 100%);
+  height: 3px;
+  margin-top: 4px;
+  overflow: hidden;
+  background: var(--bone-a14);
+}
+.iqstat__bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: var(--formalin);
+  animation: iqstat-bar 1.3s ease-in-out infinite;
+}
+@keyframes iqstat-bar {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(260%); }
+}
+.iqstat__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+[data-layout='narrow'] .iqstat {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 12px;
+  padding: 18px 16px 20px;
+  text-align: center;
+}
+[data-layout='narrow'] .iqstat__holma {
+  width: 110px;
+  height: 120px;
+}
+[data-layout='narrow'] .iqstat__body {
+  justify-items: center;
+}
+[data-layout='narrow'] .iqstat__actions {
+  justify-content: center;
 }

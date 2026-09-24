@@ -85,6 +85,11 @@
   font-size: 0.42em;
   letter-spacing: 0.2em;
 }
+/* type floor: the small stamp's EN line never drops under 11px */
+.stamp--sm .stamp__en {
+  font-size: max(0.3em, var(--fs-2xs));
+  letter-spacing: 0.26em;
+}
 .stamp__splat {
   position: absolute;
   inset: -10%;

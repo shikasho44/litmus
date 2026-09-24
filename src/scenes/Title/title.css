@@ -5,7 +5,10 @@
   display: grid;
   grid-template-rows: auto 1fr auto;
   padding: 0;
-  overflow: hidden;
+  /* the rows never overlap: if a very short window can't hold logo + menu + footer, it scrolls */
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .title.is-gate {
   cursor: pointer;
@@ -156,8 +159,8 @@
   top: 50%;
   transform: translateY(-50%) rotate(180deg);
   writing-mode: vertical-rl;
-  font-size: 10px;
-  letter-spacing: 0.4em;
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.32em;
   color: var(--bone-3);
   opacity: 0.7;
 }
@@ -199,9 +202,10 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: clamp(22px, 4vh, 44px);
+  gap: clamp(12px, 3.2vh, 44px);
   padding: 0 calc(var(--safe-r) + 24px) 0 calc(var(--safe-l) + clamp(40px, 7vw, 120px));
-  min-height: 0;
+  /* never shrink below the logo + menu (min-height: 0 let them spill into the badge / footer rows) */
+  min-height: auto;
 }
 
 /* ---------- logo ---------- */
@@ -221,7 +225,7 @@
   align-items: center;
   gap: 10px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.24em;
   color: var(--bone-2);
   margin-bottom: 10px;
@@ -239,7 +243,8 @@
   font-weight: 400;
 }
 .logo__row--a {
-  font-size: clamp(52px, 7vw, 124px);
+  /* width- AND height-aware: a 1280×720 window must hold logo + menu + footer */
+  font-size: clamp(44px, min(7vw, 9.5vh), 124px);
   color: var(--bone);
   letter-spacing: -0.01em;
   text-shadow: 0.05em 0.05em 0 var(--alarm), -0.025em 0 0 rgba(61, 224, 255, 0.75);
@@ -250,7 +255,7 @@
   gap: 0.08em;
   margin-left: 0.9em;
   margin-top: 0.04em;
-  font-size: clamp(76px, 10.4vw, 184px);
+  font-size: clamp(64px, min(10.4vw, 14vh), 184px);
 }
 .logo__particle {
   font-size: 0.34em;
@@ -269,7 +274,7 @@
 }
 .logo__sub {
   display: inline-block;
-  margin-top: 22px;
+  margin-top: clamp(12px, 2.4vh, 22px);
   margin-left: 0.4em;
 }
 .logo__sub span {
@@ -349,6 +354,7 @@
   height: 1px;
   background: linear-gradient(90deg, var(--bone-a24), transparent);
   z-index: -2;
+  transition: height var(--dur-1);
 }
 .menu__idx {
   font-size: 12px;
@@ -368,11 +374,14 @@
   white-space: nowrap;
 }
 .menu__en {
+  min-width: 0;
   font-family: var(--font-en);
   font-size: 0.72rem;
   letter-spacing: 0.3em;
   color: var(--bone-3);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: color var(--dur-1);
 }
 .menu__sub {
@@ -407,26 +416,49 @@
 .menu__item:active .menu__bar {
   transform: skewX(var(--skew)) scaleX(1);
 }
+/* hover is a lighter treatment than the primary fill / keyboard focus: a formalin rule on
+   the left and an underline sweep, so only one item ever reads as "the" primary */
+.menu__item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  background: var(--formalin);
+  transform: skewX(var(--skew)) scaleY(0);
+  transition: transform var(--dur-2) var(--ease-out);
+}
 @media (hover: hover) {
-  .menu__item:hover {
-    color: var(--ink);
+  .menu__item:not(.is-primary):hover {
+    color: var(--bone);
     transform: translateX(8px);
   }
-  .menu__item:hover .menu__bar {
-    transform: skewX(var(--skew)) scaleX(1);
+  .menu__item:not(.is-primary):hover::before {
+    transform: skewX(var(--skew)) scaleY(1);
   }
-  .menu__item:hover .menu__idx,
-  .menu__item:hover .menu__en,
-  .menu__item:hover .menu__sub {
-    color: var(--ink);
+  .menu__item:not(.is-primary):hover::after {
+    height: 2px;
+    background: linear-gradient(90deg, var(--formalin), rgba(198, 255, 61, 0.2) 70%, transparent);
   }
-  .menu__item:hover .menu__arrow {
+  .menu__item:not(.is-primary):hover .menu__en {
+    color: var(--formalin);
+  }
+  .menu__item:not(.is-primary):hover .menu__arrow {
     opacity: 1;
     transform: none;
+    color: var(--formalin);
+  }
+  .menu__item.is-primary:hover {
+    transform: translateX(8px);
   }
   .menu__item.is-primary:hover .menu__bar {
     box-shadow: 10px 10px 0 var(--alarm);
   }
+}
+.menu__item:focus-visible::before {
+  transform: none;
+  opacity: 0;
 }
 .menu__item:focus-visible {
   outline-color: var(--alarm);
@@ -457,8 +489,12 @@
   font-size: 1.85rem;
 }
 .menu__item.is-primary .menu__idx,
-.menu__item.is-primary .menu__en {
+.menu__item.is-primary .menu__en,
+.menu__item.is-primary .menu__sub {
   color: var(--ink);
+}
+.menu__item.is-primary .menu__sub {
+  font-weight: 700;
 }
 .menu__item.is-primary .menu__arrow {
   opacity: 1;
@@ -530,8 +566,8 @@
   bottom: -14px;
   padding: 2px 8px;
   font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.06em;
   color: var(--paper-ink);
   background: var(--bone);
   transform: rotate(4deg);
@@ -566,8 +602,9 @@
   top: -11px;
   left: 12px;
   padding: 0 8px;
-  font-family: var(--font-display);
-  font-size: 11px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.14em;
   color: var(--formalin);
   background: var(--ink);
@@ -641,9 +678,18 @@
   gap: 4px 16px;
 }
 .title__links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
   color: var(--bone-2);
   text-decoration: none;
   padding: 6px 0;
+}
+@media (pointer: coarse) {
+  .title__links a {
+    min-height: 44px;
+    padding: 0 4px;
+  }
 }
 .title__links a:hover {
   color: var(--formalin);
@@ -654,6 +700,41 @@
   color: var(--mute);
 }
 
+/* ---------- short wide windows (1280×720 and similar) ---------- */
+@media (max-height: 800px) {
+  [data-layout='wide'] .menu {
+    gap: 2px;
+  }
+  [data-layout='wide'] .menu__item {
+    min-height: 42px;
+  }
+  [data-layout='wide'] .menu__item.is-primary {
+    min-height: 60px;
+    margin-bottom: 6px;
+  }
+  [data-layout='wide'] .menu__item.is-primary .menu__jp {
+    font-size: 1.6rem;
+  }
+  [data-layout='wide'] .menu__jp {
+    font-size: 1.15rem;
+  }
+  [data-layout='wide'] .logo__kicker {
+    margin-bottom: 4px;
+  }
+  [data-layout='wide'] .title__top {
+    padding-top: calc(var(--safe-t) + 12px);
+  }
+  [data-layout='wide'] .title__foot {
+    padding-top: 8px;
+    padding-bottom: calc(var(--safe-b) + 10px);
+  }
+}
+@media (max-height: 640px) {
+  [data-layout='wide'] .logo__kicker {
+    display: none;
+  }
+}
+
 /* ---------- narrow (phones) ---------- */
 [data-layout='narrow'] .title {
   overflow-y: auto;
@@ -662,11 +743,12 @@
   align-content: start;
 }
 [data-layout='narrow'] .title__art img {
-  object-position: 62% 30%;
+  /* Holma's face in the upper-right third; the logo sits over the darker lower-left */
+  object-position: 80% 32%;
 }
 [data-layout='narrow'] .title__shade {
   background:
-    linear-gradient(180deg, rgba(11, 13, 18, 0.35) 0%, rgba(11, 13, 18, 0.55) 30%, rgba(11, 13, 18, 0.9) 58%, rgba(11, 13, 18, 0.97) 100%);
+    linear-gradient(180deg, rgba(11, 13, 18, 0.3) 0%, rgba(11, 13, 18, 0.4) 28%, rgba(11, 13, 18, 0.88) 56%, rgba(11, 13, 18, 0.97) 100%);
 }
 [data-layout='narrow'] .title__hero {
   width: 70%;
@@ -698,9 +780,10 @@
   gap: 22px;
   justify-content: flex-start;
 }
+/* gate: the logo sits low, so Holma's head (upper-right of the key art) looks over it */
 [data-layout='narrow'] .title.is-gate .title__main {
   min-height: calc(var(--vvh) - 230px);
-  justify-content: center;
+  justify-content: flex-end;
 }
 [data-layout='narrow'] .logo {
   transform-origin: 0 100%;
@@ -714,9 +797,9 @@
   margin-left: 0.6em;
 }
 [data-layout='narrow'] .logo__kicker {
-  font-size: 9px;
+  font-size: var(--fs-2xs);
   gap: 6px;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.04em;
 }
 [data-layout='narrow'] .logo__sub {
   margin-top: 14px;
@@ -742,7 +825,37 @@
   gap: 2px;
 }
 [data-layout='narrow'] .menu__item.is-primary .menu__en {
-  font-size: 0.62rem;
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.24em;
+}
+/* 続きから 「case title」: the sub goes under the label instead of into it */
+[data-layout='narrow'] .menu__item:has(.menu__sub) {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+[data-layout='narrow'] .menu__item:has(.menu__sub) .menu__idx {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+[data-layout='narrow'] .menu__item:has(.menu__sub) .menu__label {
+  grid-column: 2;
+  grid-row: 1;
+}
+[data-layout='narrow'] .menu__item:has(.menu__sub) .menu__sub {
+  grid-column: 2 / 4;
+  grid-row: 2;
+  max-width: 100%;
+  margin-top: -2px;
+}
+[data-layout='narrow'] .menu__item:has(.menu__sub) .menu__arrow {
+  grid-column: 4;
+  grid-row: 1 / span 2;
+}
+/* the smallest phones: the EN kickers of the secondary items would only be ellipses */
+@media (max-width: 359px) {
+  [data-layout='narrow'] .menu__item:not(.is-primary) .menu__en {
+    display: none;
+  }
 }
 [data-layout='narrow'] .menu__jp {
   font-size: 1.15rem;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CaseProgress } from '../../state/types';
-import { computeRank, keyRateTarget, questionPar, RANK_TITLES, type RankInput } from './rank';
+import { computeRank, keyRateTarget, questionPar, rankAdvice, RANK_TITLES, type RankInput } from './rank';
 import { buildCaseResult, collectRankInput, quizMisses } from './stats';
 
 const base = (over: Partial<RankInput> = {}): RankInput => ({
@@ -165,5 +165,46 @@ describe('collectRankInput / buildCaseResult', () => {
     expect(i.asked).toBe(0);
     expect(i.verdictAttempts).toBe(1);
     expect(computeRank(i).rank).toBe('S');
+  });
+});
+
+describe('rankAdvice', () => {
+  it('a clean S has nothing to blame', () => {
+    const a = rankAdvice(base());
+    expect(a.target).toBeUndefined();
+    expect(a.blockers).toEqual([]);
+    expect(a.line).toContain('減点なし');
+    expect(a.sCondition).toContain('囁き');
+  });
+
+  it('one hint is the whole reason an otherwise clean run is A', () => {
+    const inp = base({ hintsUsed: 1 });
+    expect(computeRank(inp).rank).toBe('A');
+    const a = rankAdvice(inp);
+    expect(a.target).toBe('S');
+    expect(a.blockers.map((b) => b.id)).toEqual(['hints']);
+    expect(a.line).toBe('囁き1回がなければ、Sでしたねェ。');
+  });
+
+  it('names two penalties when one is not enough, and the claim holds', () => {
+    const inp = base({ hintsUsed: 1, debateMisses: 4 });
+    const r = computeRank(inp);
+    expect(r.rank).not.toBe('S');
+    const a = rankAdvice(inp, r);
+    expect(a.blockers.length).toBeGreaterThan(0);
+    expect(a.blockers.length).toBeLessThanOrEqual(2);
+    if (a.target === 'S') {
+      const fixed = { ...inp, hintsUsed: a.blockers.some((b) => b.id === 'hints') ? 0 : inp.hintsUsed, debateMisses: a.blockers.some((b) => b.id === 'misses') ? 0 : inp.debateMisses };
+      expect(computeRank(fixed).rank).toBe('S');
+    }
+    expect(a.line).toMatch(/囁き1回|撃ち損じ4回/);
+  });
+
+  it('falls back to the next rank up, then to the heaviest penalties', () => {
+    const heavy = base({ asked: 70, answered: 70, keyQuestions: 10, hintsUsed: 3, grants: 2, verdictAttempts: 6, debateMisses: 5 });
+    const a = rankAdvice(heavy);
+    expect(a.blockers.length).toBeGreaterThan(0);
+    expect(a.line.length).toBeGreaterThan(5);
+    expect(a.target === undefined || a.target === 'B' || a.target === 'S').toBe(true);
   });
 });

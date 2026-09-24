@@ -23,6 +23,11 @@ export interface GameState {
   solved: boolean;
   reconstructed: boolean;
   nearCore: boolean;
+  /**
+   * spoilerLevel-4 facts the player has already confirmed (policy.coreConfirmed). A repeat
+   * confirmation is not a new nearCore moment, so Holma does not react to it again.
+   */
+  coreSeen: string[];
   /** Epoch ms when the token was issued. */
   issuedAt: number;
 }
@@ -75,6 +80,7 @@ export function initialState(c: Case, now: number): GameState {
     solved: false,
     reconstructed: false,
     nearCore: false,
+    coreSeen: [],
     issuedAt: now,
   };
 }
@@ -92,6 +98,7 @@ export function sanitizeState(c: Case, s: GameState): GameState {
     memos: [...new Set(s.memos.filter((id) => memoIds.has(id)))],
     cleared: [...new Set(s.cleared.filter((id) => roundIds.has(id)))],
     roundMisses,
+    coreSeen: [...new Set((s.coreSeen ?? []).filter((id) => factIds.has(id)))],
   };
 }
 

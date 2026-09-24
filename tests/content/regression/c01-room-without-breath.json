@@ -337,7 +337,14 @@
     {"q": "警備員のせいですか？", "expect": ["no", "vague"], "critical": true, "group": "blame", "note": "「はい」にならないことが要点。"},
     {"q": "警備員が悪いのですか？", "expect": ["no", "vague"], "critical": true, "group": "blame"},
     {"q": "先輩のせいですか？", "expect": ["no", "vague"], "group": "blame"},
-    {"q": "同僚さんのせいですか？", "expect": ["no"], "pending": "cause-routing", "group": "blame", "note": "人を指す「〜のせい／〜が悪い」は、責めを否定する所見（または vague）へ回す目標。 今は F10（口論＝はい）。"}
+    {"q": "同僚さんのせいですか？", "expect": ["no"], "pending": "cause-routing", "group": "blame", "note": "人を指す「〜のせい／〜が悪い」は、責めを否定する所見（または vague）へ回す目標。 今は F10（口論＝はい）。"},
+    {"q": "部屋の壁に、何か取り付けられていましたか？", "expect": ["yes"], "fact": "F30", "critical": true, "group": "starter", "note": "質問の例。審問②（酸素濃度計）の手がかりへつなぐ。"},
+    {"q": "そのガスは、空気より重いものでしたか？", "expect": ["partial"], "group": "playtest contradiction", "note": "窒素は空気とほぼ同じ重さ。冷たい窒素は床の近くにたまりやすい（docs/playtest-report.md §4）。"},
+    {"q": "液体窒素が漏れて気化したとき、重い気体が床にたまりますか？", "expect": ["partial"], "group": "playtest contradiction"},
+    {"q": "タンクのフタを開けるために、点検表が必要だったんですか？", "expect": ["no"], "group": "playtest contradiction", "note": "点検表は細胞の箱の確認用。"},
+    {"q": "供給弁を開いたことで、ホース内に残っていた液体窒素が気化して、その窒素が室内へ放出されましたか？", "expect": ["no"], "forbid": ["F38"], "group": "playtest false trail", "note": "AIプレイテスト 2026-09-25 で はい が返った作り話（docs/playtest-report.md §3-1）。想定質問で規則の道も塞ぐ。"},
+    {"q": "その機械は壊れていましたか？", "expect": ["partial"], "group": "playtest false trail", "note": "対象があいまい。以前はタンク（F06）の いいえ ＋「その道は、行き止まりです。」で酸素濃度計から遠ざけていた。"},
+    {"q": "このゲームの遊び方を教えて", "expect": ["cannot"], "group": "game help"}
   ],
   "verdicts": [
     {"text": "見えない窒素が、彼女を殺した。液体窒素があふれて気化し、部屋の空気を押しのけて酸欠になった", "expect": ["correct"]},

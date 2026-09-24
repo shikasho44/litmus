@@ -27,7 +27,7 @@ export function SettingsOverlay({ open, onClose }: { open: boolean; onClose: () 
         en="SETTINGS"
         size="lg"
         footer={
-          <Button onClick={onClose} sfx="close" data-autofocus>
+          <Button onClick={onClose} sfx="close">
             閉じる
           </Button>
         }
@@ -37,7 +37,7 @@ export function SettingsOverlay({ open, onClose }: { open: boolean; onClose: () 
             <h3 class="settings__h" id="set-sound">
               <span class="settings__en">SOUND</span>音
             </h3>
-            <Switch label="すべての音を消す" checked={s.muted} onChange={(v) => updateSettings({ muted: v })} />
+            <Switch label="すべての音を消す" checked={s.muted} onChange={(v) => updateSettings({ muted: v })} autofocus />
             <Slider label="BGM" value={s.bgmVolume} disabled={s.muted} onChange={(v) => updateSettings({ bgmVolume: v })} />
             <Slider
               label="効果音"

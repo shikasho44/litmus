@@ -17,6 +17,8 @@ export const DEFAULT_RATE_RULES: Record<string, RateRule[]> = {
   write: [{ limit: 120, windowMs: MIN }, { limit: 3000, windowMs: DAY }],
   read: [{ limit: 240, windowMs: MIN }],
   admin: [{ limit: 120, windowMs: MIN }],
+  /** Wrong x-admin-token guesses per IP. Over the limit, even a correct token is refused (429). */
+  adminFail: [{ limit: 10, windowMs: MIN }, { limit: 50, windowMs: DAY }],
 };
 
 export type RateResult = { ok: true } | { ok: false; retryAfterMs: number; limit: number; windowMs: number };
@@ -35,6 +37,15 @@ export class RateLimiter {
 
   /** Records a hit for (bucket, key) unless a rule is exceeded. */
   check(bucket: string, key: string): RateResult {
+    return this.evaluate(bucket, key, true);
+  }
+
+  /** Same verdict as check() without recording a hit. */
+  peek(bucket: string, key: string): RateResult {
+    return this.evaluate(bucket, key, false);
+  }
+
+  private evaluate(bucket: string, key: string, record: boolean): RateResult {
     const rules = this.rules[bucket];
     if (!rules || rules.length === 0) return { ok: true };
     const now = this.clock();
@@ -60,6 +71,10 @@ export class RateLimiter {
         const oldestInWindow = arr[arr.length - r.limit];
         return { ok: false, retryAfterMs: Math.max(1000, oldestInWindow + r.windowMs - now), limit: r.limit, windowMs: r.windowMs };
       }
+    }
+    if (!record) {
+      if (arr.length > 0) this.hits.set(k, arr);
+      return { ok: true };
     }
     arr.push(now);
     this.hits.set(k, arr);

@@ -148,6 +148,45 @@ export function HintConfirm({
   );
 }
 
+/**
+ * The server could not verify the saved record (token). Nothing is wiped without the player's
+ * say: they may retry (a transient 401 recovers) or start over — the old log stays readable in
+ * the notebook as 「前回の記録」.
+ */
+export function TokenTroubleDialog({ open, onRetry, onRestart, onClose }: { open: boolean; onRetry: () => void; onRestart: () => void; onClose: () => void }) {
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      dismissible={false}
+      title="記録を照合できませんでした"
+      en="RECORD MISMATCH"
+      size="sm"
+      tone="alarm"
+      class="ivdlg--token"
+      footer={
+        <div class="ivdlg__foot">
+          <Button variant="ghost" sfx="cancel" icon="refresh" onClick={onRetry} data-autofocus>
+            もう一度試す
+          </Button>
+          <Button variant="danger" icon="back" onClick={onRestart}>
+            最初からやり直す
+          </Button>
+        </div>
+      }
+    >
+      <HolmaSays line={{ text: 'おや……帳簿の綴じ紐がほどけてしまったようです。困りましたねェ。', mood: 'surprised' }} />
+      <p class="ivdlg__lead">
+        この端末に保存された捜査の記録を、確かめられませんでした。通信の乱れなら、<b>もう一度試す</b>で戻れることがあります。
+      </p>
+      <p class="ivdlg__note">
+        <Icon name="info" size={14} />
+        やり直す場合も、これまでの質問と所見は「前回の記録」として捜査ノートの質問ログに残ります（読み返し専用）。
+      </p>
+    </Modal>
+  );
+}
+
 export function MenuDialog({
   open,
   onClose,

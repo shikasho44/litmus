@@ -6,7 +6,7 @@ Usage (from the project root):
     python scripts/art/export_art.py --check-face   # writes art-src/holma/split/_face-check.png
 
 Outputs
-    public/art/holma/{normal,laugh,surprised,serious}.webp   lossless RGBA, max height 1400
+    public/art/holma/{normal,laugh,surprised,serious}.webp   RGBA: lossy q95 colour + lossless alpha, max height 1400
     public/art/holma/meta.json                               {"normal":{"w","h","face":{"x","y"}}}
     public/cases/c0N/portrait.webp                           1024x1536, q88
     public/art/bg-*.webp, public/cases/c0N/bg.webp           1920x1080, q82
@@ -36,6 +36,7 @@ from style import ART_SRC, PUBLIC  # noqa: E402
 
 HOLMA_NAMES = ["normal", "laugh", "surprised", "serious"]
 HOLMA_MAX_H = 1400
+HOLMA_QUALITY = 95
 
 BG_MAP = {
     "room-zero": PUBLIC / "art" / "bg-room-zero.webp",
@@ -64,11 +65,12 @@ def cover_resize(im: Image.Image, w: int, h: int, focus: tuple[float, float] = (
 
 
 def save_webp(im: Image.Image, path: Path, quality: int | None = None, lossless: bool = False) -> None:
+    """Lossy by default. An RGBA image keeps its alpha lossless (alpha_quality=100) either way."""
     path.parent.mkdir(parents=True, exist_ok=True)
     if lossless:
         im.save(path, "WEBP", lossless=True, quality=100, method=6)
     else:
-        im.save(path, "WEBP", quality=quality or 82, method=6)
+        im.save(path, "WEBP", quality=quality or 82, method=6, alpha_quality=100)
     print(f"  -> {path.relative_to(PUBLIC.parent)}  {im.size[0]}x{im.size[1]}  {path.stat().st_size // 1024} KB")
 
 
@@ -119,10 +121,14 @@ def export_holma(check_face: bool = False) -> None:
             raise SystemExit(f"{name}: alpha extrema {ext} != (0, 255)")
         face = faces.get(name) or guess_face(im)
         meta[name] = {"w": im.width, "h": im.height, "face": {"x": face["x"], "y": face["y"]}}
-        save_webp(im, out_dir / f"{name}.webp", lossless=True)
-        # re-open to prove the alpha survived the round trip
+        # Lossy colour (q95) + lossless alpha: ~95 KB instead of ~260 KB lossless per mood, with no
+        # visible change at display size (fur texture softens only under 6x zoom); every scene
+        # with Holma loads all four moods, so this is ~0.65 MB off the first session.
+        save_webp(im, out_dir / f"{name}.webp", quality=HOLMA_QUALITY)
+        # re-open to prove the alpha survived the round trip bit-exact
         back = Image.open(out_dir / f"{name}.webp")
         assert back.mode == "RGBA" and back.getchannel("A").getextrema() == (0, 255), name
+        assert back.getchannel("A").tobytes() == im.getchannel("A").tobytes(), f"{name}: alpha changed"
         if check_face:
             c = Image.new("RGBA", im.size, (40, 44, 56, 255))
             c.alpha_composite(im)

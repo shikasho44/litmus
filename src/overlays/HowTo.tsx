@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import type { PublicFact } from '../../shared/api';
-import { ANSWER_CLASSES } from '../../shared/case-schema';
+import { ANSWER_CLASSES } from '../../shared/constants';
 import { audio } from '../audio';
 import { Button } from '../ui/Button';
 import { EvidenceCard } from '../ui/EvidenceCard';
@@ -12,14 +12,18 @@ import { ShardPortrait } from '../ui/ShardPortrait';
 import { STAMP_META, Stamp } from '../ui/Stamp';
 import './overlays.css';
 
-/* Example card for the tutorial only — deliberately generic, not taken from any case. */
+/*
+ * Tutorial examples. They must match NO case (not even loosely): no rooms, windows, air,
+ * ventilation, locks, cold, sport… A stopped clock and the sea are safe. Re-check this
+ * block whenever a case is added.
+ */
 const SAMPLE_FACT: PublicFact = {
   id: 'F00',
-  text: '部屋のドアは、内側から鍵がかかっていた。',
-  category: '場所',
+  text: '壁の時計は、十一時四十分で止まっていた。',
+  category: '時間',
   importance: 2,
-  cardTitle: '内側の鍵',
-  icon: 'lock',
+  cardTitle: '止まった時計',
+  icon: 'time',
 };
 
 interface Step {
@@ -34,14 +38,14 @@ function AskArt() {
     <div class="howto-art howto-art--ask">
       <div class="howto-q">
         <span class="howto-q__label">審問官</span>
-        <span>部屋に、窓はありましたか？</span>
+        <span>彼女は、海の近くで亡くなりましたか？</span>
       </div>
       <div class="howto-a">
         <div class="howto-a__holma">
           <HolmaSprite mood="laugh" framing="bust" idle={false} />
         </div>
         <Stamp answerClass="no" size="sm" decorative />
-        <p class="howto-a__line">いいえ。窓はひとつもありませんねェ。</p>
+        <p class="howto-a__line">いいえ。海からは、ずいぶん遠い場所ですねェ。</p>
       </div>
     </div>
   );
@@ -84,7 +88,7 @@ function HintArt() {
         <div class="howto-hint" key={lv} style={{ '--lv': lv }}>
           <Icon name="hint" size={22} />
           <span class="howto-hint__lv">WHISPER {lv}</span>
-          <span class="howto-hint__txt">{lv === 1 ? 'まず、場所をよく見なさい' : lv === 2 ? '空気は、目に見えませんよ' : '……ここから先は、ご自分で'}</span>
+          <span class="howto-hint__txt">{lv === 1 ? 'まず、時間の順に並べなさい' : lv === 2 ? 'その時計は、何を見ていたのでしょう' : '……ここから先は、ご自分で'}</span>
         </div>
       ))}
     </div>
@@ -97,7 +101,7 @@ function InquestArt() {
       <div class="howto-band">
         <span class="howto-band__who">ジェーン・ドゥ</span>
         <p class="howto-band__text t-jane">
-          きっと誰かに<span class="howto-noise">毒を盛られた</span>のよ……
+          わたしは、<span class="howto-noise">時計の音</span>を聞きながら眠ったの……
         </p>
       </div>
       <div class="howto-shot">
@@ -116,7 +120,7 @@ function VerdictArt() {
     <div class="howto-art howto-art--verdict">
       <div class="howto-verdict__input">
         <span class="howto-verdict__label">死因宣告</span>
-        <p>換気の止まった部屋で◯◯が起き、彼女は……</p>
+        <p>◯◯のせいで△△が起き、彼女は……</p>
       </div>
       <ul class="howto-verdict__list">
         <li class="is-ok">
@@ -126,7 +130,7 @@ function VerdictArt() {
           <Icon name="check" size={16} /> 原因となった出来事
         </li>
         <li>
-          <span class="howto-verdict__q">?</span> なぜ気づけなかったか
+          <span class="howto-verdict__q">?</span> 科学的な仕組み
         </li>
       </ul>
     </div>
@@ -183,7 +187,7 @@ const STEPS: Step[] = [
                     : c === 'irrelevant'
                       ? '死因とは関係ない。'
                       : c === 'cannot'
-                        ? '今はまだ答えられない。先に別のことを調べよう。'
+                        ? '答えそのものになる問い。それは宣告で、あなたが言うこと。'
                         : '質問があいまい。具体的に言い直そう。'}
             </span>
           </li>
@@ -198,8 +202,8 @@ const STEPS: Step[] = [
     body: (
       <>
         <p>
-          大事なことに触れると<strong>所見カード</strong>が手に入り、捜査ノートに綴じられます。所見が増えるたびに、名前のない彼女——
-          <strong>ジェーン・ドゥの破片</strong>がひとつずつ灯っていきます。
+          大事なことに触れると<strong>所見カード</strong>が手に入り、捜査ノートに綴じられます。所見が増えるほど、名前のない彼女——
+          <strong>ジェーン・ドゥの破片</strong>が灯っていきます。大事な所見ほど、多くの破片が灯ります。
         </p>
         <p class="t-sm t-bone2">所見に関係する「科学メモ」も解放されます。</p>
       </>

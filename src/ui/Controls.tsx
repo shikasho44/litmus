@@ -55,7 +55,22 @@ export function Slider({
   );
 }
 
-export function Switch({ label, checked, onChange, description, id }: { label: string; checked: boolean; onChange: (v: boolean) => void; description?: string; id?: string }) {
+export function Switch({
+  label,
+  checked,
+  onChange,
+  description,
+  id,
+  autofocus,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  description?: string;
+  id?: string;
+  /** Initial focus target when the switch opens a dialog (Modal honours [data-autofocus]). */
+  autofocus?: boolean;
+}) {
   const [autoId] = useState(() => nextId('switch'));
   const sid = id ?? autoId;
   return (
@@ -78,6 +93,7 @@ export function Switch({ label, checked, onChange, description, id }: { label: s
         aria-checked={checked}
         aria-labelledby={`${sid}-l`}
         aria-describedby={description ? `${sid}-d` : undefined}
+        data-autofocus={autofocus ? true : undefined}
         onClick={() => {
           audio.sfx('toggle');
           onChange(!checked);

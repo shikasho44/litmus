@@ -272,6 +272,20 @@ export function IntroScene({ params }: SceneProps) {
     }
   }, [i, kind]);
 
+  // phone staging: Holma stands on the dialogue box → expose its height to CSS (--intro-dlg-h)
+  const sceneRef = useRef<HTMLElement>(null);
+  const hasDlg = kind === 'narration' || kind === 'jane' || kind === 'holma';
+  useLayoutEffect(() => {
+    const el = dlgRef.current;
+    const scene = sceneRef.current;
+    if (!el || !scene || !hasDlg) return;
+    const set = () => scene.style.setProperty('--intro-dlg-h', `${Math.round(el.getBoundingClientRect().height)}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [hasDlg]);
+
   // background slow push-in
   useLayoutEffect(() => {
     const el = bgRef.current;
@@ -327,7 +341,7 @@ export function IntroScene({ params }: SceneProps) {
   const text = kind === 'narration' || kind === 'jane' || kind === 'holma' ? step.text : '';
 
   return (
-    <section class={`scene intro is-${kind} ${janeIn ? 'has-jane' : ''} ${holmaIn ? 'has-holma' : ''}`}>
+    <section ref={sceneRef} class={`scene intro is-${kind} ${janeIn ? 'has-jane' : ''} ${holmaIn ? 'has-holma' : ''}`}>
       <div class="intro__bg" aria-hidden="true">
         {bg && <img ref={bgRef} src={bg} alt="" class="intro__bg-img" />}
         <div class="intro__bg-shade" />

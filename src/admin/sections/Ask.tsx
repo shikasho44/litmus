@@ -255,7 +255,12 @@ function RunResult({ run, factLabel }: { run: Run; factLabel: (id: string) => Co
                   <AnswerChip cls={a.answerClass} />
                   <span class="adm-answer__q">{a.question}</span>
                   <Badge>{a.mood}</Badge>
-                  {a.notice && <Badge tone={a.notice === 'support' ? 'violet' : 'bad'}>notice: {a.notice}</Badge>}
+                  {a.nearCore && (
+                    <Badge tone="amber" title="この答えで核心に近づいた（ホルマの反応が変わる）">
+                      nearCore
+                    </Badge>
+                  )}
+                  {a.notice &&<Badge tone={a.notice === 'support' ? 'violet' : 'bad'}>notice: {a.notice}</Badge>}
                 </div>
                 <p class="adm-answer__line">{a.line}</p>
                 {a.unlocked.length > 0 && (

@@ -7,13 +7,14 @@
  * State machine: src/features/inquest/session.ts. Components: src/features/inquest/*.
  */
 import { gsap } from 'gsap';
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { FactCategory } from '../../../shared/case-schema';
 import { goto, openOverlay, transitioning, type SceneProps } from '../../app/router';
 import { audio } from '../../audio';
-import { fx, fxRefs } from '../../fx';
+import { cutInQueue, fx, fxRefs } from '../../fx';
 import { motionReduced } from '../../fx/motion';
 import { ART, useImage } from '../../lib/asset';
+import { isTouch } from '../../lib/env';
 import { pickLine } from '../../lib/lines';
 import { layout } from '../../lib/viewport';
 import { useCaseTimer } from '../../state/hooks';
@@ -29,7 +30,8 @@ import { flyBullet, flyCard } from '../../features/inquest/bullet';
 import { ComposureMeter } from '../../features/inquest/Composure';
 import { DebateStage } from '../../features/inquest/DebateStage';
 import { EvidenceList, LoadedCard } from '../../features/inquest/EvidenceList';
-import { FireButton, HintBanner, InstructionStrip, PhaseRail, Quip } from '../../features/inquest/Hud';
+import { mapFinaleToPanels } from '../../features/inquest/finaleMap';
+import { FireButton, HintBanner, InquestStatus, InstructionStrip, PhaseRail, Quip } from '../../features/inquest/Hud';
 import { ChoicePicker, ReconBoard } from '../../features/inquest/ReconBoard';
 import { InquestSession, successSpeaker } from '../../features/inquest/session';
 import { SuspendedOverlay } from '../../features/inquest/SuspendedOverlay';
@@ -46,7 +48,12 @@ export function InquestScene({ params }: SceneProps) {
   const narrow = layout.value === 'narrow';
   const narrowRef = useRef(narrow);
   narrowRef.current = narrow;
+  /** Touch copy (no keyboard shortcuts) on phones and coarse pointers. */
+  const touchUi = narrow || isTouch();
   const camera = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLElement>(null);
+  const dlgWrap = useRef<HTMLDivElement>(null);
+  const [leaving, setLeaving] = useState(false);
   const [card, setCard] = useState<{ spec: TitleCardSpec; key: number; resolve: () => void } | null>(null);
   const [drawer, setDrawer] = useState(false);
   const [evSheet, setEvSheet] = useState(false);
@@ -60,6 +67,7 @@ export function InquestScene({ params }: SceneProps) {
   const [bandsOn, setBandsOn] = useState(false);
   const [susp, setSusp] = useState<{ text: string; mood: 'normal' | 'laugh' | 'surprised' | 'serious' } | null>(null);
   const cardSeq = useRef(0);
+  const touchUiRef = useRef(touchUi);
   const bg = useImage(ART.inquest);
   useCaseTimer(caseId);
 
@@ -136,9 +144,13 @@ export function InquestScene({ params }: SceneProps) {
   };
 
   const enterVerdict = async (resumed: boolean) => {
+    // The sheet stays read-only (and unfocused) until the cut-in and Holma's prompt are over,
+    // so Enter advances his line instead of typing blank lines into the verdict.
+    s.verdictIntro.value = true;
     s.phase.value = 'verdict';
     s.verdictStep.value = 'write';
     s.target.value = null;
+    s.selected.value = null;
     s.persist();
     cam({ x: -2, scale: 1.08 }, 1.6);
     await fx.cutIn({ text: '死因宣告', en: 'DECLARE THE CAUSE OF DEATH', tone: 'bone', hold: 0.8, character: 'holma', mood: 'serious' });
@@ -148,6 +160,7 @@ export function InquestScene({ params }: SceneProps) {
       for (let k = 0; k < 3 && l.text === VERDICT_PROMPT; k++) l = pickLine('inquest.verdictPrompt', 'serious');
       if (l.text !== VERDICT_PROMPT) await s.say([{ speaker: 'holma', text: l.text, mood: l.mood }]);
     }
+    if (!s.disposed) s.verdictIntro.value = false;
   };
 
   const enterRecon = async (resumed: boolean) => {
@@ -156,7 +169,8 @@ export function InquestScene({ params }: SceneProps) {
     if (!s.recon.peek()) {
       try {
         await s.loadRecon();
-      } catch {
+      } catch (e) {
+        s.fail(e, '再構成の読み込み');
         s.quip('再構成を読み込めませんでした。もう一度お試しください。', 'warn');
       }
     }
@@ -178,11 +192,13 @@ export function InquestScene({ params }: SceneProps) {
     await s.say([s.holma('inquest.reconstructionDone', 'serious')]);
     const lines = s.finaleLines.peek();
     const panels = view.panels;
+    // Each narration line lights the frame it tells (matched by wording, never going back).
+    const map = mapFinaleToPanels(lines, panels);
     let prev = -1;
     await s.say(
       lines.map((t) => ({ speaker: 'holma' as const, text: t, mood: 'serious' as const })),
       (k) => {
-        const pi = Math.min(panels.length - 1, Math.floor((k * panels.length) / Math.max(1, lines.length)));
+        const pi = Math.max(0, Math.min(panels.length - 1, map[k] ?? panels.length - 1));
         if (pi !== prev) {
           prev = pi;
           audio.sfx('page');
@@ -274,6 +290,7 @@ export function InquestScene({ params }: SceneProps) {
       void flight.finish(true);
       s.broken.value = t;
       s.target.value = null;
+      s.bark.value = null; // an earlier miss quip must not linger over the 反証！ cut-in
       audio.sfx('refute');
       fx.shatter(cx, cy, { color: '#C6FF3D', count: 52 });
       fx.flash('#FFFFFF', { opacity: 0.6 });
@@ -285,7 +302,8 @@ export function InquestScene({ params }: SceneProps) {
       s.step.value = 'success';
       s.busy.value = false;
       fx.pulse('cyan', false);
-      await s.say(res.lines.map((l) => ({ speaker: successSpeaker(l), text: l, mood: 'serious' as const })));
+      // The server says who remembers (ShotResponse.speaker); the wording guess is only a fallback.
+      await s.say(res.lines.map((l) => ({ speaker: res.speaker ?? successSpeaker(l), text: l, mood: 'serious' as const })));
       if (s.disposed) return;
       s.step.value = 'clear';
       audio.sfx('findingCore');
@@ -343,10 +361,15 @@ export function InquestScene({ params }: SceneProps) {
     requestAnimationFrame(() => document.querySelector(`.iq-mag [data-fact-id="${res.fact.id}"]`)?.scrollIntoView({ block: 'nearest', behavior: motionReduced() ? 'auto' : 'smooth' }));
   };
 
-  /* keyboard (debate): ↑↓ statements, ←→ noise, E evidence, Enter fire, Space pause, Esc unlock */
+  /*
+   * keyboard (debate): ↑↓ statements (inside the magazine: findings), ←→ noise, E / 1–9 findings,
+   * Enter fire, Space pause, Esc unlock. Picking a finding by key moves the focus with it (roving),
+   * so a focused magazine row can never swallow the Enter that should fire.
+   */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (s.phase.peek() !== 'debate' || e.isComposing || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (s.tokenDead.peek()) return;
       if (document.querySelector('.modal-root, .sheet-root, .susp')) return;
       if (s.dialogue.peek() || s.step.peek() !== 'play') return;
       const ae = document.activeElement as HTMLElement | null;
@@ -356,10 +379,41 @@ export function InquestScene({ params }: SceneProps) {
       if (!n) return;
       const cur = s.current.peek();
       const noiseOf = (i: number) => sts[i].segments.map((g, k) => (g.noise ? k : -1)).filter((k) => k >= 0);
+      const shown = () => {
+        const all = s.evidence.peek();
+        return filter === 'all' ? all : all.filter((f) => f.category === filter);
+      };
+      const inMag = !!ae?.closest('.iq-mag');
+      /** Load the finding at `i` of the visible list; follow it with the focus when it was in the magazine. */
+      const pickAt = (i: number) => {
+        const list = shown();
+        if (!list.length) return;
+        const next = list[((i % list.length) + list.length) % list.length];
+        audio.sfx('page');
+        s.select(next.id);
+        requestAnimationFrame(() => {
+          const row = document.querySelector<HTMLElement>(`.iq-mag [data-fact-id="${next.id}"]`);
+          if (inMag) row?.focus({ preventScroll: true });
+          row?.scrollIntoView({ block: 'nearest' });
+        });
+      };
+      if (/^[1-9]$/.test(e.key) && !e.shiftKey) {
+        e.preventDefault();
+        const n = Number(e.key) - 1;
+        if (n < shown().length) pickAt(n);
+        return;
+      }
       switch (e.key) {
         case 'ArrowUp':
         case 'ArrowDown': {
           e.preventDefault();
+          if (ae?.classList.contains('evl__row')) {
+            // inside the magazine: step through the findings (and load them)
+            const list = shown();
+            const i = list.findIndex((f) => f.id === ae.dataset.factId);
+            pickAt((i < 0 ? 0 : i) + (e.key === 'ArrowUp' ? -1 : 1));
+            break;
+          }
           audio.sfx('page');
           s.target.value = null;
           s.current.value = (cur + (e.key === 'ArrowUp' ? -1 : 1) + n) % n;
@@ -388,30 +442,28 @@ export function InquestScene({ params }: SceneProps) {
         case 'e':
         case 'E': {
           e.preventDefault();
-          const all = s.evidence.peek();
-          const list = filter === 'all' ? all : all.filter((f) => f.category === filter);
+          const list = shown();
           if (!list.length) break;
           const i = list.findIndex((f) => f.id === s.selected.peek());
-          const next = list[(i + (e.shiftKey ? -1 : 1) + list.length) % list.length];
-          audio.sfx('page');
-          s.select(next.id);
-          requestAnimationFrame(() => document.querySelector(`.iq-mag [data-fact-id="${next.id}"]`)?.scrollIntoView({ block: 'nearest' }));
+          pickAt(i < 0 ? (e.shiftKey ? -1 : 0) : i + (e.shiftKey ? -1 : 1));
           break;
         }
         case 'Enter': {
+          if (e.repeat) return;
           if (ae?.classList.contains('noise')) {
             const t = s.target.peek();
             const isT = t && ae.closest('.band')?.getAttribute('data-statement-id') === t.statementId && Number(ae.dataset.seg) === t.seg;
             if (!isT) return; // the noise handles its own lock / unlock
           } else if (ae?.classList.contains('evl__row')) {
-            if (ae.dataset.factId !== s.selected.peek() || !s.ready.peek()) return;
+            // Enter on a row that is not loaded loads it (the row's own click); on the loaded row it fires.
+            if (ae.dataset.factId !== s.selected.peek()) return;
           } else if (ae && ae.tagName === 'BUTTON' && !ae.hasAttribute('data-fire')) return;
           e.preventDefault();
           if (s.ready.peek()) void fire();
           else if (!s.target.peek()) {
             const k = noiseOf(cur)[0];
             if (k !== undefined) s.setTarget({ statementId: sts[cur].id, seg: k, text: sts[cur].segments[k].text });
-          } else s.quip('所見を選んで装填してください（E キーで切り替え）。', 'hint');
+          } else s.quip(touchUiRef.current ? '下の『所見』から一枚選んで装填してください。' : '所見を選んで装填してください（E キー・数字キーで選べます）。', 'hint');
           break;
         }
         case ' ': {
@@ -435,6 +487,62 @@ export function InquestScene({ params }: SceneProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [s, filter]);
 
+  /* cut-ins (開廷 / 反証！ / 死因宣告 …) can be skipped: click, tap, Enter, Space or Esc */
+  useEffect(() => {
+    let startedAt = 0;
+    let seen = -1;
+    const unsub = cutInQueue.subscribe((c) => {
+      if (c && c.id !== seen) {
+        seen = c.id;
+        startedAt = performance.now();
+      }
+    });
+    const skip = () => {
+      const c = cutInQueue.peek();
+      if (!c || performance.now() - startedAt < 320) return false; // never the press that caused it
+      if (document.querySelector('.modal-root, .sheet-root')) return false;
+      const el = document.querySelector<HTMLElement>('.fx-cutin .cutin');
+      const done = () => {
+        if (cutInQueue.peek()?.id === c.id) fx._cutInDone();
+      };
+      if (el && !motionReduced()) gsap.to(el, { opacity: 0, duration: 0.14, overwrite: true, onComplete: done });
+      else done();
+      return true;
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (!cutInQueue.peek() || e.repeat || e.isComposing) return;
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Escape') return;
+      if (skip()) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    const onPointer = (e: PointerEvent) => {
+      if (!cutInQueue.peek() || e.button > 0) return;
+      if ((e.target as Element | null)?.closest?.('.iq__top')) return; // the settings button stays usable
+      skip();
+    };
+    window.addEventListener('keydown', onKey, true);
+    window.addEventListener('pointerdown', onPointer, true);
+    return () => {
+      unsub();
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('pointerdown', onPointer, true);
+    };
+  }, []);
+
+  /* the dialogue box height → --iq-dlg-h (phone layouts keep content scrollable above it) */
+  useLayoutEffect(() => {
+    const el = dlgWrap.current;
+    const host = root.current;
+    if (!el || !host) return;
+    const set = () => host.style.setProperty('--iq-dlg-h', `${Math.ceil(el.getBoundingClientRect().height)}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [!!dialogue]);
+
   /* phone: locking a noise with an empty chamber opens the magazine right away */
   const tgt = s.target.value;
   useEffect(() => {
@@ -457,12 +565,13 @@ export function InquestScene({ params }: SceneProps) {
   /* verdict / reconstruction actions                                     */
   /* ------------------------------------------------------------------ */
   const submitVerdict = async () => {
-    if (s.verdictStep.peek() !== 'write' || s.dialogue.peek()) return;
+    if (s.verdictStep.peek() !== 'write' || s.dialogue.peek() || s.verdictIntro.peek() || s.tokenDead.peek()) return;
     s.verdictStep.value = 'judging';
     audio.sfx('send');
     cam({ x: 0, scale: 1.14 }, 2.2, 'power1.inOut');
-    fx.pulse('alarm');
-    const beat = setInterval(() => fx.pulse('alarm'), 1150);
+    // Suspense lives in the stage (alarm vignette in CSS) and the heartbeat — the sheet stays bright.
+    audio.sfx('heartbeat');
+    const beat = setInterval(() => audio.sfx('heartbeat'), 1150);
     const t0 = performance.now();
     const view = await s.declare();
     const rest = (motionReduced() ? 600 : 1900) - (performance.now() - t0);
@@ -486,7 +595,14 @@ export function InquestScene({ params }: SceneProps) {
     cam({ x: -2, scale: 1.06 }, 0.5, 'expo.out');
     await s.wait(motionReduced() ? 500 : 1300);
     const lead = view.result === 'correct' ? 'surprised' : view.result === 'wrong' ? 'laugh' : 'normal';
-    await s.say(view.lines.map((l, i) => ({ speaker: 'holma' as const, text: l, mood: i === 0 ? lead : ('serious' as const) })));
+    await s.say(
+      view.lines.map((l, i) => ({ speaker: 'holma' as const, text: l, mood: i === 0 ? lead : ('serious' as const) })),
+      (i) => {
+        // phone: keep the element checklist in view above Holma's box
+        if (i === 0 && narrowRef.current)
+          requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector('.iq__verdict .vresult')?.scrollIntoView({ block: 'nearest', behavior: motionReduced() ? 'auto' : 'smooth' })));
+      },
+    );
     if (s.disposed) return;
     if (view.result === 'correct') {
       audio.sfx('reveal');
@@ -529,6 +645,33 @@ export function InquestScene({ params }: SceneProps) {
     if (narrowRef.current) setChoiceSheet(true);
   };
 
+  /** After a pick: move on to the next empty frame; when none is left, hand over to 確定. */
+  const afterPick = (id: string) => {
+    const blanks = s.blanks.peek();
+    const at = blanks.findIndex((p) => p.id === id);
+    const order = [...blanks.slice(at + 1), ...blanks.slice(0, Math.max(0, at))];
+    const next = order.find((p) => typeof s.picks.peek()[p.id] !== 'number' && !s.verified.peek()[p.id]);
+    const focusSubmit = () => document.querySelector<HTMLElement>('[data-recon-submit]')?.focus({ preventScroll: false });
+    if (narrowRef.current) {
+      setTimeout(() => {
+        if (s.disposed) return;
+        if (next) {
+          setChoosing(next.id);
+          document.querySelector(`[data-panel-id="${next.id}"]`)?.scrollIntoView({ block: 'center', behavior: motionReduced() ? 'auto' : 'smooth' });
+        } else {
+          setChoiceSheet(false);
+          setTimeout(focusSubmit, 380);
+        }
+      }, 260);
+      return;
+    }
+    setTimeout(() => {
+      if (s.disposed) return;
+      setChoosing(next ? next.id : null);
+      if (!next) requestAnimationFrame(focusSubmit);
+    }, 220);
+  };
+
   /* ------------------------------------------------------------------ */
   /* render                                                               */
   /* ------------------------------------------------------------------ */
@@ -539,12 +682,25 @@ export function InquestScene({ params }: SceneProps) {
   const holmaFocus = (phase === 'debate' && stmt?.speaker === 'holma') || s.speaking.value === 'holma' || phase === 'verdict';
   const inDebate = phase === 'debate';
   const inRecon = phase === 'reconstruction' || phase === 'finale' || phase === 'done';
-  const canBeg = inDebate && step === 'play' && !s.busy.value;
-  const title = info ? info.title : '死因審問';
+  const canBeg = inDebate && step === 'play' && !s.busy.value && !s.tokenDead.value;
+  const critical = inDebate && s.composure.value <= 1;
+  touchUiRef.current = touchUi;
+
+  /** bad_token: the record cannot be verified — start this case over (or leave to the title). */
+  const restartAfterBadToken = async (to: 'investigation' | 'title') => {
+    if (leaving) return;
+    setLeaving(true);
+    await s.restartAfterBadToken();
+    if (to === 'investigation') {
+      audio.bgm('investigation');
+      goto('investigation', { caseId }, { replace: true });
+    } else goto('title', {}, { replace: true });
+  };
 
   return (
     <section
-      class={`scene iq iq--${phase} ${narrow ? 'is-narrow' : 'is-wide'}`}
+      ref={root}
+      class={`scene iq iq--${phase} ${narrow ? 'is-narrow' : 'is-wide'} ${critical ? 'is-critical' : ''}`}
       data-phase={phase}
       data-step={inDebate ? step : undefined}
       data-verdict-step={phase === 'verdict' ? s.verdictStep.value : undefined}
@@ -576,7 +732,7 @@ export function InquestScene({ params }: SceneProps) {
         <div class="iq__title">
           <span class="iq__en">INQUEST</span>
           <span class="iq__jp">死因審問</span>
-          {!narrow && <span class="iq__case">{title}</span>}
+          {!narrow && info && <span class="iq__case">{info.title}</span>}
         </div>
         {!narrow && <PhaseRail phase={phase} />}
         <div class="spacer" />
@@ -598,20 +754,14 @@ export function InquestScene({ params }: SceneProps) {
       {/* ---------- arena ---------- */}
       <div class="iq__arena">
         {phase === 'loading' && (
-          <div class="iq__loading" role="status">
-            <span class="iq__loading-gavel" aria-hidden="true">
-              <Icon name="gavel" size={42} />
-            </span>
-            <span>開廷の準備をしています…</span>
+          <div class="iq__status">
+            <InquestStatus kind="loading" kicker="PREPARING THE INQUEST" title="開廷の準備をしています" body="ホルマが記録と所見を並べています。少しだけお待ちください。" />
           </div>
         )}
-        {phase === 'error' && (
-          <div class="iq__error" role="alert">
-            <p class="eyebrow">CONNECTION</p>
-            <h2 class="t-display t-xl">審問を開けませんでした</h2>
-            <p class="t-sm t-bone2">{s.error.value}</p>
-            <div class="row" style={{ justifyContent: 'center', marginTop: 12 }}>
-              <Button icon="refresh" onClick={() => void boot()}>
+        {phase === 'error' && !s.tokenDead.value && (
+          <div class="iq__status">
+            <InquestStatus kind="error" kicker="CONNECTION" title="審問を開けませんでした" body={s.error.value ?? undefined}>
+              <Button icon="refresh" onClick={() => void boot()} data-autofocus>
                 もう一度
               </Button>
               <Button
@@ -625,7 +775,7 @@ export function InquestScene({ params }: SceneProps) {
               >
                 捜査に戻る
               </Button>
-            </div>
+            </InquestStatus>
           </div>
         )}
 
@@ -651,6 +801,7 @@ export function InquestScene({ params }: SceneProps) {
               session={s}
               stampKey={stampKey}
               autoFocus={!narrow}
+              touch={touchUi}
               onSubmit={() => void submitVerdict()}
               onOpenEvidence={() => setEvSheet(true)}
               onStampImpact={() => {
@@ -671,6 +822,7 @@ export function InquestScene({ params }: SceneProps) {
               choosing={choosing}
               shakeKey={reconShake}
               onOpenPanel={openPanel}
+              onPicked={afterPick}
               onSubmit={() => void submitRecon()}
               onFinish={() => {
                 s.finish();
@@ -726,7 +878,7 @@ export function InquestScene({ params }: SceneProps) {
 
       {/* ---------- dialogue ---------- */}
       {dialogue && (
-        <div class={`iq__dialogue speaker-${dialogue.line.speaker}`} data-inquest-dialogue>
+        <div ref={dlgWrap} class={`iq__dialogue speaker-${dialogue.line.speaker}`} data-inquest-dialogue>
           <DialogueBox speaker={dialogue.line.speaker} text={dialogue.line.text} name={dialogue.line.name} lineKey={dialogue.key} onAdvance={() => s.advance()} glitch={dialogue.line.speaker === 'jane'} size={narrow ? 'md' : 'lg'} />
         </div>
       )}
@@ -782,7 +934,7 @@ export function InquestScene({ params }: SceneProps) {
       </BottomSheet>
 
       <BottomSheet open={choiceSheet && !!choosing} onClose={() => setChoiceSheet(false)} title="空白のコマ" en="BLANK PANEL" side="bottom">
-        {choosing && <ChoicePicker session={s} panelId={choosing} onPicked={() => setTimeout(() => setChoiceSheet(false), 180)} />}
+        {choosing && <ChoicePicker key={choosing} session={s} panelId={choosing} onPicked={afterPick} />}
       </BottomSheet>
 
       <Modal
@@ -806,6 +958,32 @@ export function InquestScene({ params }: SceneProps) {
         <p class="iq-beg__p">このラウンドを崩すための所見を、ホルマが1枚だけ貸してくれます。</p>
         <p class="iq-beg__note">
           <Icon name="info" size={14} /> 使うと審問官ランクに響きます（{s.grants.value > 0 ? `これまで ${s.grants.value} 回` : 'まだ 0 回'}）。すでに持っている場合は、ヒントだけもらえます。
+        </p>
+      </Modal>
+
+      <Modal
+        open={s.tokenDead.value}
+        title="記録を確かめられませんでした"
+        en="RECORD UNVERIFIED"
+        size="sm"
+        tone="alarm"
+        role="alertdialog"
+        dismissible={false}
+        class="iq-badtoken"
+        footer={
+          <>
+            <Button variant="ghost" icon="back" sfx="cancel" disabled={leaving} onClick={() => void restartAfterBadToken('title')} data-badtoken-title>
+              タイトルへ
+            </Button>
+            <Button icon="refresh" disabled={leaving} aria-busy={leaving} onClick={() => void restartAfterBadToken('investigation')} data-autofocus data-badtoken-restart>
+              この事件を最初からやり直す
+            </Button>
+          </>
+        }
+      >
+        <p class="iq-beg__p">進行の記録を、サーバーが確かめられませんでした（期限が切れたか、記録が書き換わっています）。</p>
+        <p class="iq-beg__note">
+          <Icon name="info" size={14} /> この審問は続けられません。事件は最初から捜査し直せます。最高ランクと解決回数は残ります。
         </p>
       </Modal>
     </section>

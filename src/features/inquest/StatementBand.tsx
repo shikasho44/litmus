@@ -99,9 +99,50 @@ export interface StatementBandProps {
   onTap?: () => void;
 }
 
+type StatementSegment = InquestStatementView['segments'][number];
+
+/** Characters that may not start a line (they follow the noise) / end one (they precede it). */
+const NO_START = /^[。、，．,.！？!?…‥」』）)〕］\]｝}〉》ー〜～ァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎゕゖ]+/;
+const NO_END = /[「『（(〔［\[｛{〈《]+$/;
+
+interface GluedSeg {
+  seg: StatementSegment;
+  k: number;
+  /** text moved from the previous plain segment in front of the noise */
+  before?: string;
+  /** text moved from the next plain segment behind the noise */
+  after?: string;
+}
+
+/** Split plain text around each noise so kinsoku characters stay glued to it. */
+export function glued(segments: readonly StatementSegment[]): GluedSeg[] {
+  const out: GluedSeg[] = segments.map((seg, k) => ({ seg, k }));
+  for (let i = 0; i < out.length; i++) {
+    if (!out[i].seg.noise) continue;
+    const prev = out[i - 1];
+    if (prev && !prev.seg.noise) {
+      const m = prev.seg.text.match(NO_END);
+      if (m) {
+        out[i].before = m[0];
+        prev.seg = { ...prev.seg, text: prev.seg.text.slice(0, -m[0].length) };
+      }
+    }
+    const next = out[i + 1];
+    if (next && !next.seg.noise) {
+      const m = next.seg.text.match(NO_START);
+      if (m) {
+        out[i].after = m[0];
+        next.seg = { ...next.seg, text: next.seg.text.slice(m[0].length) };
+      }
+    }
+  }
+  return out.filter((g) => g.seg.noise || g.seg.text);
+}
+
 export function StatementBand({ statement, index, total, pos, leaving, holdMs, halted, target, broken, interactive, onNoise, onTap }: StatementBandProps) {
   const ref = useRef<HTMLDivElement>(null);
   const jane = statement.speaker === 'jane';
+  const locked = !leaving && !!target && target.statementId === statement.id;
 
   useLayoutEffect(() => {
     const el = ref.current?.querySelector<HTMLElement>('.band__strip');
@@ -144,19 +185,25 @@ export function StatementBand({ statement, index, total, pos, leaving, holdMs, h
           <div class="band__who">
             {jane ? <JaneChip size={38} /> : <HolmaChip size={38} />}
             <span class="band__name">{jane ? 'ジェーン・ドゥ' : 'ホルマ'}</span>
+            {/* phone: the LOCK tag lives in the header row, never on top of the name or counter */}
+            {locked && (
+              <span class="band__lock" aria-hidden="true">
+                LOCK
+              </span>
+            )}
             <span class="band__idx">
               {String(index + 1).padStart(2, '0')}
               <i>/{String(total).padStart(2, '0')}</i>
             </span>
           </div>
           <p class="band__text">
-            {statement.segments.map((seg, k) => {
+            {glued(statement.segments).map(({ seg, k, before, after }) => {
               if (!seg.noise) return <span key={k}>{seg.text}</span>;
               const isT = !!target && target.statementId === statement.id && target.seg === k;
               const isB = !!broken && broken.statementId === statement.id && broken.seg === k;
               const activate = () => onNoise?.({ statementId: statement.id, seg: k, text: seg.text });
               // A span (not <button>) so long noise can wrap inside the line on phones.
-              return (
+              const noise = (
                 <span
                   key={k}
                   role="button"
@@ -193,6 +240,16 @@ export function StatementBand({ statement, index, total, pos, leaving, holdMs, h
                     </span>
                   )}
                   {isB && <span class="noise__crack" aria-hidden="true" />}
+                </span>
+              );
+              // An opening bracket before / a stop after the noise travels with it: a line never
+              // starts with 「。」 (or ends with 「「」) just because the noise is its own box.
+              if (!before && !after) return noise;
+              return (
+                <span key={`g${k}`} class="noise-glue">
+                  {before}
+                  {noise}
+                  {after}
                 </span>
               );
             })}

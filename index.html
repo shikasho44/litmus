@@ -16,20 +16,41 @@
     <meta property="og:site_name" content="%VITE_APP_TITLE%" />
     <meta property="og:title" content="%VITE_APP_TITLE%" />
     <meta property="og:description" content="%VITE_SITE_DESCRIPTION%" />
-    <meta property="og:image" content="./og.png" />
+    <!-- ./og.jpg becomes absolute (and og:url + canonical are added) when VITE_SITE_URL is set: src/build/html-env.ts -->
+    <meta property="og:image" content="./og.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="ガラスの破片でできた女性の影と、白衣を着た白ウサギの剥製ホルマ。薄暗い安置室。" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="%VITE_APP_TITLE%" />
     <meta name="twitter:description" content="%VITE_SITE_DESCRIPTION%" />
-    <meta name="twitter:image" content="./og.png" />
+    <meta name="twitter:image" content="./og.jpg" />
+    <meta name="twitter:image:alt" content="ガラスの破片でできた女性の影と、白衣を着た白ウサギの剥製ホルマ。薄暗い安置室。" />
 
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <!-- Logo glyph subsets of Dela Gothic One (kana / 死 / 因) so the title renders crisply on first paint -->
     <link rel="preload" as="font" type="font/woff2" crossorigin href="./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-119-400-normal.woff2" />
     <link rel="preload" as="font" type="font/woff2" crossorigin href="./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-102-400-normal.woff2" />
     <link rel="preload" as="font" type="font/woff2" crossorigin href="./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-99-400-normal.woff2" />
+    <!-- The title's largest paint: fetched next to the JS instead of after it (src/main.tsx warms the rest later) -->
+    <link rel="preload" as="image" href="/art/key-art.webp" fetchpriority="high" />
+    <!--
+      Critical faces, declared here so the boot wait in src/main.tsx does not depend on the full
+      fonts.css chunk (≈100 KB gz, ~240 unicode-range rules): the logo subsets preloaded above,
+      the Zen Kaku kana subset and Anton Latin. Copied verbatim from src/styles/fonts.css —
+      keep in sync when regenerating it (docs/frontend.md §Fonts). fonts.css re-declares them;
+      identical rules share one download.
+    -->
+    <style>
+      @font-face { font-family: 'Dela Gothic One'; font-weight: 400; font-display: swap; src: url(./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-119-400-normal.woff2) format('woff2'); unicode-range: U+20,U+2027,U+3001-3002,U+3041-307f,U+3081-308f,U+3091-3093,U+3099-309a,U+309d-309e,U+30a1-30e1,U+30e3-30ed,U+30ef-30f0,U+30f2-30f4,U+30fb-30fe,U+ff0c,U+ff0e; }
+      @font-face { font-family: 'Dela Gothic One'; font-weight: 400; font-display: swap; src: url(./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-102-400-normal.woff2) format('woff2'); unicode-range: U+3d,U+5e,U+25cf,U+4e0e,U+4e5d,U+4e73,U+4e94,U+4f3c,U+5009,U+5145,U+51ac,U+5238,U+524a,U+53f3,U+547c,U+5802,U+5922,U+5a66,U+5c0e,U+5de6,U+5fd8,U+5feb,U+6797,U+685c,U+6b7b,U+6c5f-6c60,U+6cc9,U+6ce2,U+6d17,U+6e21,U+7167,U+7642,U+76db,U+8001,U+821e,U+8857,U+89d2,U+8b1b,U+8b70,U+8cb4,U+8cde,U+8f03,U+8f2a,U+968e,U+9b54,U+9e7f,U+9ebb,U+ff05,U+ff33; }
+      @font-face { font-family: 'Dela Gothic One'; font-weight: 400; font-display: swap; src: url(./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-99-400-normal.woff2) format('woff2'); unicode-range: U+2191,U+505c,U+52e4,U+5305,U+535a,U+56e0,U+59bb,U+5acc,U+5b09,U+5b87,U+5c90,U+5df1,U+5e2d,U+5e33,U+5f3e,U+6298,U+6383,U+653b,U+6697,U+6804,U+6a39,U+6cca,U+6e90,U+6f2b,U+702c,U+7206,U+7236,U+7559,U+7565,U+7591,U+75c7,U+75db,U+7b4b,U+7bb1,U+7d99,U+7fbd,U+8131,U+885b,U+8b1d,U+8ff7,U+9003,U+9045,U+96a0,U+9732,U+990a,U+99d0,U+9e97,U+9f62,U+ff25,U+ff2d; }
+      @font-face { font-family: 'Zen Kaku Gothic New'; font-weight: 500; font-display: swap; src: url(./node_modules/@fontsource/zen-kaku-gothic-new/files/zen-kaku-gothic-new-119-500-normal.woff2) format('woff2'); unicode-range: U+20,U+2027,U+3001-3002,U+3041-307f,U+3081-308f,U+3091-3093,U+3099-309a,U+309d-309e,U+30a1-30e1,U+30e3-30ed,U+30ef-30f0,U+30f2-30f4,U+30fb-30fe,U+ff0c,U+ff0e; }
+      @font-face { font-family: 'Anton'; font-weight: 400; font-display: swap; src: url(./node_modules/@fontsource/anton/files/anton-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+    </style>
     <style>
       html,
       body {
@@ -96,7 +117,8 @@
     </style>
   </head>
   <body>
-    <div id="app"></div>
+    <!-- Replaced when the app mounts (the boot splash covers it until then); what crawlers without JS read. -->
+    <div id="app"><section class="seo-fallback"><h1>%VITE_APP_TITLE%</h1><p>%VITE_SITE_DESCRIPTION%</p></section></div>
     <div id="boot" aria-hidden="true">
       <div class="b">
         <span>ROOM ZERO — UNLOCKING</span>

@@ -28,7 +28,7 @@
     { "speaker": "jane", "fx": "glitch", "text": "最後の、ひとときが。割れたまま、ひかりを返さない。" },
     { "speaker": "holma", "mood": "serious", "text": "ご覧のとおり、彼女はご自分の死を覚えていません。覚えていても、ところどころ、間違っている。" },
     { "speaker": "holma", "mood": "normal", "bgm": "investigation", "text": "あなたの問いが真実の一端に触れると、それは『所見』のカードとなり、捜査ノートに綴じられます。" },
-    { "speaker": "holma", "mood": "surprised", "fx": "flash", "text": "そして所見をひとつ得るたび、彼女の破片がひとつ灯る。灯るほどに、失われた姿が浮かび上がるのです。" },
+    { "speaker": "holma", "mood": "surprised", "fx": "flash", "text": "そして所見を得るたび、彼女の破片が灯る。灯るほどに、失われた姿が浮かび上がるのです。" },
     { "speaker": "holma", "mood": "laugh", "text": "行き詰まったら『ホルマの囁き』を。三度まで、そっと耳打ちしてさしあげます。……記録には、残りますがねェ。" },
     { "speaker": "holma", "mood": "serious", "fx": "gavel", "text": "所見が揃ったら『審問を開く』。いつでも開けますが——開廷すれば、空気が変わりますよ。" },
     { "speaker": "holma", "mood": "laugh", "text": "審問ではまず『ノイズ・ブレイク』。彼女が本気で信じている間違った記憶、その光る言葉を、所見で撃ち抜くのです。" },

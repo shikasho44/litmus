@@ -32,8 +32,18 @@
   transition: opacity 1.8s var(--ease-out);
   will-change: transform;
 }
+/* title card: the room is readable behind the card (dimmed + vignetted, not black) */
+.intro.is-title {
+  --intro-dim: 0.38;
+}
 .intro.is-title .intro__bg-img {
-  opacity: 0.14;
+  opacity: 0.58;
+}
+.intro.is-title .intro__bg-shade {
+  background:
+    linear-gradient(90deg, rgba(5, 7, 10, 0.78) 0%, rgba(5, 7, 10, 0.45) 45%, rgba(5, 7, 10, 0.15) 100%),
+    linear-gradient(180deg, rgba(5, 7, 10, 0.55) 0%, transparent 28%, transparent 60%, rgba(5, 7, 10, 0.9) 100%),
+    radial-gradient(ellipse at 55% 45%, transparent 35%, rgba(0, 0, 0, 0.7) 100%);
 }
 .intro:not(.is-title) .intro__bg-img {
   opacity: 1;
@@ -119,6 +129,7 @@
   font-size: var(--fs-2xs);
   letter-spacing: 0.24em;
   color: var(--bone-3);
+  white-space: nowrap;
 }
 .intro__rec {
   width: 8px;
@@ -269,25 +280,33 @@
   letter-spacing: 0.38em;
   color: var(--formalin);
 }
+/* The readout's rule and tint live on the rows, so the panel grows row by row as each one
+   types in (no empty bordered box while the first rows are still hidden). */
 .itc__readout {
   grid-column: 2;
   display: grid;
-  gap: 6px;
+  gap: 0;
   margin-top: 26px;
-  padding: 12px 16px 12px 16px;
   max-width: 640px;
-  border-left: 2px solid var(--formalin);
-  background: linear-gradient(90deg, rgba(198, 255, 61, 0.07), transparent 80%);
 }
 .itc__row {
   display: grid;
   grid-template-columns: 92px minmax(0, 1fr);
   gap: 12px;
   align-items: baseline;
+  padding: 3px 16px;
+  border-left: 2px solid var(--formalin);
+  background: linear-gradient(90deg, rgba(198, 255, 61, 0.08), transparent 80%);
+}
+.itc__row:first-child {
+  padding-top: 12px;
+}
+.itc__row:last-child {
+  padding-bottom: 12px;
 }
 .itc__row dt {
-  font-size: 10px;
-  letter-spacing: 0.24em;
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.22em;
   color: var(--formalin);
 }
 .itc__row dd {
@@ -319,6 +338,56 @@
   letter-spacing: 0.3em;
   color: var(--formalin);
   animation: intro-rec 1.2s steps(1, end) infinite;
+}
+
+/* big screens: the card grows with the room (≈1.35×) and sits a little above centre */
+@media (min-width: 1600px) {
+  [data-layout='wide'] .itc {
+    column-gap: 72px;
+    padding: 60px 10vw 140px;
+  }
+  [data-layout='wide'] .itc__band {
+    top: calc(50% - 330px);
+    height: 20px;
+  }
+  [data-layout='wide'] .itc__case {
+    font-size: clamp(34px, 2.4vw, 48px);
+  }
+  [data-layout='wide'] .itc__num,
+  [data-layout='wide'] .itc__num-shadow {
+    font-size: clamp(300px, 21vw, 420px);
+  }
+  [data-layout='wide'] .itc__kicker {
+    font-size: var(--fs-sm);
+  }
+  [data-layout='wide'] .itc__title {
+    font-size: clamp(92px, 6.6vw, 128px);
+    text-shadow: 7px 7px 0 var(--alarm);
+  }
+  [data-layout='wide'] .itc__title-en {
+    font-size: clamp(20px, 1.4vw, 28px);
+  }
+  [data-layout='wide'] .itc__readout {
+    max-width: 880px;
+    margin-top: 34px;
+  }
+  [data-layout='wide'] .itc__row {
+    grid-template-columns: 120px minmax(0, 1fr);
+    padding-left: 20px;
+  }
+  [data-layout='wide'] .itc__row dt {
+    font-size: var(--fs-xs);
+  }
+  [data-layout='wide'] .itc__row dd {
+    font-size: var(--fs-lg);
+  }
+  [data-layout='wide'] .itc__redact {
+    width: 150px;
+    height: 18px;
+  }
+  [data-layout='wide'] .itc__continue {
+    font-size: var(--fs-xs);
+  }
 }
 [data-layout='narrow'] .itc__continue {
   grid-column: 1;
@@ -490,7 +559,8 @@
 [data-layout='narrow'] .itc {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: none;
-  align-content: center;
+  /* safe: a card taller than the screen starts under the top bar instead of spilling into it */
+  align-content: safe center;
   padding: 72px 20px 48px;
 }
 [data-layout='narrow'] .itc__head {
@@ -515,10 +585,6 @@
   font-size: 12px;
   letter-spacing: 0.26em;
 }
-[data-layout='narrow'] .itc__readout {
-  margin-top: 18px;
-  padding: 10px 12px;
-}
 [data-layout='narrow'] .itc__row {
   grid-template-columns: minmax(0, 1fr);
   gap: 0;
@@ -526,8 +592,58 @@
 [data-layout='narrow'] .itc__row dd {
   font-size: var(--fs-xs);
 }
+/* phone: the tape runs just above the CASE number (in the flow), never across it */
 [data-layout='narrow'] .itc__band {
-  top: 14%;
+  position: relative;
+  top: auto;
+  left: -40px;
+  right: auto;
+  width: calc(100% + 80px);
+  height: 12px;
+  margin-bottom: 26px;
+}
+[data-layout='narrow'] .itc__readout {
+  margin-top: 18px;
+}
+[data-layout='narrow'] .itc__row {
+  padding: 2px 12px;
+}
+[data-layout='narrow'] .itc__row:first-child {
+  padding-top: 10px;
+}
+[data-layout='narrow'] .itc__row:last-child {
+  padding-bottom: 10px;
+}
+/* short phones (≈320×640): tighten the card so it fits between the top bar and the bottom */
+@media (max-height: 700px) {
+  [data-layout='narrow'] .itc {
+    padding: 64px 18px 36px;
+  }
+  [data-layout='narrow'] .itc__band {
+    margin-bottom: 14px;
+  }
+  [data-layout='narrow'] .itc__head {
+    margin-bottom: 12px;
+  }
+  [data-layout='narrow'] .itc__num,
+  [data-layout='narrow'] .itc__num-shadow {
+    font-size: clamp(88px, 30vw, 110px);
+  }
+  [data-layout='narrow'] .itc__title {
+    font-size: clamp(28px, 9.4vw, 40px);
+  }
+  [data-layout='narrow'] .itc__title-en {
+    margin-top: 8px;
+  }
+  [data-layout='narrow'] .itc__readout {
+    margin-top: 12px;
+  }
+  [data-layout='narrow'] .itc__row dd {
+    line-height: 1.45;
+  }
+  [data-layout='narrow'] .itc__continue {
+    margin-top: 14px;
+  }
 }
 [data-layout='narrow'] .intro__jane {
   top: 10%;
@@ -540,12 +656,15 @@
   height: 36%;
   top: 12%;
 }
+/* phone: Holma stands behind the dialogue box (--intro-dlg-h is measured by the scene): the
+   sprite's crop line sits under the (near-opaque, blurred) box, never floating above it.
+   No mask here — a mask would also cut off the ears and rim light that leave the box upwards. */
 [data-layout='narrow'] .intro__holma {
   right: -14%;
-  bottom: auto;
-  top: 18%;
+  top: auto;
+  bottom: calc(var(--intro-dlg-h, 170px) + 14px + var(--safe-b) - 56px);
   width: 84%;
-  height: 50%;
+  height: 54%;
 }
 [data-layout='narrow'] .intro__dlg {
   left: 10px;

@@ -37,7 +37,15 @@ export function useDialog(open: boolean, onClose: (() => void) | undefined, opts
     stack.push(el);
     const t = setTimeout(() => {
       const auto = el.querySelector<HTMLElement>('[data-autofocus]');
-      (auto ?? focusables(el)[0] ?? el).focus({ preventScroll: true });
+      const target = auto ?? focusables(el)[0] ?? el;
+      target.focus({ preventScroll: true });
+      // Never leave keyboard focus on something the player can't see (e.g. a control scrolled
+      // out of a long dialog body): fall back to the dialog itself, which is always in view.
+      if (target !== el) {
+        const r = target.getBoundingClientRect();
+        const vh = window.visualViewport?.height ?? window.innerHeight;
+        if (r.bottom > vh + 1 || r.top < -1) el.focus({ preventScroll: true });
+      }
     }, 30);
     const onKey = (e: KeyboardEvent) => {
       if (stack[stack.length - 1] !== el) return;

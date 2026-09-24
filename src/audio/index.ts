@@ -11,7 +11,7 @@
  */
 import { effect } from '@preact/signals';
 import { settings } from '../state/save';
-import { audioUnlocked, getBuses, rampGain, unlockAudio } from './engine';
+import { audioUnlocked, peekBuses, rampGain, unlockAudio } from './engine';
 import { currentTrack, playTrack } from './music';
 import { playBlip, playSfx, type SfxName, type Speaker } from './sfx';
 import type { BgmId } from './tracks';
@@ -56,8 +56,9 @@ export const audio = {
   },
 };
 
+/** Sync bus gains with the settings. Never creates the AudioContext (that waits for a gesture). */
 function applySettings() {
-  const b = getBuses();
+  const b = peekBuses();
   const s = settings.peek();
   blipsOn = s.voiceBlips;
   if (!b) return;
@@ -88,7 +89,7 @@ export function bindAudioSettings() {
   window.addEventListener('keydown', unlockOnce, true);
   window.addEventListener('touchend', unlockOnce, true);
   document.addEventListener('visibilitychange', () => {
-    const b = getBuses();
+    const b = peekBuses();
     if (!b || !audioUnlocked.peek()) return;
     if (document.visibilityState === 'hidden') void b.ctx.suspend().catch(() => {});
     else void b.ctx.resume().catch(() => {});

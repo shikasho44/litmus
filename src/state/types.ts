@@ -59,6 +59,20 @@ export interface LogAnswer {
   mood: HolmaMood;
   unlocked: string[]; // fact ids unlocked by this answer
   memos: string[]; // science memo ids unlocked by this answer
+  /** This answer confirmed a core hypothesis (AskAnswer.nearCore) → ★核心 in the question log. */
+  nearCore?: boolean;
+}
+
+/**
+ * Read-only copy of an attempt that was restarted because the server could not verify the
+ * saved token. Shown in the notebook as 「前回の記録」; it grants nothing back.
+ */
+export interface PreviousAttempt {
+  at: number;
+  log: LogEntry[];
+  facts: Record<string, PublicFact>;
+  factOrder: string[];
+  hints: { level: number; text: string }[];
 }
 
 export type LogEntry =
@@ -78,7 +92,8 @@ export interface InquestState {
   misses: number;
   grants: number; // 「ホルマに泣きつく」count
   verdictAttempts: number;
-  lastVerdict?: { result: VerdictResult; matched: string[]; labels: Record<string, string>; text: string };
+  /** notes: Holma's pointed feedback lines (「ホルマの指摘」); required: element ids the solve needs. */
+  lastVerdict?: { result: VerdictResult; matched: string[]; labels: Record<string, string>; text: string; notes?: string[]; required?: string[] };
   verdictDraft?: string;
   reconstructionPicks?: Record<string, number>;
   reconstructionDone?: boolean;
@@ -91,6 +106,14 @@ export interface CaseResult {
   at: number;
   elapsedMs: number;
   stats: Record<string, number>;
+  /** Best rank of this case BEFORE this run (set by completeCase; lets the result screen show the change). */
+  prevBest?: Rank;
+}
+
+/** The victim's restored identity, remembered once the identity ceremony has played (shown on the Files tag after completion). */
+export interface RestoredIdentity {
+  name: string;
+  kana: string;
 }
 
 export interface CaseProgress {
@@ -116,6 +139,10 @@ export interface CaseProgress {
   quiz?: { answers: Record<string, number>; correct: string[] };
   /** The identity ceremony (Resolution) has played once this run → a reload shows the record page. */
   resolutionSeen?: boolean;
+  /** Backup of the attempt before a bad-token restart (see caseData.restartCaseAfterBadToken). */
+  previousAttempt?: PreviousAttempt;
+  /** Restored victim name (kept across replays, like bestRank). Only shown after the case was completed. */
+  restored?: RestoredIdentity;
   completed: boolean;
   clears: number;
   bestRank?: Rank;

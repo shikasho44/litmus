@@ -3,6 +3,7 @@ import { defineConfig, loadEnv } from 'vite';
 import preact from '@preact/preset-vite';
 import { janedoeApi } from './server/node/vite-plugin.js';
 import { htmlEnvDefaults } from './src/build/html-env.js';
+import { releaseGuard } from './src/build/release-guard.js';
 
 export default defineConfig(({ mode }) => {
   const root = process.cwd();
@@ -10,15 +11,23 @@ export default defineConfig(({ mode }) => {
   // Same rule as APP_CONFIG.API_MODE (src/config/app.ts). Compile-time so the http build
   // drops the embedded engine + case data completely (see src/api/index.ts).
   const embedded = (env.VITE_API_MODE || (mode === 'static' ? 'embedded' : 'http')) === 'embedded';
+  const official = /^(true|1)$/i.test(env.VITE_OFFICIAL_RELEASE_ENABLED ?? '');
 
-  // Multi-page: the game (index.html) + the admin console (admin.html, docs/admin.md).
-  // The static/embedded build has no server API, so the admin console is left out there.
+  // Multi-page: the game (index.html) + the admin console (admin.html, docs/admin.md §1).
+  // The admin page ships only where its API can answer: never in the static/embedded build (no
+  // server API), and in the http build only when ADMIN_TOKEN is set at build time (without it the
+  // production admin API is a 404, so the page would be dead weight that still exposes the admin
+  // route map). VITE_INCLUDE_ADMIN=true|false overrides. The dev server serves admin.html anyway.
+  const adminFlag = (env.VITE_INCLUDE_ADMIN ?? '').trim().toLowerCase();
+  const includeAdmin =
+    !embedded && (adminFlag ? adminFlag === 'true' || adminFlag === '1' : !!loadEnv(mode, root, 'ADMIN_TOKEN').ADMIN_TOKEN?.trim());
   const input: Record<string, string> = { index: resolve(root, 'index.html') };
-  if (!embedded) input.admin = resolve(root, 'admin.html');
+  if (includeAdmin) input.admin = resolve(root, 'admin.html');
 
   return {
     base: './',
-    plugins: [preact(), htmlEnvDefaults(), janedoeApi()],
+    // releaseGuard: fails the build if Markdown, case secrets or zod reach the output (see file).
+    plugins: [preact(), htmlEnvDefaults(), janedoeApi(), releaseGuard({ embedded, official })],
     define: { __JANEDOE_EMBEDDED__: JSON.stringify(embedded) },
     server: {
       port: 5190,

@@ -5,18 +5,23 @@
  *     per atomic answer: stamp slam → Holma mood + typed line → (findings: cut-in → card
  *     flies to the notebook → shards light) → (nearCore: pulse + shard flicker)
  *
+ * Pacing: the first FULL_FINDINGS finding reveals of a session get the full show (cut-in +
+ * card flight); after that ordinary findings use a compact flight that runs while the line
+ * is still typing. CORE findings always get the full cut-in. Enter/click fast-forwards; Enter
+ * with a question typed also queues it, so it is sent as soon as the presentation ends.
+ *
  * Everything the player earned is saved BEFORE the presentation runs, so a reload in the
  * middle of an animation never loses anything. The presentation only controls what is
  * revealed when (hidden answer ids, facts still "in flight", the shard count on stage).
  */
 import { batch, signal } from '@preact/signals';
 import type { AnswerClass } from '../../../shared/case-schema';
-import { ApiError, type AskAnswer, type AskResponse, type CasePublic, type HolmaMood, type PublicFact } from '../../../shared/api';
+import { ApiError, type AskAnswer, type AskResponse, type CasePublic, type HolmaMood, type ProgressSnapshot, type PublicFact } from '../../../shared/api';
 import { api } from '../../api';
 import { audio } from '../../audio';
 import { fx } from '../../fx';
 import { motionReduced } from '../../fx/motion';
-import { bank, pickLine, resolveLine, type ResolvedLine } from '../../lib/lines';
+import { pickLine, type ResolvedLine } from '../../lib/lines';
 import { layout } from '../../lib/viewport';
 import { addFacts, addHint, addMemos, appendLog, getCaseProgress, newLogId, setToken } from '../../state/save';
 import type { LogEntry } from '../../state/types';
@@ -39,7 +44,13 @@ export interface FlightRequest {
   id: number;
   facts: PublicFact[];
   core: boolean;
+  /** Short flight (no cut-in before it): used once the player has seen a few full reveals. */
+  compact: boolean;
   resolve: () => void;
+}
+/** The server could not verify the saved token: the player decides (retry / start over). */
+export interface TokenTrouble {
+  source: 'ask' | 'hint';
 }
 export interface Whisper {
   level: number;
@@ -65,10 +76,62 @@ const IDLE_MS = (() => {
   }
 })();
 const RATE_WAIT_MS = 8_000;
+/** Finding reveals per session that get the full cut-in + flight before the compact treatment. */
+const FULL_FINDINGS = 2;
+/** Presentations (ever, per browser) that show the 「クリック / Enter で早送り」 hint. */
+const FF_HINT_KEY = 'janedoe:ffhint';
+const FF_HINT_TIMES = 3;
+const STAMP_HOLD = 0.85;
 
-function lastPiece(line: string) {
-  const parts = line.split('\n').map((s) => s.trim()).filter(Boolean);
-  return parts[parts.length - 1] ?? '';
+function ffHintLeft(): boolean {
+  try {
+    return Number(localStorage.getItem(FF_HINT_KEY) ?? 0) < FF_HINT_TIMES;
+  } catch {
+    return false;
+  }
+}
+function ffHintSeen() {
+  try {
+    localStorage.setItem(FF_HINT_KEY, String(Number(localStorage.getItem(FF_HINT_KEY) ?? 0) + 1));
+  } catch {
+    /* per-viewer convenience only */
+  }
+}
+
+/**
+ * Sizes the judgement stamp from the stage: the fx stamp is ≈2.6× its font size tall, so a
+ * font size of 27% of the stage height keeps the slam inside the stage frame (1280×720, phone
+ * keyboard open) while big screens still get the full-size stamp. The size classes' own values
+ * (src/ui/stamp.css) are the upper bound. Applied through --iv-stamp-s (investigation.css).
+ */
+function fitStamp(narrow: boolean): 'lg' | 'xl' {
+  const r = document.querySelector<HTMLElement>('[data-stage]')?.getBoundingClientRect();
+  const h = r && r.height > 0 ? r.height : 400;
+  const vw = window.innerWidth;
+  const clamp = (lo: number, v: number, hi: number) => Math.max(lo, Math.min(hi, v));
+  const cap = narrow ? clamp(46, vw * 0.14, 72) : clamp(80, vw * 0.11, 150);
+  const px = Math.round(clamp(34, h * 0.27, cap));
+  document.documentElement.style.setProperty('--iv-stamp-s', `${px}px`);
+  return narrow ? 'lg' : 'xl';
+}
+
+/**
+ * Which answers are "near core" moments. The engine flags them per answer (AskAnswer.nearCore:
+ * a core hypothesis confirmed for the first time, or the nearCore state switching on). Fallback
+ * for a server that does not send the flag: when the snapshot's nearCore flipped on this turn
+ * and no answer claims it, the last non-support answer gets it (the old behaviour).
+ */
+export function nearFlags(answers: AskAnswer[], wasNear: boolean, snap: ProgressSnapshot | undefined): boolean[] {
+  const flags = answers.map((a) => a.nearCore === true && a.notice !== 'support');
+  if (!flags.some(Boolean) && !wasNear && snap?.nearCore) {
+    for (let i = answers.length - 1; i >= 0; i--) {
+      if (answers[i].notice !== 'support') {
+        flags[i] = true;
+        break;
+      }
+    }
+  }
+  return flags;
 }
 
 export type Controller = ReturnType<typeof createController>;
@@ -104,9 +167,19 @@ export function createController(caseId: string) {
   const announce = signal('');
   const inputText = signal('');
   const flight = signal<FlightRequest | null>(null);
+  /** Enter was pressed with a question typed during a presentation → send it when it ends. */
+  const queued = signal(false);
+  /** Show the one-time 「クリック / Enter で早送り」 hint during this presentation. */
+  const ffHint = signal(false);
+  /** Answer ids whose small verdict chips wait until the big stamp starts to leave. */
+  const chipHold = signal<Set<string>>(new Set());
+  /** A bad token is waiting for the player's decision (dialog). */
+  const tokenTrouble = signal<TokenTrouble | null>(null);
 
   let skipping = false;
   let seq = 0;
+  /** Finding reveals shown in this session (the first FULL_FINDINGS get the full treatment). */
+  let findingShows = 0;
   let lastActivity = Date.now();
   let idleCount = 0;
   let idleAlt = 0;
@@ -131,13 +204,6 @@ export function createController(caseId: string) {
   function setPub(p: CasePublic | undefined) {
     pub.value = p;
     if (p && !presenting.peek()) shownProgress.value = shardProgress(p, progress()?.factOrder ?? [], progress()?.snapshot?.progress ?? 0);
-  }
-
-  function nearCoreLines(): Set<string> {
-    const s = new Set<string>();
-    for (const l of bank('nearCore')) s.add(resolveLine(l).text.trim());
-    for (const t of pub.peek()?.holmaLines?.nearCore ?? []) s.add(t.trim());
-    return s;
   }
 
   function waitTyped(id: string, text: string): Promise<void> {
@@ -167,11 +233,43 @@ export function createController(caseId: string) {
     if (idleLine.peek()) idleLine.value = null;
   }
 
+  /* ---------------- verdict chips ---------------- */
+  const heldClass = new Map<string, AnswerClass>();
+  function holdChip(id: string, answerClass: AnswerClass) {
+    heldClass.set(id, answerClass);
+    const s = new Set(chipHold.peek());
+    s.add(id);
+    chipHold.value = s;
+  }
+  function releaseAllChips() {
+    const ids = [...chipHold.peek()];
+    if (!ids.length) return;
+    const last = heldClass.get(ids[ids.length - 1]);
+    heldClass.clear();
+    batch(() => {
+      chipHold.value = new Set();
+      const q = stageQ.peek();
+      if (q && !q.answerClass && last) stageQ.value = { ...q, answerClass: last };
+    });
+  }
+  /** The big stamp is leaving → the small chips (stage caption + chat row) may appear. */
+  function releaseChip(id: string, answerClass: AnswerClass) {
+    if (!chipHold.peek().has(id)) return;
+    heldClass.delete(id);
+    batch(() => {
+      const s = new Set(chipHold.peek());
+      s.delete(id);
+      chipHold.value = s;
+      const q = stageQ.peek();
+      if (q && !q.answerClass) stageQ.value = { ...q, answerClass };
+    });
+  }
+
   /* ---------------- finding sequence ---------------- */
-  function fly(facts: PublicFact[], core: boolean): Promise<void> {
+  function fly(facts: PublicFact[], core: boolean, compact: boolean): Promise<void> {
     return new Promise((resolve) => {
       if (skipping) return resolve();
-      flight.value = { id: ++seq, facts, core, resolve };
+      flight.value = { id: ++seq, facts, core, compact, resolve };
     });
   }
 
@@ -182,19 +280,25 @@ export function createController(caseId: string) {
     f.resolve();
   }
 
-  async function findingSequence(facts: PublicFact[], landedIds: string[]) {
+  /** Is the next reveal of these facts compact? (ordinary findings after the first few) */
+  function compactFor(facts: PublicFact[]) {
+    return !facts.some((f) => f.importance >= 3) && findingShows >= FULL_FINDINGS;
+  }
+
+  async function findingSequence(facts: PublicFact[], landedIds: string[], compact: boolean) {
     const core = facts.some((f) => f.importance >= 3);
+    findingShows++;
     if (!skipping) {
       if (core) {
         fx.flash('#FF2E63', { opacity: 0.32, duration: 0.5 });
         fx.speedLines(1100, { kind: 'radial', color: 'rgba(255,46,99,0.55)' });
         fx.shake(1.1, 0.42);
-        await fx.cutIn({ text: '核心所見', en: 'CORE FINDING', tone: 'alarm', character: 'holma', mood: 'surprised', hold: 0.95 });
-      } else {
+        await fx.cutIn({ text: '核心所見', en: 'CORE FINDING', tone: 'alarm', character: 'holma', mood: 'surprised', hold: 0.9 });
+      } else if (!compact) {
         await fx.cutIn({ text: '所見入手', en: 'NEW FINDING', tone: 'formalin', hold: 0.42 });
       }
     }
-    await fly(facts, core);
+    await fly(facts, core, compact && !core);
     audio.sfx(core ? 'findingCore' : 'finding');
     batch(() => {
       const next = new Set(arriving.peek());
@@ -207,14 +311,17 @@ export function createController(caseId: string) {
   }
 
   /* ---------------- presentation ---------------- */
-  async function present(answers: AskAnswer[], entries: Extract<LogEntry, { kind: 'answer' }>[], res: AskResponse, wasNear: boolean) {
+  async function present(answers: AskAnswer[], entries: Extract<LogEntry, { kind: 'answer' }>[], res: AskResponse, near: boolean[]) {
     presenting.value = true;
     skipping = false;
-    const nearSet = nearCoreLines();
     const landed = new Set(progress()?.factOrder ?? []);
     for (const a of answers) for (const f of a.unlocked) landed.delete(f.id);
     let nearShown = false;
     const narrow = layout.peek() === 'narrow';
+    if (answers.some((a) => a.unlocked.length) && ffHintLeft()) {
+      ffHint.value = true;
+      ffHintSeen();
+    }
 
     for (let i = 0; i < answers.length; i++) {
       if (disposed) return;
@@ -222,9 +329,20 @@ export function createController(caseId: string) {
       const e = entries[i];
       const support = a.notice === 'support';
       let stampDone: Promise<void> = Promise.resolve();
+      /** Resolves as the big stamp starts to leave (or is gone). */
+      let stampLeaving: Promise<void> = Promise.resolve();
+      let chipTimer: ReturnType<typeof setTimeout> | undefined;
       if (!support && !skipping) {
-        stageQ.value = { ...(stageQ.peek() ?? { n: 0, text: a.question }), answerClass: a.answerClass };
-        stampDone = fx.stamp(a.answerClass, { size: narrow ? 'lg' : 'xl', hold: 0.85 });
+        // the big stamp speaks first; the small chips (caption, chat row) follow as it leaves
+        stageQ.value = { ...(stageQ.peek() ?? { n: 0, text: a.question }), answerClass: undefined };
+        holdChip(e.id, a.answerClass);
+        stampDone = fx.stamp(a.answerClass, { size: fitStamp(narrow), hold: STAMP_HOLD });
+        let leave = () => {};
+        stampLeaving = Promise.race([stampDone, new Promise<void>((r) => (leave = r))]);
+        chipTimer = setTimeout(() => {
+          releaseChip(e.id, a.answerClass);
+          leave();
+        }, (0.25 + STAMP_HOLD) * 1000);
         await wait(motionReduced() ? 60 : 230);
       } else if (!support) {
         stageQ.value = { ...(stageQ.peek() ?? { n: 0, text: a.question }), answerClass: a.answerClass };
@@ -241,16 +359,27 @@ export function createController(caseId: string) {
         talking.value = !skipping;
       });
       announce.value = support ? `ホルマ：${a.line}` : `判定：${STAMP_META[a.answerClass].sr}。ホルマ：${a.line.replace(/\n/g, ' ')}`;
-      if (!skipping) await Promise.all([stampDone, waitTyped(e.id, a.line)]);
-      talking.value = false;
+      const typed = (skipping ? Promise.resolve() : waitTyped(e.id, a.line)).then(() => {
+        talking.value = false;
+      });
+      const compact = a.unlocked.length > 0 && compactFor(a.unlocked);
+      // a compact card already pops while the stamp fades out; everything else waits for it to go
+      if (!skipping) await (compact ? stampLeaving : stampDone);
+      clearTimeout(chipTimer);
+      if (!support) releaseChip(e.id, a.answerClass);
 
       if (a.unlocked.length) {
         a.unlocked.forEach((f) => landed.add(f.id));
-        await findingSequence(a.unlocked, [...landed]);
-      }
+        // compact: the card flies while Holma is still talking; full: after the line
+        if (compact) await Promise.all([findingSequence(a.unlocked, [...landed], true), typed]);
+        else {
+          await typed;
+          await findingSequence(a.unlocked, [...landed], false);
+        }
+      } else await typed;
+      talking.value = false;
 
-      const isNear = !support && (nearSet.has(lastPiece(a.line)) || (!wasNear && res.progress.nearCore && !nearShown && i === answers.length - 1));
-      if (isNear && !nearShown) {
+      if (near[i] && !nearShown) {
         nearShown = true;
         nearTick.value++;
         if (!skipping) {
@@ -263,9 +392,11 @@ export function createController(caseId: string) {
     batch(() => {
       hidden.value = new Set();
       arriving.value = new Set();
+      releaseAllChips();
       shownProgress.value = shardProgress(pub.peek(), progress()?.factOrder ?? [], res.progress.progress);
       presenting.value = false;
       talking.value = false;
+      ffHint.value = false;
     });
     skipping = false;
   }
@@ -274,10 +405,20 @@ export function createController(caseId: string) {
   function fastForward() {
     if (!presenting.peek()) return;
     skipping = true;
-    finishTick.value++;
+    batch(() => {
+      finishTick.value++;
+      ffHint.value = false;
+      releaseAllChips();
+    });
     typeWaiters.forEach((done) => done());
     const f = flight.peek();
     if (f) flightDone(f.id);
+  }
+
+  /** Enter with a question typed while the presentation plays: send it once it is over. */
+  function queueSend() {
+    if (!presenting.peek()) return;
+    queued.value = true;
   }
 
   /* ---------------- ask ---------------- */
@@ -324,8 +465,9 @@ export function createController(caseId: string) {
     }
     if (disposed) return false;
 
+    const near = nearFlags(res.answers, wasNear, res.progress);
     const entries = res.answers.map(
-      (a): Extract<LogEntry, { kind: 'answer' }> => ({
+      (a, i): Extract<LogEntry, { kind: 'answer' }> => ({
         id: newLogId(),
         at: Date.now(),
         kind: 'answer',
@@ -336,6 +478,7 @@ export function createController(caseId: string) {
         unlocked: a.unlocked.map((f) => f.id),
         memos: a.memos.map((m) => m.id),
         ...(a.notice ? { notice: a.notice, degraded: a.notice === 'degraded' } : {}),
+        ...(near[i] ? { nearCore: true } : {}),
       }),
     );
     const facts = res.answers.flatMap((a) => a.unlocked);
@@ -355,8 +498,13 @@ export function createController(caseId: string) {
       pending.value = null;
       asking.value = false;
     });
-    await present(res.answers, entries, res, wasNear);
+    await present(res.answers, entries, res, near);
     touch();
+    if (queued.peek() && !disposed) {
+      queued.value = false;
+      const next = inputText.peek().trim();
+      if (next) void ask(next);
+    }
     return true;
   }
 
@@ -379,9 +527,9 @@ export function createController(caseId: string) {
       return;
     }
     if (code === 'bad_token') {
-      const ok = await restartCaseAfterBadToken(caseId, pub.peek());
-      syncFromSave();
-      toast(ok ? '記録の照合に失敗したため、この事件を最初からやり直します。' : '記録の照合に失敗しました。通信を確かめて、もう一度どうぞ。', { tone: 'warn', duration: 5200 });
+      // never wipe the case silently: the player chooses (retry / start over with a backup)
+      tokenTrouble.value = { source: 'ask' };
+      announce.value = '記録を照合できませんでした。もう一度試すか、最初からやり直すかを選んでください。';
       return;
     }
     const l = pickLine('error.network');
@@ -392,6 +540,28 @@ export function createController(caseId: string) {
   function retry(text?: string) {
     const t = (inputText.peek() || text || '').trim();
     if (t) void ask(t);
+  }
+
+  /**
+   * The player's answer to the bad-token dialog.
+   *   retry   — try the same request again with the saved token (a transient 401 recovers)
+   *   restart — back the attempt up (notebook 「前回の記録」), start the case over, keep the input
+   */
+  async function resolveTokenTrouble(action: 'retry' | 'restart' | 'dismiss') {
+    const t = tokenTrouble.peek();
+    if (!t) return;
+    tokenTrouble.value = null;
+    if (action === 'dismiss') return;
+    if (action === 'retry') {
+      if (t.source === 'hint') void requestHint();
+      else retry();
+      return;
+    }
+    const ok = await restartCaseAfterBadToken(caseId, pub.peek());
+    if (disposed) return;
+    findingShows = 0;
+    syncFromSave();
+    toast(ok ? '新しい記録で捜査を始め直しました。前回の記録は捜査ノートで読み返せます。' : '記録を作り直せませんでした。通信を確かめて、もう一度どうぞ。', { tone: ok ? 'info' : 'warn', duration: 4200 });
   }
 
   /* ---------------- hints ---------------- */
@@ -422,9 +592,7 @@ export function createController(caseId: string) {
     } catch (e) {
       const code = e instanceof ApiError ? e.code : 'network';
       if (code === 'bad_token') {
-        await restartCaseAfterBadToken(caseId, pub.peek());
-        syncFromSave();
-        toast('記録の照合に失敗したため、この事件を最初からやり直します。', { tone: 'warn', duration: 5200 });
+        tokenTrouble.value = { source: 'hint' };
       } else {
         const l = pickLine(code === 'rate_limited' ? 'error.rateLimited' : 'error.network');
         toast(l.text, { tone: 'warn', icon: 'whisper' });
@@ -468,6 +636,7 @@ export function createController(caseId: string) {
     typeWaiters.forEach((d) => d());
     const f = flight.peek();
     if (f) f.resolve();
+    document.documentElement.style.removeProperty('--iv-stamp-s');
   }
 
   return {
@@ -495,12 +664,18 @@ export function createController(caseId: string) {
     announce,
     inputText,
     flight,
+    queued,
+    ffHint,
+    chipHold,
+    tokenTrouble,
     // actions
     setPub,
     syncFromSave,
     ask,
     retry,
     fastForward,
+    queueSend,
+    resolveTokenTrouble,
     onTyped,
     flightDone,
     requestHint,

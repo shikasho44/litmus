@@ -1,7 +1,8 @@
 // 死因審問 (inquest) visual QA — drives the whole inquest in a real browser and screenshots
 // every state.
 //   node scripts/shots-inquest.mjs                 c01 + c02 at pc/sp, c01 at pc720, c02 at sp360,
-//                                                  plus resume, suspension, safety and reduced-motion checks
+//                                                  plus resume, suspension, safety, reduced-motion,
+//                                                  grant-a-new-card, bad-token and error/loading checks
 //   node scripts/shots-inquest.mjs --quick         c01 at pc and sp only
 //   node scripts/shots-inquest.mjs --case c02 --size sp
 // Uses the dev server on :5192 (starts `vite --port 5192 --strictPort` itself if nothing answers).
@@ -48,6 +49,7 @@ const SIZES = {
   pc720: { viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 },
   sp: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
   sp360: { viewport: { width: 360, height: 740 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  sp320: { viewport: { width: 320, height: 640 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
 };
 
 /* ------------------------------------------------------------------ server */
@@ -87,7 +89,7 @@ async function tick(page, ms) {
 async function shot(page, name) {
   await sleep(250); // let CSS-only transitions settle (they run on real time)
   await overflow(page, name);
-  await page.screenshot({ path: resolve(out, `${name}.png`) });
+  await page.screenshot({ path: resolve(out, `${name}.png`), timeout: 180000 });
   console.log(`  ✓ ${name}.png`);
 }
 async function overflow(page, label) {
@@ -122,7 +124,7 @@ const state = (page) =>
   });
 
 /** Advance time until pred(state); finishes and advances dialogue lines on the way when asked. */
-async function until(page, pred, { advance = true, timeout = 120000, label = 'condition', step = 120 } = {}) {
+async function until(page, pred, { advance = true, timeout = 300000, label = 'condition', step = 120 } = {}) {
   const t0 = Date.now();
   while (Date.now() - t0 < timeout) {
     const st = await state(page);
@@ -137,7 +139,7 @@ async function until(page, pred, { advance = true, timeout = 120000, label = 'co
   }
   throw new Error(`timeout waiting for ${label}: ${JSON.stringify(await state(page))}`);
 }
-async function untilSel(page, sel, { timeout = 60000, gone = false } = {}) {
+async function untilSel(page, sel, { timeout = 240000, gone = false } = {}) {
   const t0 = Date.now();
   while (Date.now() - t0 < timeout) {
     const has = await page.evaluate((s) => !!document.querySelector(s), sel);
@@ -157,7 +159,7 @@ async function open(page, caseId, stage = 'investigated') {
     await sleep(20);
   }
   // Freeze page time: from here on it only moves when the script ticks it.
-  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 100);
+  await freeze(page);
   await page.evaluate(
     async ({ caseId, stage }) => {
       const J = window.__JD;
@@ -181,7 +183,20 @@ async function reload(page) {
     await tick(page, 100);
     await sleep(20);
   }
-  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 100);
+  await freeze(page);
+}
+
+/** clock.pauseAt(now + margin); on a busy machine the page clock can overtake the margin — retry wider. */
+async function freeze(page) {
+  for (const margin of [100, 600, 2000, 5000]) {
+    try {
+      await page.clock.pauseAt((await page.evaluate(() => Date.now())) + margin);
+      return;
+    } catch (e) {
+      if (!/past/.test(String(e?.message))) throw e;
+    }
+  }
+  throw new Error('could not pause the page clock');
 }
 
 /** Lock the noise that contains `span` in statement `stmtId` (jumps to it first). */
@@ -221,18 +236,24 @@ async function pickEvidence(page, factId, narrow) {
 }
 
 async function pickOption(page, panelId, text, narrow) {
-  await page.locator(`[data-panel-id="${panelId}"]`).scrollIntoViewIfNeeded();
-  await page.click(`[data-panel-id="${panelId}"]`);
   const scope = narrow ? '.sheet-root ' : '.recon__side ';
+  // after a pick the chooser moves on to the next blank by itself: only open the panel if needed
+  if (!(await page.$(`${scope}[data-choice-for="${panelId}"]`))) {
+    if (narrow && (await page.$('.sheet-root'))) {
+      await page.keyboard.press('Escape');
+      await untilSel(page, '.sheet-root', { gone: true });
+    }
+    await page.locator(`[data-panel-id="${panelId}"]`).scrollIntoViewIfNeeded();
+    await page.click(`[data-panel-id="${panelId}"]`);
+  }
   await untilSel(page, `${scope}[data-choice-for="${panelId}"]`);
   await tick(page, narrow ? 400 : 150);
   await page.locator(`${scope}.choice__opt`, { hasText: text }).first().click();
-  if (narrow) await untilSel(page, '.sheet-root', { gone: true });
-  await tick(page, 200);
+  await tick(page, 700);
 }
 
 /** Keyboard only: ↑↓ to the statement, ←→ to the noise, E to the finding, Enter to fire. */
-async function keyboardShot(page, round) {
+async function keyboardShot(page, round, { focusRow } = {}) {
   const { statement, span, fact } = round.answer;
   const want = round.statements.findIndex((s) => s.id === statement);
   await page.evaluate(() => document.activeElement?.blur?.());
@@ -251,6 +272,14 @@ async function keyboardShot(page, round) {
     });
     if (t && t.st === statement && (t.text.includes(span) || span.includes(t.text))) break;
   }
+  if (focusRow) {
+    // a mouse click on some other finding first leaves the focus on that magazine row:
+    // E must carry the focus along, and Enter must fire (not re-load the clicked row)
+    const other = page.locator(`.iq-mag .evl__row:not([data-fact-id="${fact}"])`).first();
+    await other.scrollIntoViewIfNeeded();
+    await other.click();
+    await tick(page, 150);
+  }
   for (let k = 0; k < 80; k++) {
     const f = await page.evaluate(() => document.querySelector('[data-loaded-fact]')?.getAttribute('data-loaded-fact'));
     if (f === fact) break;
@@ -258,10 +287,50 @@ async function keyboardShot(page, round) {
     await tick(page, 40);
   }
   await tick(page, 200);
+  if (focusRow) {
+    const ae = await page.evaluate(() => document.activeElement?.getAttribute('data-fact-id'));
+    if (ae && ae !== fact) problems.push(`keyboard: focus stayed on ${ae} after E selected ${fact}`);
+  }
   await page.keyboard.press('Enter');
 }
 
+/** Rect of the first element matching `sel` (null when absent / hidden). */
+const rect = (page, sel) =>
+  page.evaluate((q) => {
+    const e = document.querySelector(q);
+    if (!e) return null;
+    const r = e.getBoundingClientRect();
+    if (!r.width || !r.height || getComputedStyle(e).visibility === 'hidden') return null;
+    return { x: r.left, y: r.top, w: r.width, h: r.height, b: r.bottom, r: r.right };
+  }, sel);
+const overlaps = (a, b) => !!a && !!b && a.x < b.r - 1 && b.x < a.r - 1 && a.y < b.b - 1 && b.y < a.b - 1;
+
+/** Phone touch targets of the debate must be ≥ 44 × 44 (visual size may be smaller). */
+async function touchTargets(page, tag) {
+  const small = await page.evaluate(() => {
+    const out = [];
+    for (const sel of ['.debate__dot', '.debate__pause', '.debate__navbtn', '.iq-dock__loaded', '[data-fire]', '[data-beg]']) {
+      for (const e of document.querySelectorAll(sel)) {
+        const r = e.getBoundingClientRect();
+        if (!r.width || getComputedStyle(e).display === 'none' || getComputedStyle(e).visibility === 'hidden') continue;
+        if (r.width < 43.5 || r.height < 43.5) out.push(`${sel} ${Math.round(r.width)}x${Math.round(r.height)}`);
+      }
+    }
+    // the noise: the word plus its invisible hit area (::after of .noise__txt)
+    for (const n of document.querySelectorAll('.band:not(.is-leaving) .noise')) {
+      const r = n.getBoundingClientRect();
+      const a = getComputedStyle(n.querySelector('.noise__txt'), '::after');
+      const h = r.height - parseFloat(a.top) - parseFloat(a.bottom);
+      if (h < 43.5) out.push(`.noise ${Math.round(r.width)}x${Math.round(h)}`);
+    }
+    return out;
+  });
+  if (small.length) problems.push(`${tag}: touch targets below 44px → ${[...new Set(small)].join(', ')}`);
+}
+
 function watch(page, tag) {
+  // SwiftShader raster on a busy machine can take many seconds per frame: be patient.
+  page.setDefaultTimeout(120000);
   page.on('pageerror', (e) => problems.push(`${tag} pageerror: ${e.message}`));
   page.on('console', (m) => {
     if (m.type() === 'error') problems.push(`${tag} console: ${m.text()}`);
@@ -293,9 +362,15 @@ async function runCase(browser, key, sizeKey, opts = {}) {
     await page.evaluate(() => window.__JD.skipText());
     await tick(page, 300);
     await shot(page, name('round-intro-line'));
+    if (narrow) {
+      const next = await rect(page, '.iq__dialogue .dlg__next');
+      if (next && (next.w < 43.5 || next.h < 43.5)) problems.push(`${tag}: dialogue advance button ${Math.round(next.w)}x${Math.round(next.h)} (< 44)`);
+      if (await rect(page, '.iq-dock')) problems.push(`${tag}: the dock shows under a dialogue line`);
+    }
     await until(page, (s) => s.step === 'play' && s.dlg === 'off', { label: 'debate play' });
     await tick(page, 1200);
     await shot(page, name('debate'));
+    if (narrow) await touchTargets(page, tag);
 
     const round = c.debate[0];
     const ok = [round.answer.fact, ...(round.alsoAccept ?? [])];
@@ -332,7 +407,10 @@ async function runCase(browser, key, sizeKey, opts = {}) {
 
     // correct shot (mouse / touch, or keyboard only)
     if (opts.keyboard) {
-      await keyboardShot(page, round);
+      await keyboardShot(page, round, { focusRow: true });
+      await tick(page, 120);
+      const st = await state(page);
+      if (st.step !== 'firing' && st.step !== 'success' && !st.cut) problems.push(`${tag}: keyboard Enter did not fire (step ${st.step})`);
       await shot(page, name('keyboard-fire'));
     } else {
       await lockNoise(page, round, round.answer.statement, round.answer.span);
@@ -345,13 +423,28 @@ async function runCase(browser, key, sizeKey, opts = {}) {
     await untilSel(page, '.fx-cutin');
     await tick(page, 450);
     await shot(page, name('refute-cutin'));
+    if (opts.skip) {
+      // cut-ins can be skipped (Enter)
+      await page.keyboard.press('Enter');
+      await tick(page, 260);
+      if (await page.$('.fx-cutin')) problems.push(`${tag}: Enter did not skip the 反証！ cut-in`);
+    }
     await until(page, (s) => s.step === 'success' && s.dlg === 'on', { advance: false, label: 'success lines' });
     await page.evaluate(() => window.__JD.skipText());
     await tick(page, 300);
     await shot(page, name('success-line'));
+    if (!(await page.$('.iq__dialogue.speaker-jane'))) problems.push(`${tag}: the corrected memory is not spoken by Jane`);
+    if (narrow && (await rect(page, '.iq-dock'))) problems.push(`${tag}: the dock shows under Jane's line`);
     await until(page, (s) => s.card === 'on', { label: 'memory restored card' });
     await tick(page, 700);
     await shot(page, name('memory-restored'));
+    if (opts.skip) {
+      await page.keyboard.press(' ');
+      await tick(page, 160);
+      // (the next round's card may already be up: check this one is gone)
+      if (await page.evaluate(() => [...document.querySelectorAll('.tcard__title')].some((e) => e.textContent.includes('記憶修復'))))
+        problems.push(`${tag}: Space did not skip the 記憶修復 card`);
+    }
 
     // later rounds
     for (let r = 1; r < c.debate.length; r++) {
@@ -359,6 +452,7 @@ async function runCase(browser, key, sizeKey, opts = {}) {
       await until(page, (s) => s.step === 'play' && s.dlg === 'off' && s.card === 'off', { label: `round ${r + 1}` });
       await tick(page, 900);
       if (r === 1) await shot(page, name(`round${r + 1}`));
+      if (r === 1 && (await page.$('[data-loaded-fact]'))) problems.push(`${tag}: round ${r + 1} starts with last round's finding still loaded`);
       if (opts.grant && r === 1) {
         await page.click('[data-beg]');
         await untilSel(page, '[data-beg-confirm]');
@@ -375,25 +469,51 @@ async function runCase(browser, key, sizeKey, opts = {}) {
       await until(page, (s) => s.step === 'success' || s.phase === 'verdict', { advance: false, label: `hit ${r + 1}` });
     }
 
-    // verdict
+    // verdict: Holma's prompt first — the sheet must not steal the keyboard meanwhile
+    await until(page, (s) => s.phase === 'verdict' && s.dlg === 'on' && !s.cut, { label: 'verdict prompt' });
+    await tick(page, 300);
+    {
+      const ae = await page.evaluate(() => document.activeElement?.id);
+      if (ae === 'verdict-text') problems.push(`${tag}: the verdict sheet has focus while Holma's prompt is on screen`);
+      if (!narrow) {
+        const d = await rect(page, '.iq__dialogue');
+        const btn = await rect(page, '[data-verdict-submit]');
+        if (overlaps(d, btn)) problems.push(`${tag}: Holma's prompt covers the 宣告する button`);
+      }
+      await page.keyboard.press('Enter');
+      await tick(page, 200);
+      await page.keyboard.press('Enter');
+      await tick(page, 300);
+      const v = await page.inputValue('#verdict-text');
+      if (v !== '') problems.push(`${tag}: Enter during Holma's prompt typed into the verdict (${JSON.stringify(v)})`);
+    }
     await until(page, (s) => s.phase === 'verdict' && s.vstep === 'write' && s.dlg === 'off' && !s.cut, { label: 'verdict' });
     await tick(page, 2400);
     await shot(page, name('verdict'));
+    if (!narrow && (await page.evaluate(() => document.activeElement?.id)) !== 'verdict-text') problems.push(`${tag}: the verdict sheet is not focused once Holma is done`);
     await page.fill('#verdict-text', INCOMPLETE[key]);
     await tick(page, 200);
     await page.click('[data-verdict-submit]');
     await tick(page, 900);
     await shot(page, name('verdict-judging'));
     await until(page, (s) => s.vstep === 'result', { advance: false, label: 'verdict result' });
-    await tick(page, 1100);
+    await tick(page, 750); // after the slam, before the stamp becomes a corner seal
     await shot(page, name('verdict-result'));
     await until(page, (s) => s.dlg === 'on', { advance: false, label: 'verdict lines' });
     await page.evaluate(() => window.__JD.skipText());
     await tick(page, 250);
+    await sleep(700); // smooth scroll (phone) runs on real time
     await shot(page, name('verdict-lines'));
+    {
+      const d = await rect(page, '.iq__dialogue');
+      const chk = await rect(page, '.vresult');
+      if (overlaps(d, chk)) problems.push(`${tag}: Holma's verdict line covers the element checklist`);
+      if (!(await page.$('.vsheet__stamp.is-sealed'))) problems.push(`${tag}: the verdict stamp did not shrink to a corner seal`);
+    }
     await until(page, (s) => s.vstep === 'write' && s.dlg === 'off', { label: 'rewrite' });
     await tick(page, 400);
     await shot(page, name('verdict-retry'));
+    if (!(await page.$('.vnote'))) problems.push(`${tag}: Holma's pointed note is gone after the verdict lines`);
 
     if (opts.reloadAtVerdict) {
       await tick(page, 700); // draft autosave debounce
@@ -434,11 +554,16 @@ async function runCase(browser, key, sizeKey, opts = {}) {
     await shot(page, name('recon'));
     const blanks = c.reconstruction.panels.filter((p) => p.choice);
     const first = blanks[0];
-    for (const p of blanks) {
+    for (const [i, p] of blanks.entries()) {
       const good = p.choice.options.find((o) => o.correct).text;
       const bad = p.choice.options.find((o) => !o.correct).text;
       await pickOption(page, p.id, p === first ? bad : good, narrow);
+      const nxt = blanks[i + 1];
+      if (nxt && !(await page.$(`[data-choice-for="${nxt.id}"]`))) problems.push(`${tag}: after picking ${p.id} the chooser did not move on to ${nxt.id}`);
     }
+    await untilSel(page, '.sheet-root', { gone: true });
+    await tick(page, 500);
+    if (!(await page.evaluate(() => document.activeElement?.hasAttribute('data-recon-submit')))) problems.push(`${tag}: 確定 is not focused after the last blank`);
     await shot(page, name('recon-picked'));
     await page.click('[data-recon-submit]');
     await until(page, (s) => s.dlg === 'on', { advance: false, label: 'recon wrong line' });
@@ -448,6 +573,8 @@ async function runCase(browser, key, sizeKey, opts = {}) {
     await until(page, (s) => s.dlg === 'off' && s.busy === 'off', { label: 'recon retry' });
     await tick(page, 300);
     await pickOption(page, first.id, first.choice.options.find((o) => o.correct).text, narrow);
+    await untilSel(page, '.sheet-root', { gone: true });
+    await tick(page, 300);
     await page.click('[data-recon-submit]');
     await until(page, (s) => s.phase === 'finale' && s.dlg === 'on', { advance: false, label: 'finale' });
     // advance a few narration lines so a middle frame is lit
@@ -519,6 +646,182 @@ async function runSuspend(browser, key, sizeKey) {
   }
 }
 
+/**
+ * 「ホルマに泣きつく」 for a card the player does NOT have: a token straight from the start of the
+ * case (stage 'fresh') holds none of the answer findings. The granted card must join the magazine,
+ * load itself, and win the round; round 2 must start with an empty chamber.
+ */
+async function runGrant(browser, key, sizeKey) {
+  const c = CASES[key];
+  const tag = `${key}-${sizeKey}-grant`;
+  const narrow = sizeKey.startsWith('sp');
+  let n = 0;
+  const name = (x) => `${tag}-${String(++n).padStart(2, '0')}-${x}`;
+  console.log(`[inquest] ${tag}`);
+  const ctx = await browser.newContext({ ...SIZES[sizeKey], locale: 'ja-JP' });
+  const page = await ctx.newPage();
+  watch(page, tag);
+  try {
+    await open(page, c.id, 'fresh');
+    for (const [r, rd] of c.debate.entries()) {
+      await until(page, (s) => s.phase === 'debate' && s.step === 'play' && s.dlg === 'off' && s.card === 'off' && !s.cut, { label: `round ${r + 1}` });
+      await tick(page, 700);
+      const have = await page.evaluate(({ id, f }) => !!window.__JD.getState().save.cases[id]?.facts?.[f], { id: c.id, f: rd.answer.fact });
+      if (have) problems.push(`${tag}: the fresh token already holds ${rd.answer.fact}`);
+      if (r > 0 && (await page.$('[data-loaded-fact]'))) problems.push(`${tag}: round ${r + 1} starts with a card loaded`);
+      await shot(page, name(`r${r + 1}-empty`));
+      await page.click('[data-beg]');
+      await untilSel(page, '[data-beg-confirm]');
+      await tick(page, 300);
+      if (r === 0) await shot(page, name('beg-confirm'));
+      await page.click('[data-beg-confirm]');
+      await until(page, (s) => s.busy === 'off' && !s.sheet, { advance: false, label: 'grant' });
+      await tick(page, 900);
+      await shot(page, name(`r${r + 1}-granted`));
+      const got = await page.evaluate(() => document.querySelector('[data-loaded-fact]')?.getAttribute('data-loaded-fact'));
+      if (got !== rd.answer.fact) problems.push(`${tag}: round ${r + 1}: granted card is not loaded (${got}, want ${rd.answer.fact})`);
+      if (!narrow && !(await page.$(`.iq-mag [data-fact-id="${rd.answer.fact}"].is-fresh`))) problems.push(`${tag}: round ${r + 1}: granted card is not in the magazine with a NEW mark`);
+      const save = await page.evaluate((id) => window.__JD.getState().save.cases[id], c.id);
+      if (!save.facts?.[rd.answer.fact]) problems.push(`${tag}: round ${r + 1}: granted card not stored in the notebook`);
+      if (save.inquest?.grants !== r + 1) problems.push(`${tag}: round ${r + 1}: grant count ${save.inquest?.grants}`);
+      // lock the answer and fire the granted card (the chamber is full: no drawer on phones)
+      await lockNoise(page, rd, rd.answer.statement, rd.answer.span);
+      await tick(page, 500);
+      if (await page.$('.sheet-root')) problems.push(`${tag}: the magazine opened although a card was loaded`);
+      await page.click('[data-fire]');
+      await until(page, (s) => s.step === 'success' || s.phase === 'verdict', { advance: false, label: `hit ${r + 1}` });
+      await until(page, (s) => s.dlg === 'on', { advance: false, label: `success ${r + 1}` });
+      if (r === 0) {
+        await page.evaluate(() => window.__JD.skipText());
+        await tick(page, 300);
+        await shot(page, name('success-line'));
+      }
+    }
+    await until(page, (s) => s.phase === 'verdict' && s.vstep === 'write' && s.dlg === 'off' && !s.cut, { label: 'verdict' });
+  } catch (e) {
+    problems.push(`${tag}: ${e.message.split('\n')[0]}`);
+    await page.screenshot({ path: resolve(out, `${tag}-FAIL.png`) }).catch(() => {});
+  } finally {
+    await ctx.close();
+  }
+}
+
+/** A token the server rejects (401 bad_token) during a shot / the verdict: a blocking dialog, then a clean restart. */
+async function runBadToken(browser, key, sizeKey, where) {
+  const c = CASES[key];
+  const tag = `${key}-${sizeKey}-badtoken-${where}`;
+  const narrow = sizeKey.startsWith('sp');
+  console.log(`[inquest] ${tag}`);
+  const ctx = await browser.newContext({ ...SIZES[sizeKey], locale: 'ja-JP' });
+  const page = await ctx.newPage();
+  watch(page, tag);
+  page.on('console', (m) => {
+    // the rejected call is expected to log a 401
+    const i = problems.indexOf(`${tag} console: ${m.text()}`);
+    if (m.type() === 'error' && /401|Unauthorized/.test(m.text()) && i >= 0) problems.splice(i, 1);
+  });
+  const tokenCalls = [];
+  page.on('response', (r) => {
+    if (/\/api\/token$/.test(new URL(r.url()).pathname)) tokenCalls.push(r.status());
+  });
+  try {
+    await open(page, c.id, where === 'verdict' ? 'debated' : 'investigated');
+    const bad = await page.evaluate((id) => {
+      const J = window.__JD;
+      const t = J.getState().save.cases[id].token;
+      const b = t.slice(0, -6) + (t.endsWith('AAAAAA') ? 'BBBBBB' : 'AAAAAA');
+      return b;
+    }, c.id);
+    if (where === 'shot') {
+      await until(page, (s) => s.step === 'play' && s.dlg === 'off', { label: 'play' });
+      await page.evaluate(({ id, bad }) => window.__JD.updateCase(id, { token: bad }), { id: c.id, bad });
+      const round = c.debate[0];
+      await lockNoise(page, round, round.answer.statement, round.answer.span);
+      await pickEvidence(page, round.answer.fact, narrow);
+      await page.click('[data-fire]');
+    } else {
+      await until(page, (s) => s.phase === 'verdict' && s.vstep === 'write' && s.dlg === 'off' && !s.cut, { label: 'verdict' });
+      // (the 死因宣告 cut-in may not have started yet: wait until the sheet can be written)
+      await untilSel(page, '#verdict-text:not([readonly])', { timeout: 60000 });
+      await page.evaluate(({ id, bad }) => window.__JD.updateCase(id, { token: bad }), { id: c.id, bad });
+      await page.fill('#verdict-text', INCOMPLETE[key]);
+      await page.click('[data-verdict-submit]');
+    }
+    await untilSel(page, '[data-badtoken-restart]', { timeout: 30000 });
+    await tick(page, 600);
+    await shot(page, `${tag}-01-dialog`);
+    if (!(await page.$('.modal[role="alertdialog"]'))) problems.push(`${tag}: the bad-token dialog is not an alertdialog`);
+    if (await page.$('[data-fire]:not([disabled])')) problems.push(`${tag}: FIRE stays enabled behind the bad-token dialog`);
+    if (await page.$('[data-verdict-submit]:not([disabled])')) problems.push(`${tag}: 宣告 stays enabled behind the bad-token dialog`);
+    const toTitle = where === 'verdict';
+    await page.click(toTitle ? '[data-badtoken-title]' : '[data-badtoken-restart]');
+    for (let i = 0; i < 200; i++) {
+      const h = await page.evaluate(() => location.hash);
+      if (toTitle ? !h.includes('inquest') : h.includes('#/investigation')) break;
+      await tick(page, 100);
+      await sleep(30);
+    }
+    const st = await page.evaluate((id) => ({ hash: location.hash, c: window.__JD.getState().save.cases[id] }), c.id);
+    if (toTitle ? st.hash.includes('inquest') : !st.hash.includes('#/investigation')) problems.push(`${tag}: did not leave the inquest (${st.hash})`);
+    if (st.c?.token === bad) problems.push(`${tag}: the dead token is still in the save`);
+    else if (!st.c?.token) problems.push(`${tag}: no fresh token after the restart (POST /api/token → ${JSON.stringify(tokenCalls)})`);
+    if (st.c?.stage !== 'investigation') problems.push(`${tag}: stage after restart is ${st.c?.stage}`);
+  } catch (e) {
+    problems.push(`${tag}: ${e.message.split('\n')[0]}`);
+    await page.screenshot({ path: resolve(out, `${tag}-FAIL.png`) }).catch(() => {});
+  } finally {
+    await ctx.close();
+  }
+}
+
+/** Loading and connection-error states of the inquest (the start call held back / failing). */
+async function runStatus(browser, key, sizeKey) {
+  const c = CASES[key];
+  const tag = `${key}-${sizeKey}-status`;
+  console.log(`[inquest] ${tag}`);
+  const ctx = await browser.newContext({ ...SIZES[sizeKey], locale: 'ja-JP' });
+  const page = await ctx.newPage();
+  watch(page, tag);
+  page.on('console', (m) => {
+    const i = problems.indexOf(`${tag} console: ${m.text()}`);
+    if (m.type() === 'error' && /Failed to load resource|ERR_FAILED|500/.test(m.text()) && i >= 0) problems.splice(i, 1);
+  });
+  try {
+    let release;
+    const gate = new Promise((r) => (release = r));
+    let mode = 'hold';
+    await page.route('**/api/inquest/start', async (route) => {
+      if (mode === 'hold') {
+        await gate;
+        return route.continue();
+      }
+      return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: { code: 'server', message: 'qa' } }) });
+    });
+    await open(page, c.id);
+    await untilSel(page, '.iqstat--loading');
+    await tick(page, 600);
+    await shot(page, `${tag}-01-loading`);
+    {
+      // the title slot shows the real case title (from the case file) or nothing — never a placeholder
+      const slot = await page.evaluate(() => [...document.querySelectorAll('.iq__top .iq__case')].map((e) => e.textContent.trim()));
+      if (slot.some((t) => !t || t === '死因審問')) problems.push(`${tag}: the case title slot shows a placeholder (${JSON.stringify(slot)})`);
+    }
+    mode = 'fail';
+    release();
+    await untilSel(page, '.iq-mag, .iq-dock, .fx-cutin', { timeout: 30000 });
+    // now make a reload fail
+    await reload(page);
+    await untilSel(page, '.iqstat--error', { timeout: 30000 });
+    await tick(page, 600);
+    await shot(page, `${tag}-02-error`);
+  } catch (e) {
+    problems.push(`${tag}: ${e.message.split('\n')[0]}`);
+    await page.screenshot({ path: resolve(out, `${tag}-FAIL.png`) }).catch(() => {});
+  } finally {
+    await ctx.close();
+  }
+}
+
 /** Reduced motion: the debate still reads and plays (no shake / flight / camera). */
 async function runReduced(browser, key, sizeKey) {
   const c = CASES[key];
@@ -534,6 +837,11 @@ async function runReduced(browser, key, sizeKey) {
     await tick(page, 600);
     await shot(page, `${tag}-01-debate`);
     const round = c.debate[0];
+    // switching statements never stacks two bands (the old one leaves at once)
+    await page.click('.debate__dot >> nth=1');
+    await tick(page, 120);
+    const bands = await page.evaluate(() => document.querySelectorAll('.band').length);
+    if (bands > 1) problems.push(`${tag}: ${bands} statement bands on screen at once`);
     await lockNoise(page, round, round.answer.statement, round.answer.span);
     await pickEvidence(page, round.answer.fact, sizeKey.startsWith('sp'));
     await page.click('[data-fire]');
@@ -561,14 +869,21 @@ try {
     plan.push(() => runCase(browser, 'c01', 'pc'), () => runCase(browser, 'c01', 'sp'));
   } else {
     const full = {
-      'c01-pc': () => runCase(browser, 'c01', 'pc', { reloadAfterMiss: true, reloadAtVerdict: true, safety: true }),
+      'c01-pc': () => runCase(browser, 'c01', 'pc', { reloadAfterMiss: true, reloadAtVerdict: true, safety: true, skip: true }),
       'c01-sp': () => runCase(browser, 'c01', 'sp'),
       'c02-pc': () => runCase(browser, 'c02', 'pc', { grant: true }),
       'c02-sp': () => runCase(browser, 'c02', 'sp', { grant: true }),
       'c01-pc720': () => runCase(browser, 'c01', 'pc720', { keyboard: true }),
       'c02-sp360': () => runCase(browser, 'c02', 'sp360'),
+      'c02-sp320': () => runCase(browser, 'c02', 'sp320'),
       suspend: () => runSuspend(browser, 'c01', 'pc'),
       reduced: () => runReduced(browser, 'c02', 'sp'),
+      'grant-pc': () => runGrant(browser, 'c01', 'pc'),
+      'grant-sp': () => runGrant(browser, 'c02', 'sp'),
+      'badtoken-shot': () => runBadToken(browser, 'c01', 'pc', 'shot'),
+      'badtoken-verdict': () => runBadToken(browser, 'c03', 'sp', 'verdict'),
+      'status-pc': () => runStatus(browser, 'c01', 'pc'),
+      'status-sp': () => runStatus(browser, 'c01', 'sp'),
     };
     for (const [k, fn] of Object.entries(full)) if (!ONLY || ONLY.includes(k)) plan.push(fn);
   }

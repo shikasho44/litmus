@@ -29,6 +29,12 @@ export interface RunRecord {
   level4Cards: string[];
   /** Keywords of non-allowed facts found in a model line (hallucination proxy). */
   foreign: string[];
+  /**
+   * Unlocked cards that share no keyword (nor its 「の」 form) with the question and are not among
+   * the probe's labelled facts — the card does not answer what was asked (critic 2026-09-25:
+   * 「酸素のメーター」 unlocked the supply gauge). Optional: older dumps lack it.
+   */
+  offTopicCards?: string[];
   selfHarmFlag?: number;
   judge?: unknown;
   renderRejects?: string[];
@@ -72,6 +78,9 @@ export interface Metrics {
   retryRate: number;
   degradedRate: number;
   renderFallbackRate: number;
+  /** Of the runs that unlocked a card: share with an off-topic card (RunRecord.offTopicCards). */
+  offTopicCardRate: number;
+  cardRuns: number;
 }
 
 export const JPY_PER_USD = 150;
@@ -154,6 +163,8 @@ export function computeMetrics(probes: ProbeRecord[]): Metrics {
     retryRate: ratio(runs.filter(({ r }) => r.providerErrors > 0).length, n),
     degradedRate: ratio(runs.filter(({ r }) => r.degraded).length, n),
     renderFallbackRate: ratio(runs.filter(({ r }) => r.renderFallback).length, n),
+    offTopicCardRate: ratio(runs.filter(({ r }) => (r.offTopicCards?.length ?? 0) > 0).length, runs.filter(({ r }) => r.unlocked.length > 0).length),
+    cardRuns: runs.filter(({ r }) => r.unlocked.length > 0).length,
   };
 }
 

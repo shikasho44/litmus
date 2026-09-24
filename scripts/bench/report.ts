@@ -179,6 +179,7 @@ export function reportHtml(r: BenchReport): string {
     tile('再試行あり', pct(m.retryRate)),
     tile('rules へ退避', pct(m.degradedRate)),
     tile('言い換え→定型文', pct(m.renderFallbackRate)),
+    tile('質問と無関係なカード', m.cardRuns ? `${pct(m.offTopicCardRate)}（${m.cardRuns}回中）` : '—'),
     tile('実費合計', `${usd(r.spend.totalUsd)}`),
   ].join('');
   const byKind = Object.entries(r.byKind).sort((a, b) => b[1].runs - a[1].runs).map(([k, v]) => metricsRow(k, v)).join('');

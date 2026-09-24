@@ -107,6 +107,40 @@
   opacity: 0.35;
   mix-blend-mode: multiply;
 }
+/* Stage-only alarm layers. They sit under the arena (z-index 5), so panels stay bright. */
+.iq__stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out);
+}
+/* 死因宣告 · 判定中: an alarm vignette and scanlines breathing with the heartbeat (< 1 Hz) */
+.iq[data-verdict-step='judging'] .iq__stage::after {
+  background:
+    radial-gradient(ellipse 80% 75% at 38% 50%, transparent 45%, rgba(255, 46, 99, 0.3) 100%),
+    repeating-linear-gradient(0deg, rgba(255, 46, 99, 0.06) 0 1px, transparent 1px 4px);
+  animation: iq-heartbeat 1.15s ease-in-out infinite;
+}
+/* 集中力 1: the edges of the courtroom pulse red */
+.iq.is-critical .iq__stage::after {
+  background: radial-gradient(ellipse 80% 75% at 50% 50%, transparent 55%, rgba(255, 46, 99, 0.42) 100%);
+  box-shadow: inset 0 0 90px 10px rgba(255, 46, 99, 0.35);
+  animation: iq-heartbeat 1.2s ease-in-out infinite;
+}
+@keyframes iq-heartbeat {
+  0%, 100% { opacity: 0.45; }
+  18% { opacity: 1; }
+  32% { opacity: 0.6; }
+  46% { opacity: 0.9; }
+}
+[data-reduce-motion='true'] .iq[data-verdict-step='judging'] .iq__stage::after,
+[data-reduce-motion='true'] .iq.is-critical .iq__stage::after {
+  animation: none;
+  opacity: 0.8;
+}
 
 /* phase moods */
 .iq--verdict .iq__jane {
@@ -221,11 +255,30 @@
   left: 50%;
   bottom: 14px;
   transform: translateX(-50%);
+  /* left: 50% alone would cap the shrink-to-fit box at half the arena: the steps then spill
+     off-centre (and off-screen at 360px) */
+  width: max-content;
   max-width: calc(100% - 20px);
 }
 .iq .quip-live {
   right: 27%;
   top: 17%;
+}
+.iq.is-wide.iq--debate .quip-live {
+  right: 38%;
+  top: 15%;
+}
+.iq.is-wide.iq--debate .quip {
+  max-width: 360px;
+}
+.iq.is-wide.iq--debate .quip::after {
+  right: -15px;
+  bottom: auto;
+  top: 16px;
+  border-width: 8px 0 8px 15px;
+  border-color: transparent transparent transparent var(--bone);
+  border-style: solid;
+  filter: drop-shadow(2px 0 0 var(--ink));
 }
 .iq--verdict .quip-live {
   right: 24%;
@@ -236,25 +289,14 @@
   right: 20px;
   top: 12px;
 }
-.iq__loading,
-.iq__error {
+.iq__status {
   position: absolute;
   inset: 0;
+  z-index: 7;
   display: grid;
   place-items: center;
-  align-content: center;
-  gap: 10px;
-  text-align: center;
-  padding: 24px;
-}
-.iq__loading {
-  font-weight: 700;
-  color: var(--bone-2);
-}
-.iq__loading-gavel {
-  color: var(--alarm);
-  transform-origin: 80% 80%;
-  animation: gavel-swing 1.15s var(--ease-in) infinite;
+  padding: 24px 16px;
+  background: radial-gradient(ellipse at center, rgba(8, 10, 14, 0.55), rgba(8, 10, 14, 0.82));
 }
 
 /* verdict area */
@@ -287,9 +329,21 @@
 @keyframes dlg-up {
   from { opacity: 0; transform: translate(-50%, 16px); }
 }
-.iq--verdict .iq__dialogue {
-  left: 38%;
-  width: min(900px, 66%);
+.iq.is-wide.iq--verdict .iq__dialogue {
+  left: auto;
+  right: 24px;
+  width: min(520px, 36%);
+  transform: none;
+  animation-name: dlg-up-r;
+}
+@keyframes dlg-up-r {
+  from { opacity: 0; transform: translateY(16px); }
+}
+/* A solid box: nothing under it (dock, debate nav, sheet, comic captions) may read through */
+.iq .iq__dialogue .dlg__frame {
+  background: linear-gradient(180deg, #161A23, #0B0D12);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 /* ---------------------------------------------------------------- magazine (PC) */
@@ -412,7 +466,9 @@
 }
 
 /* ---------------------------------------------------------------- 1280 and below */
-@media (max-width: 1360px) {
+/* the key legend needs ~560px next to the three steps: only where the arena is wide enough */
+@media (max-width: 1600px), (pointer: coarse) {
+  /* (touch screens get no keyboard legend at any width) */
   .iq .istrip__keys {
     display: none;
   }
@@ -534,11 +590,89 @@
   width: calc(100% - 16px);
 }
 .iq.is-narrow .iq__dialogue .dlg__frame {
-  padding: 16px 44px 16px 18px;
+  padding: 16px 48px 16px 18px;
+}
+.iq.is-narrow .iq-dock {
+  transition: opacity 0.18s var(--ease-out), visibility 0s;
+}
+.iq.is-narrow[data-dialogue='on'] .iq-dock {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s var(--ease-out), visibility 0s 0.18s;
+}
+.iq.is-narrow.iq--verdict[data-dialogue='on'] .iq__verdict {
+  padding-bottom: calc(var(--iq-dlg-h, 150px) + 20px + var(--safe-b));
+  scroll-padding-bottom: calc(var(--iq-dlg-h, 150px) + 20px + var(--safe-b));
+}
+/* while Holma talks the actions are inert: no half-covered buttons peeking round his name plate */
+.iq.is-narrow.iq--verdict[data-dialogue='on'] .vpanel__actions {
+  visibility: hidden;
+}
+.iq.is-narrow.iq--debate .quip-live {
+  top: 62px;
 }
 .iq.is-narrow .iq__dialogue .dlg__text {
   font-size: 1.02rem;
 }
 [data-kb='open'] .iq.is-narrow .iq__verdict {
   padding-bottom: 8px;
+}
+.iq.is-narrow .iq__dialogue .dlg__next {
+  width: 44px;
+  height: 44px;
+  right: 6px;
+  bottom: 6px;
+}
+@media (pointer: coarse) {
+  .iq .iq__dialogue .dlg__next {
+    width: 44px;
+    height: 44px;
+    right: 6px;
+    bottom: 6px;
+  }
+}
+/* the loading / error card on phones */
+.iq.is-narrow .iq__status {
+  align-items: start;
+  padding-top: 18%;
+}
+/* short phones (≤ 700px tall, e.g. 320 × 640): Holma's quip hugs the statement nav and runs on
+   one line with his name, and the band text tightens a notch, so the bubble never hides the
+   band's speaker row */
+@media (max-height: 700px) {
+  .iq.is-narrow.iq--debate .quip-live {
+    top: 50px;
+  }
+  .iq.is-narrow .quip {
+    padding: 5px 12px 7px;
+  }
+  .iq.is-narrow .quip__who {
+    display: inline;
+    margin-right: 8px;
+  }
+  .iq.is-narrow .quip__t {
+    display: inline;
+    font-size: 0.86rem;
+    line-height: 1.55;
+  }
+  .iq.is-narrow .band__text {
+    font-size: 1.04rem;
+    line-height: 1.62;
+  }
+}
+/* 320px: the three instruction steps fit inside the strip */
+@media (max-width: 340px) {
+  .iq.is-narrow .istrip {
+    padding: 5px 5px;
+  }
+  .iq.is-narrow .istrip__step {
+    font-size: 10.5px;
+    gap: 4px;
+  }
+}
+/* touch screens in the wide layout (tablets): no keyboard hint on FIRE either */
+@media (pointer: coarse) {
+  .iq .fire__kbd {
+    display: none;
+  }
 }

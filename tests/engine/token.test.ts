@@ -24,6 +24,9 @@ describe('progress token', () => {
     expect(t.startsWith('j1.')).toBe(true);
     const back = await verifyToken(t, secret, FIXTURE_ID, now + 1000);
     expect(back).toEqual({ ...s, issuedAt: now });
+    // confirmed core facts round-trip; tokens issued before the field existed read as []
+    const k = await verifyToken(await signToken({ ...s, coreSeen: ['F15'] }, secret, now), secret, FIXTURE_ID, now);
+    expect(k.coreSeen).toEqual(['F15']);
   });
 
   it('rejects tampering, other cases, other secrets, garbage and expiry', async () => {

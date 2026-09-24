@@ -1,8 +1,9 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { CasePublic, PublicFact, ScienceMemoView } from '../../../shared/api';
+import { audio } from '../../audio';
 import type { CaseProgress, LogEntry } from '../../state/types';
-import { EvidenceCard, factTitle } from '../../ui/EvidenceCard';
+import { EvidenceCard, factTitle, importanceLabel } from '../../ui/EvidenceCard';
 import { resolveIcon } from '../../ui/icons';
 import { Icon } from '../../ui/Icon';
 import { Stamp, STAMP_META } from '../../ui/Stamp';
@@ -12,6 +13,9 @@ import { SupportCard } from './SupportCard';
 import { TypeLine } from './TypeLine';
 
 type AnswerEntry = Extract<LogEntry, { kind: 'answer' }>;
+
+/** Rows rendered at once (the notebook's 質問ログ keeps the full history). */
+const WINDOW = 80;
 
 export function MemoCard({ memo, compact }: { memo: ScienceMemoView; compact?: boolean }) {
   return (
@@ -23,6 +27,52 @@ export function MemoCard({ memo, compact }: { memo: ScienceMemoView; compact?: b
       </header>
       <p class="memo__text">{memo.text}</p>
     </article>
+  );
+}
+
+/**
+ * A finding in the conversation: one line (icon, title, category) that opens the full card
+ * in place. The notebook holds the full card, so the log stays readable on every screen.
+ */
+function FindingChip({ fact, index }: { fact: PublicFact; index: number }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const core = fact.importance >= 3;
+  const key = fact.importance === 2;
+  // bring the opened card into view (the tap counts as the player's own scrolling)
+  useEffect(() => {
+    if (!open) return;
+    const id = requestAnimationFrame(() => ref.current?.querySelector('.fchip__card')?.scrollIntoView({ block: 'nearest' }));
+    return () => cancelAnimationFrame(id);
+  }, [open]);
+  return (
+    <div ref={ref} class={`fchip ${core ? 'fchip--core' : key ? 'fchip--key' : ''} ${open ? 'is-open' : ''}`} style={{ '--fchip-i': index }}>
+      <button
+        type="button"
+        class="fchip__btn"
+        aria-expanded={open}
+        aria-label={`${core ? '核心所見' : '所見'}：${factTitle(fact)}（${fact.category}・${importanceLabel(fact.importance)}）${open ? 'を閉じる' : 'を開く'}`}
+        onClick={() => {
+          setOpen(!open);
+          audio.sfx(open ? 'toggle' : 'page');
+        }}
+      >
+        <span class="fchip__icon" aria-hidden="true">
+          <Icon name={resolveIcon(fact.icon, fact.category)} size={16} />
+        </span>
+        <span class="fchip__kicker t-mono" aria-hidden="true">
+          {core ? 'CORE' : 'NEW'}
+        </span>
+        <span class="fchip__title" aria-hidden="true">
+          {factTitle(fact)}
+        </span>
+        <span class="fchip__cat" aria-hidden="true">
+          {fact.category}
+        </span>
+        <Icon name="chevronDown" size={14} class="fchip__chev" />
+      </button>
+      {open && <EvidenceCard fact={fact} class="fchip__card" />}
+    </div>
   );
 }
 
@@ -50,6 +100,7 @@ function AnswerRow({
   animate,
   ctl,
   arriving,
+  held,
 }: {
   e: AnswerEntry;
   multi: boolean;
@@ -58,12 +109,14 @@ function AnswerRow({
   animate: boolean;
   ctl: Controller;
   arriving: Set<string>;
+  /** The big stamp is still on stage: keep the small chip back (space reserved). */
+  held: boolean;
 }) {
   const support = e.notice === 'support';
   const degraded = e.notice === 'degraded' || e.degraded;
   const landed = facts.filter((f) => !arriving.has(f.id));
   return (
-    <div class={`arow arow--${e.answerClass} ${support ? 'is-support' : ''}`} data-answer={e.answerClass}>
+    <div class={`arow arow--${e.answerClass} ${support ? 'is-support' : ''} ${e.nearCore ? 'is-near' : ''}`} data-answer={e.answerClass}>
       <div class="arow__avatar">
         <HolmaFace mood={support ? 'serious' : e.mood} />
       </div>
@@ -71,9 +124,16 @@ function AnswerRow({
         <div class="arow__meta">
           <span class="arow__name">ホルマ</span>
           {!support && (
-            <span class="arow__stamp">
-              <Stamp answerClass={e.answerClass} size="xs" tilt={-4} decorative />
+            <span class={`arow__stamp ${held ? 'is-held' : ''}`}>
+              {/* remounts on release, so the chip pops in as the big stamp leaves */}
+              <Stamp key={held ? 'held' : 'shown'} answerClass={e.answerClass} size="xs" tilt={-4} decorative />
               <span class="sr-only">判定：{STAMP_META[e.answerClass].sr}</span>
+            </span>
+          )}
+          {e.nearCore && !support && (
+            <span class="arow__near">
+              <Icon name="star" size={12} />
+              核心に迫る
             </span>
           )}
           {degraded && (
@@ -91,7 +151,7 @@ function AnswerRow({
         {landed.length > 0 && (
           <div class="arow__cards">
             {landed.map((f, i) => (
-              <EvidenceCard key={f.id} fact={f} index={i} class="arow__card" />
+              <FindingChip key={f.id} fact={f} index={i} />
             ))}
           </div>
         )}
@@ -177,18 +237,36 @@ export interface ChatLogProps {
   pub?: CasePublic;
 }
 
+/**
+ * How the log follows new content:
+ *   anchor — keep the start of the newest exchange (question / hint / error row) in view: pinned
+ *            to the bottom while the exchange fits, its first line at the top once it does not
+ *   bottom — pinned to the bottom (the player scrolled down there, or pressed 続き/最新)
+ *   free   — the player scrolled away; never move, offer a jump button instead
+ */
+type Follow = 'anchor' | 'bottom' | 'free';
+
+interface Row {
+  key: string;
+  node: ComponentChildren;
+  /** Starts an exchange (the scroll anchor). */
+  start: boolean;
+}
+
 /** The conversation: questions, Holma's answers (stamp + line), findings, memos, hints. */
 export function ChatLog({ ctl, progress, pub }: ChatLogProps) {
   const scroller = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
-  // An empty log shows the case brief from the top; once questions exist, follow the bottom.
-  const stick = useRef((progress?.log ?? []).some((e) => e.kind === 'question'));
-  const [showJump, setShowJump] = useState(false);
-  const rowsRef = useRef(0);
   const log = progress?.log ?? [];
+  // An empty log shows the case brief from the top; once questions exist, follow the newest exchange.
+  const follow = useRef<Follow>(log.some((e) => e.kind === 'question') ? 'anchor' : 'free');
+  const [jump, setJump] = useState<null | 'more' | 'latest'>(null);
+  const [windowSize, setWindowSize] = useState(WINDOW);
+  const rowsRef = useRef(0);
   const hidden = ctl.hidden.value;
   const animated = ctl.animated.value;
   const arriving = ctl.arriving.value;
+  const held = ctl.chipHold.value;
   const pending = ctl.pending.value;
   const asking = ctl.asking.value;
   const transient = ctl.transient.value;
@@ -196,13 +274,13 @@ export function ChatLog({ ctl, progress, pub }: ChatLogProps) {
   void ctl.finishTick.value;
 
   const rows = useMemo(() => {
-    const out: { key: string; node: ComponentChildren }[] = [];
+    const out: Row[] = [];
     let qn = 0;
     for (let i = 0; i < log.length; i++) {
       const e = log[i];
       if (e.kind === 'question') {
         qn++;
-        out.push({ key: e.id, node: <QuestionRow n={qn} text={e.text} /> });
+        out.push({ key: e.id, start: true, node: <QuestionRow n={qn} text={e.text} /> });
       } else if (e.kind === 'answer') {
         if (hidden.has(e.id)) continue;
         // multi = this answer belongs to a message with several answers
@@ -215,67 +293,108 @@ export function ChatLog({ ctl, progress, pub }: ChatLogProps) {
         const memos = e.memos.map((id) => progress?.memos[id]).filter((m): m is ScienceMemoView => !!m);
         out.push({
           key: e.id,
-          node: <AnswerRow e={e} multi={multi} facts={facts} memos={memos} animate={animated.has(e.id)} ctl={ctl} arriving={arriving} />,
+          start: false,
+          node: <AnswerRow e={e} multi={multi} facts={facts} memos={memos} animate={animated.has(e.id)} ctl={ctl} arriving={arriving} held={held.has(e.id)} />,
         });
       } else if (e.kind === 'hint') {
-        out.push({ key: e.id, node: <HintRow level={e.level} text={e.text} /> });
+        out.push({ key: e.id, start: true, node: <HintRow level={e.level} text={e.text} /> });
       } else if (e.kind === 'system') {
-        out.push({ key: e.id, node: <p class={`srow srow--${e.tone ?? 'info'}`}>{e.text}</p> });
+        out.push({ key: e.id, start: true, node: <p class={`srow srow--${e.tone ?? 'info'}`}>{e.text}</p> });
       }
     }
     return { out, qn };
-  }, [log, hidden, animated, arriving, progress?.facts, progress?.memos]);
+  }, [log, hidden, animated, arriving, held, progress?.facts, progress?.memos]);
 
-  // Always instant: a smooth programmatic scroll would fire intermediate scroll events that
-  // look like the player scrolling up and unpin the log.
-  const scrollToEnd = () => {
+  // Only the newest rows are in the DOM (a long session stays light); the window starts at an exchange.
+  let first = Math.max(0, rows.out.length - windowSize);
+  while (first > 0 && !rows.out[first].start) first--;
+  const visible = first > 0 ? rows.out.slice(first) : rows.out;
+
+  /** Apply the follow mode. Always instant: a smooth programmatic scroll would look like the player scrolling. */
+  const apply = () => {
     const el = scroller.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
+    const inn = inner.current;
+    if (!el || !inn) return;
+    const m = follow.current;
+    const max = el.scrollHeight - el.clientHeight;
+    if (m === 'bottom') el.scrollTop = max;
+    else if (m === 'anchor') {
+      const starts = inn.querySelectorAll<HTMLElement>(':scope > .chat__row[data-start]');
+      const a = starts[starts.length - 1];
+      el.scrollTop = Math.max(0, Math.min(max, a ? a.offsetTop - 10 : max));
+    }
+    const below = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (below <= 72 || rowsRef.current === 0) setJump(null);
+    else if (m === 'anchor') setJump('more');
+    else if (m === 'free') setJump((j) => j ?? 'latest');
   };
 
-  // stay pinned to the bottom while content grows (typing, cards landing, new rows)
+  // follow content growth (typing, chips opening, cards landing, new rows)
   useLayoutEffect(() => {
     const el = inner.current;
     if (!el) return;
-    if (stick.current) scrollToEnd();
-    const ro = new ResizeObserver(() => {
-      if (stick.current) scrollToEnd();
-      else if (scroller.current && scroller.current.scrollHeight - scroller.current.scrollTop - scroller.current.clientHeight > 72 && rowsRef.current > 0) setShowJump(true);
-    });
+    apply();
+    const ro = new ResizeObserver(() => apply());
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
-  useEffect(() => {
-    // sending a question always brings the conversation back into view
-    if (pending) stick.current = true;
-    if (stick.current) scrollToEnd();
-  }, [rows.out.length, !!pending, asking, transient.length]);
+  // sending a question (or an error / hint row) brings the newest exchange into view
+  const lastRowKey = visible.length ? visible[visible.length - 1].key : '';
+  useLayoutEffect(() => {
+    if (pending) follow.current = 'anchor';
+    apply();
+  }, [lastRowKey, !!pending, asking]);
+  useLayoutEffect(() => {
+    if (transient.length) follow.current = 'bottom';
+    apply();
+  }, [transient]);
 
-  // Only the player's own scrolling may unpin the log; programmatic scrolls and content
-  // growth (typing, cards landing) never do.
+  // Only the player's own scrolling changes the mode; programmatic scrolls never do.
   const userAt = useRef(0);
   const markUser = () => (userAt.current = performance.now());
   const onScroll = () => {
     const el = scroller.current;
-    if (!el) return;
+    if (!el || performance.now() - userAt.current > 900) return;
     const near = el.scrollHeight - el.scrollTop - el.clientHeight < 72;
     if (near) {
-      stick.current = true;
-      if (showJump) setShowJump(false);
-    } else if (performance.now() - userAt.current < 900) stick.current = false;
+      follow.current = 'bottom';
+      setJump(null);
+    } else if (follow.current !== 'free') {
+      follow.current = 'free';
+    }
   };
 
   const empty = rows.qn === 0 && !pending;
   rowsRef.current = rows.qn;
-  // the case was restarted (bad token) → show the brief from the top again
+  // the case was restarted (bad token → start over) → show the brief from the top again
+  const prevQn = useRef(rows.qn);
   useEffect(() => {
-    if (!empty) return;
-    stick.current = false;
+    const was = prevQn.current;
+    prevQn.current = rows.qn;
+    if (!(was > 0 && rows.qn === 0)) return;
+    follow.current = 'free';
     if (scroller.current) scroller.current.scrollTop = 0;
-    setShowJump(false);
-  }, [empty]);
+    setJump(null);
+    setWindowSize(WINDOW);
+  }, [rows.qn]);
+
+  // 以前の記録を表示: grow the window and keep the view where it was
+  const grow = useRef<{ h: number; top: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    const g = grow.current;
+    if (!el || !g) return;
+    grow.current = null;
+    el.scrollTop = g.top + (el.scrollHeight - g.h);
+  }, [windowSize]);
+  const showEarlier = () => {
+    const el = scroller.current;
+    if (el) grow.current = { h: el.scrollHeight, top: el.scrollTop };
+    follow.current = 'free';
+    setWindowSize((n) => n + WINDOW);
+    audio.sfx('page');
+  };
 
   return (
     <div class="chat">
@@ -294,13 +413,20 @@ export function ChatLog({ ctl, progress, pub }: ChatLogProps) {
       >
         <div class="chat__inner" ref={inner}>
           {empty && <ChatIntro pub={pub} />}
-          {rows.out.map((r) => (
-            <div class="chat__row" key={r.key}>
+          {first > 0 && (
+            <button type="button" class="chat__earlier" onClick={showEarlier}>
+              <Icon name="log" size={14} />
+              以前の記録を表示
+              <span class="t-mono">（あと{first}件）</span>
+            </button>
+          )}
+          {visible.map((r) => (
+            <div class="chat__row" key={r.key} data-start={r.start ? '' : undefined}>
               {r.node}
             </div>
           ))}
           {pending && (
-            <div class="chat__row" key={pending.id}>
+            <div class="chat__row" key={pending.id} data-start="">
               <QuestionRow n={rows.qn + 1} text={pending.text} pending />
             </div>
           )}
@@ -310,7 +436,7 @@ export function ChatLog({ ctl, progress, pub }: ChatLogProps) {
             </div>
           )}
           {transient.map((t) => (
-            <div class="chat__row" key={t.id}>
+            <div class="chat__row" key={t.id} data-start="">
               <div class={`arow arow--error ${t.kind === 'rate' ? 'is-rate' : ''}`}>
                 <div class="arow__avatar">
                   <HolmaFace mood={t.mood} />
@@ -336,18 +462,18 @@ export function ChatLog({ ctl, progress, pub }: ChatLogProps) {
           ))}
         </div>
       </div>
-      {showJump && (
+      {jump && (
         <button
           type="button"
-          class="chat__jump"
+          class={`chat__jump ${jump === 'more' ? 'is-more' : ''}`}
           onClick={() => {
-            stick.current = true;
-            setShowJump(false);
-            scrollToEnd();
+            follow.current = 'bottom';
+            setJump(null);
+            apply();
           }}
         >
           <Icon name="chevronDown" size={16} />
-          最新の返答へ
+          {jump === 'more' ? '続きを読む' : '最新の返答へ'}
         </button>
       )}
     </div>

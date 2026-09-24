@@ -73,6 +73,23 @@ export function useImage(path: string | undefined | null): string | null {
   return ok && path ? assetUrl(path) : null;
 }
 
+/**
+ * Hook: true only once the image is known to be missing/broken (false while it is loading).
+ * For heavyweight stand-ins that should not be fetched just because the real art is slow.
+ */
+export function useImageMissing(path: string | undefined | null): boolean {
+  const [missing, setMissing] = useState<boolean>(() => imageKnown(path) === false);
+  useEffect(() => {
+    let alive = true;
+    setMissing(imageKnown(path) === false);
+    probeImage(path).then((r) => alive && setMissing(!r));
+    return () => {
+      alive = false;
+    };
+  }, [path]);
+  return missing;
+}
+
 /** Fetch a JSON asset from public/, returning null on any failure. */
 export async function fetchJson<T>(path: string): Promise<T | null> {
   try {
@@ -113,9 +130,4 @@ export const ART = {
   holma: (mood: string) => `art/holma/${mood}.webp`,
 } as const;
 
-/** Warm the cache for the most important images (fire and forget). */
-export function preloadCoreArt() {
-  [ART.keyArt, ART.roomZero, ART.holma('normal'), ART.holma('laugh'), ART.holma('surprised'), ART.holma('serious')].forEach((p) => {
-    void probeImage(p);
-  });
-}
+// Boot-time warming is staged in src/main.tsx (warmArt): key art first, the rest when idle.

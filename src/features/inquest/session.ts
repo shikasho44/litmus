@@ -24,6 +24,7 @@ import type {
 import { ApiError } from '../../../shared/api';
 import { api } from '../../api';
 import type { Speaker } from '../../audio';
+import { restartCaseAfterBadToken } from '../investigation/caseData';
 import { pickLine } from '../../lib/lines';
 import { addFacts, getCaseProgress, setInquest, setStage, setToken } from '../../state/save';
 import type { InquestPhase, InquestState } from '../../state/types';
@@ -58,6 +59,13 @@ export interface VerdictView {
   lines: string[];
   text: string;
   /**
+   * Holma's pointed feedback (every line after the lead: missing-element or wrong-claim
+   * feedback). Kept under the checklist as 「ホルマの指摘」 until the next submission.
+   */
+  notes: string[];
+  /** Element ids the solve requires (others are optional). Only when the server sends them. */
+  required?: string[];
+  /**
    * The server's safety filter answered instead of judging (the text confided self-harm):
    * not counted as an attempt. The UI shows no stamp — a calm line and a support card.
    */
@@ -66,7 +74,10 @@ export interface VerdictView {
 
 export const SUPPORT_URL = 'https://www.mhlw.go.jp/mamorouyokokoro/';
 
-/** Guess who speaks an authored success line (Jane talks plainly; Holma is polite / says あなた). */
+/**
+ * FALLBACK ONLY: the server says who speaks (ShotResponse.speaker). When an older server omits
+ * it, guess from the wording (Jane talks plainly; Holma is polite / says あなた).
+ */
 export function successSpeaker(line: string): 'jane' | 'holma' {
   const t = line.trim();
   if (/あなた|審問官|ですとも|ねェ|なさい/.test(t)) return 'holma';
@@ -75,6 +86,13 @@ export function successSpeaker(line: string): 'jane' | 'holma' {
 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** Drop blank lines at both ends (a stray Enter must never be saved as the verdict). */
+export function tidyDraft(text: string): string {
+  return text.replace(/^(?:[ \t\u3000]*\r?\n)+/, '').replace(/(?:\r?\n[ \t\u3000]*)+$/, '');
+}
+
+const strList = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 
 export class InquestSession {
   readonly caseId: string;
@@ -94,6 +112,11 @@ export class InquestSession {
   busy = signal(false);
   /** true on the very first entry (plays Holma's full opening). */
   firstEntry = true;
+  /**
+   * The server rejected the saved progress token (401 bad_token). Nothing can be verified any
+   * more: the scene shows a blocking dialog whose only ways out restart the case.
+   */
+  tokenDead = signal(false);
 
   /* ---- debate ---- */
   roundIndex = signal(0);
@@ -117,6 +140,11 @@ export class InquestSession {
 
   /* ---- verdict ---- */
   verdictStep = signal<VerdictStep>('write');
+  /**
+   * true from entering the verdict until the 死因宣告 cut-in and Holma's prompt are over:
+   * the sheet stays read-only and unfocused so Enter advances his line instead of typing.
+   */
+  verdictIntro = signal(false);
   draft = signal('');
   verdictAttempts = signal(0);
   verdict = signal<VerdictView | null>(null);
@@ -144,7 +172,7 @@ export class InquestSession {
   round = computed(() => this.rounds.value[this.roundIndex.value] ?? null);
   statements = computed(() => this.round.value?.statements ?? []);
   selectedFact = computed(() => this.evidence.value.find((f) => f.id === this.selected.value) ?? null);
-  ready = computed(() => !!this.target.value && !!this.selected.value && this.step.value === 'play');
+  ready = computed(() => !!this.target.value && !!this.selected.value && this.step.value === 'play' && !this.tokenDead.value);
   /** Rounds already cleared on the server. */
   cleared = computed(() => this.progress.value?.debateCleared ?? []);
   blanks = computed(() => (this.recon.value?.panels ?? []).filter((p) => p.choice));
@@ -161,7 +189,7 @@ export class InquestSession {
     clearTimeout(this.barkTimer);
     if (this.draftTimer) {
       clearTimeout(this.draftTimer);
-      this.persist({ verdictDraft: this.draft.peek() });
+      this.persist({ verdictDraft: tidyDraft(this.draft.peek()) });
     }
   }
 
@@ -201,8 +229,9 @@ export class InquestSession {
     });
   }
 
-  private fail(e: unknown, what: string) {
+  fail(e: unknown, what: string) {
     const code = e instanceof ApiError ? e.code : 'server';
+    if (code === 'bad_token' && !this.disposed) this.tokenDead.value = true;
     const msg =
       code === 'network' || code === 'timeout'
         ? '通信できませんでした。電波の良いところで、もう一度お試しください。'
@@ -240,9 +269,13 @@ export class InquestSession {
         this.grants.value = saved?.grants ?? 0;
         this.suspensions.value = saved?.suspensions ?? 0;
         this.verdictAttempts.value = Math.max(saved?.verdictAttempts ?? 0, start.progress.verdictAttempts);
-        this.draft.value = saved?.verdictDraft ?? '';
+        this.draft.value = tidyDraft(saved?.verdictDraft ?? '');
         this.picks.value = saved?.reconstructionPicks ? { ...saved.reconstructionPicks } : {};
-        if (saved?.lastVerdict) this.verdict.value = { ...saved.lastVerdict, lines: [] };
+        if (saved?.lastVerdict) {
+          const lv = saved.lastVerdict;
+          const req = strList(lv.required);
+          this.verdict.value = { result: lv.result, matched: strList(lv.matched), labels: lv.labels ?? {}, text: lv.text ?? '', lines: [], notes: strList(lv.notes), ...(req.length ? { required: req } : {}) };
+        }
       });
       this.firstEntry = !saved || (saved.cleared.length === 0 && saved.misses === 0 && saved.verdictAttempts === 0 && saved.suspensions === 0);
       setStage(this.caseId, 'inquest');
@@ -258,6 +291,7 @@ export class InquestSession {
         const firstOpen = start.rounds.findIndex((r) => !p.debateCleared.includes(r.id));
         if (firstOpen < 0 || !start.rounds.length) {
           this.roundIndex.value = Math.max(0, start.rounds.length - 1);
+          this.verdictIntro.value = true; // until the scene's 死因宣告 cut-in has played
           this.phase.value = 'verdict';
           this.verdictStep.value = 'write';
         } else {
@@ -302,6 +336,8 @@ export class InquestSession {
 
   /** Holma's non-blocking quip near his head. */
   quip(text: string, tone: 'holma' | 'hint' | 'warn' = 'holma', mood?: HolmaMood) {
+    // A dead token is explained by its own blocking dialog; no transient SYSTEM bubble on top.
+    if (this.tokenDead.peek() && tone === 'warn') return;
     clearTimeout(this.barkTimer);
     if (mood) this.holmaMood.value = mood;
     this.bark.value = { text, key: ++this.seq, tone };
@@ -317,8 +353,10 @@ export class InquestSession {
   /* ------------------------------------------------------------------ */
   /* Debate                                                               */
   /* ------------------------------------------------------------------ */
+  /** Every round starts with an EMPTY CHAMBER: the bullet that broke the last round is spent. */
   resetRoundUi() {
     batch(() => {
+      this.selected.value = null;
       this.current.value = 0;
       this.userPaused.value = false;
       this.target.value = null;
@@ -344,7 +382,7 @@ export class InquestSession {
   }
 
   /** Fire the loaded evidence at the locked noise. Returns null on transport failure. */
-  async shoot(): Promise<{ correct: boolean; lines: string[]; hint?: string } | null> {
+  async shoot(): Promise<{ correct: boolean; lines: string[]; speaker?: 'jane' | 'holma'; hint?: string } | null> {
     const round = this.round.peek();
     const t = this.target.peek();
     const f = this.selected.peek();
@@ -364,7 +402,7 @@ export class InquestSession {
         });
       }
       this.persist();
-      return { correct: res.correct, lines: res.lines, hint: res.hint };
+      return { correct: res.correct, lines: res.lines, speaker: res.speaker, hint: res.hint };
     } catch (e) {
       const { msg } = this.fail(e, '反証');
       this.quip(msg, 'warn');
@@ -429,6 +467,19 @@ export class InquestSession {
     setStage(this.caseId, 'investigation');
   }
 
+  /**
+   * After a bad_token: wipe this case's unverifiable progress (best rank / clears survive) and
+   * fetch a fresh token, so the save never keeps a dead token. Never throws.
+   */
+  async restartAfterBadToken(): Promise<void> {
+    this.disposed = true; // stop pending sequences from writing the old state back
+    this.sayResolve?.();
+    this.sayResolve = null;
+    clearTimeout(this.draftTimer);
+    this.draftTimer = undefined;
+    await restartCaseAfterBadToken(this.caseId, this.info.peek() ?? undefined);
+  }
+
   /* ------------------------------------------------------------------ */
   /* Verdict                                                              */
   /* ------------------------------------------------------------------ */
@@ -437,7 +488,7 @@ export class InquestSession {
     clearTimeout(this.draftTimer);
     this.draftTimer = setTimeout(() => {
       this.draftTimer = undefined;
-      this.persist({ verdictDraft: this.draft.peek() });
+      this.persist({ verdictDraft: tidyDraft(this.draft.peek()) });
     }, 500);
   }
 
@@ -453,17 +504,21 @@ export class InquestSession {
       // Every judged verdict increments the server's attempt count; the safety reply does not.
       const support = res.notice === 'support' || (res.result !== 'correct' && res.matched.length === 0 && res.progress.verdictAttempts === before);
       if (support) {
-        const view: VerdictView = { result: res.result, matched: [], labels: res.labels, lines: res.lines, text, support: true };
+        const view: VerdictView = { result: res.result, matched: [], labels: res.labels, lines: res.lines, notes: [], text, support: true };
         this.support.value = true;
         return view;
       }
       this.support.value = false;
-      const view: VerdictView = { result: res.result, matched: res.matched, labels: res.labels, lines: res.lines, text };
+      // Holma's lead line comes first; what follows points at the gaps (never the answer).
+      const notes = res.result === 'correct' ? [] : res.lines.slice(1).filter((l) => l.trim());
+      // `required` is optional on the wire: marks the other elements （任意） when present.
+      const required = strList((res as { required?: unknown }).required);
+      const view: VerdictView = { result: res.result, matched: res.matched, labels: res.labels, lines: res.lines, notes, text, ...(required.length ? { required } : {}) };
       batch(() => {
         this.verdictAttempts.value = Math.max(this.verdictAttempts.peek() + 1, res.progress.verdictAttempts);
         this.verdict.value = view;
       });
-      this.persist({ lastVerdict: { result: view.result, matched: view.matched, labels: view.labels, text }, verdictDraft: text });
+      this.persist({ lastVerdict: { result: view.result, matched: view.matched, labels: view.labels, text, notes, ...(view.required ? { required: view.required } : {}) }, verdictDraft: text });
       return view;
     } catch (e) {
       this.quip(this.fail(e, '宣告').msg, 'warn');

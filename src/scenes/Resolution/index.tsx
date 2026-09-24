@@ -151,7 +151,7 @@ function Ceremony({ caseId, sol, num, onDone }: { caseId: string; sol: SolutionR
   };
 
   return (
-    <div class={`res-cer ${warm ? 'is-warm' : ''} ${janeSpeaking ? 'is-jane' : ''} ${name !== 'codename' ? 'is-named' : ''}`}>
+    <div class={`res-cer ${warm ? 'is-warm' : ''} ${janeSpeaking ? 'is-jane' : ''} ${name !== 'codename' ? 'is-named' : ''} ${beat.kind === 'assemble' ? 'is-assembling' : ''}`}>
       <header class="res-cer__top">
         <p class="eyebrow">
           CASE {pad2(num)}
@@ -182,10 +182,12 @@ function Ceremony({ caseId, sol, num, onDone }: { caseId: string; sol: SolutionR
         />
       </div>
 
+      {/* Holma stands behind the right end of the dialogue box (bust, like the intro), dimmed so Jane stays the focus */}
+      <div class={`res-cer__holma ${holmaVisible ? 'is-on' : ''}`} aria-hidden="true">
+        <HolmaSprite mood="serious" framing="bust" faceX={0.52} talking={holmaVisible} />
+      </div>
+
       <div class="res-cer__dock">
-        <div class={`res-cer__holma ${holmaVisible ? 'is-on' : ''}`} aria-hidden="true">
-          <HolmaSprite mood="serious" framing="knee" talking={holmaVisible} />
-        </div>
         {beat.kind === 'line' ? (
           <DialogueBox
             key={step}
@@ -198,8 +200,8 @@ function Ceremony({ caseId, sol, num, onDone }: { caseId: string; sol: SolutionR
             size={layout.value === 'narrow' ? 'md' : 'lg'}
           />
         ) : (
-          <p class="res-cer__hush t-mono" aria-live="polite">
-            {name === 'codename' ? '……' : '名前が、戻ってくる'}
+          <p class="res-cer__hush" aria-live="polite">
+            <span key={name === 'codename' ? 'a' : 'b'}>{name === 'codename' ? '破片が、ひとつに' : '名前が、戻ってくる'}</span>
           </p>
         )}
       </div>
@@ -282,7 +284,7 @@ function Record({ caseId, sol, summary, num, onReplay }: { caseId: string; sol: 
               </Button>
             </figure>
 
-            <Disclosure id="story" en="THE WHOLE STORY" title="事件の全貌" initiallyOpen>
+            <Disclosure id="story" en="THE WHOLE STORY" title="事件の全貌" note={`あらまし・時系列 ${sol.truth.timeline.length}件`}>
               <p class="res-rec__summary">{sol.truth.summary}</p>
               <ol class="timeline">
                 {sol.truth.timeline.map((t, i) => (
@@ -295,7 +297,7 @@ function Record({ caseId, sol, summary, num, onReplay }: { caseId: string; sol: 
               </ol>
             </Disclosure>
 
-            <Disclosure id="facts" en="FINDINGS" title="所見の記録">
+            <Disclosure id="facts" en="FINDINGS" title="所見の記録" note={`発見 ${sol.allFacts.filter((f) => f.unlocked).length} / ${sol.allFacts.length}`}>
               <FactsRecord facts={sol.allFacts} />
             </Disclosure>
 
@@ -320,7 +322,8 @@ function Record({ caseId, sol, summary, num, onReplay }: { caseId: string; sol: 
   );
 }
 
-function Disclosure({ id, en, title, initiallyOpen = false, children }: { id: string; en: string; title: string; initiallyOpen?: boolean; children: ComponentChildren }) {
+/** Collapsed by default: the record's first screen is portrait · name · cause · farewell · next (the story was just told). */
+function Disclosure({ id, en, title, note, initiallyOpen = false, children }: { id: string; en: string; title: string; note?: string; initiallyOpen?: boolean; children: ComponentChildren }) {
   const [open, setOpen] = useState(initiallyOpen);
   return (
     <section class={`disc ${open ? 'is-open' : ''}`}>
@@ -336,7 +339,10 @@ function Disclosure({ id, en, title, initiallyOpen = false, children }: { id: st
           }}
         >
           <span class="disc__en">{en}</span>
-          <span class="disc__title">{title}</span>
+          <span class="disc__title">
+            {title}
+            {note && <small class="disc__note">{note}</small>}
+          </span>
           <Icon name="chevronDown" size={22} class="disc__chev" />
         </button>
       </h2>

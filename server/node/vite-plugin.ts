@@ -8,11 +8,15 @@
  *
  * Env: loadEnv(mode, envDir, '') — .env, .env.local, .env.[mode], process.env (wins).
  * dev → APP_ENV=development (admin routes open, traces in responses);
- * preview → APP_ENV=production unless set explicitly.
+ * preview → APP_ENV=production unless set explicitly. Without a SESSION_SECRET (or with the
+ * .env.example placeholder) local preview signs with a random per-process key instead of
+ * failing closed like a real production host (Vercel answers 503 on the token routes —
+ * server/http/handler.ts): progress tokens then do not survive a preview restart.
  *
  * Imports nothing from the engine statically (config bundling must stay light).
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { randomBytes } from 'node:crypto';
 import { createServer, loadEnv, type Plugin, type ViteDevServer } from 'vite';
 
 const ENTRY = '/server/node/handler.ts';
@@ -98,6 +102,12 @@ export function janedoeApi(): Plugin {
       });
     },
     configurePreviewServer(server) {
+      const configured = (env.SESSION_SECRET ?? '').trim();
+      const previewEnv: Record<string, string | undefined> = { ...env };
+      if (!configured || configured === 'change-me-to-a-long-random-string') {
+        previewEnv.SESSION_SECRET = `preview-${randomBytes(32).toString('hex')}`;
+        console.warn('[janedoe] preview: SESSION_SECRET is not set — signing progress tokens with a random per-process key (a production host without it answers 503).');
+      }
       let runner: Promise<ViteDevServer> | undefined;
       const getRunner = () =>
         (runner ??= createServer({
@@ -113,7 +123,7 @@ export function janedoeApi(): Plugin {
         (async () => {
           const vs = await getRunner();
           const mod = (await vs.ssrLoadModule(ENTRY)) as { handleApi: HandleApi };
-          await bridge(req, res, (r) => mod.handleApi(r, { ...env, APP_ENV: env.APP_ENV || 'production', PROJECT_ROOT: root }));
+          await bridge(req, res, (r) => mod.handleApi(r, { ...previewEnv, APP_ENV: env.APP_ENV || 'production', PROJECT_ROOT: root }));
         })().catch((e) => sendCrash(res, e));
       });
       server.httpServer?.once('close', () => {

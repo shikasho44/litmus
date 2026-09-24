@@ -111,3 +111,31 @@ kbd,
   color: var(--bone-2);
   background: var(--bone-a08);
 }
+
+/* ==========================================================================
+   Japanese line breaking — no mid-word breaks in display copy (「なぜ死んだの|か」)
+   Chromium 119+ segments Japanese into phrases with `auto-phrase`; other engines ignore
+   the value and keep normal breaking. :where() keeps specificity at 0, so a component
+   rule can still opt out.
+   ========================================================================== */
+:where(h1, h2, h3, h4, .t-display, .heading__jp, .modal__title, .vprompt, .tcard__title, .choice__text, .qz-card h3, .sci h2, .sci-lead, .tag__title) {
+  word-break: auto-phrase;
+  text-wrap: balance;
+}
+:where(p, li, dt, dd, figcaption, blockquote, label, .dlg__text) {
+  word-break: auto-phrase;
+  text-wrap: pretty;
+}
+
+/* ==========================================================================
+   Type floor (bible §4-2)
+   - Dela Gothic One is for headings, stamps and cut-ins at ≥ 16px. Below that its strokes
+     fill in: small labels use .t-label (Zen Kaku Gothic New 700) instead.
+   - Nothing is set below 11px (var(--fs-2xs)); sizes are rem so the 標準/大/特大 setting
+     scales them. scripts/ui-shots.mjs reports offenders on the screens it visits.
+   ========================================================================== */
+.t-label {
+  font-family: var(--font-body);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}

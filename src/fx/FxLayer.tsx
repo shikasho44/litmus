@@ -75,7 +75,7 @@ export function FxLayer() {
       </div>
       {cut && (
         <div class="fx-cutin" aria-hidden="true">
-          <CutIn key={cut.id} text={cut.text} en={cut.en} tone={cut.tone} character={cut.character} mood={cut.mood} hold={cut.hold} onDone={() => fx._cutInDone()} />
+          <CutIn key={cut.id} text={cut.text} lead={cut.lead} en={cut.en} tone={cut.tone} character={cut.character} mood={cut.mood} hold={cut.hold} onDone={() => fx._cutInDone()} />
         </div>
       )}
       <div ref={flash} class="fx-flash" aria-hidden="true" />

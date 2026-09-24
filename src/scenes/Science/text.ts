@@ -85,3 +85,43 @@ export function pullQuote(science: Pick<Science, 'body' | 'whyHere' | 'takeaways
   }
   return best || science.takeaways[0] || '';
 }
+
+/* ------------------------------------------------------------------ */
+/* Reading time                                                        */
+/* ------------------------------------------------------------------ */
+
+/** Japanese reading speed for explanatory text (characters per minute). */
+export const READ_CPM = 500;
+
+const len = (...xs: (string | undefined)[]) => xs.reduce((n, x) => n + (x ? [...x.replace(/\s+/g, '')].length : 0), 0);
+
+/**
+ * Characters per science section (ids match the page's SECTIONS). A figure counts as ~40 s of
+ * reading; the reference list only counts what a reader skims (titles and organisations).
+ */
+export function sectionChars(sol: {
+  science: Science;
+  allFacts: { id: string; text: string }[];
+  memos: { title: string; text: string }[];
+  sources: { title: string; organization: string }[];
+}): Record<string, number> {
+  const s = sol.science;
+  const facts = new Map(sol.allFacts.map((f) => [f.id, f.text]));
+  return {
+    cause: len(s.causeName, s.lead),
+    chain: s.chain.reduce((n, c) => n + len(c.stage, c.title, c.detail), 0),
+    body: len(s.body),
+    why: len(s.whyHere),
+    clues: s.foreshadowing.reduce((n, c) => n + len(facts.get(c.fact), c.meaning), 0),
+    mech: s.mechanism.reduce((n, m) => n + len(m.heading, m.text), 0) + s.diagrams.length * Math.round(READ_CPM * 0.66),
+    myths: s.misconceptions.reduce((n, m) => n + len(m.myth, m.truth), 0),
+    everyday: len(...s.everyday),
+    points: len(...s.takeaways),
+    safety: len(s.safetyNote),
+    memos: sol.memos.reduce((n, m) => n + len(m.title, m.text), 0),
+    sources: sol.sources.reduce((n, x) => n + len(x.title, x.organization), 0),
+  };
+}
+
+/** Whole minutes, at least 1. */
+export const readingMinutes = (chars: number) => Math.max(1, Math.round(chars / READ_CPM));

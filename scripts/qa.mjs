@@ -558,13 +558,27 @@ async function pickEvidence(page, factId) {
   await tick(page, 150);
 }
 async function pickOption(page, panelId, text) {
-  await page.locator(`[data-panel-id="${panelId}"]`).scrollIntoViewIfNeeded();
-  await page.click(`[data-panel-id="${panelId}"]`);
   const scope = NARROW ? '.sheet-root ' : '.recon__side ';
+  // Phones: after a pick the choice sheet stays open and moves on to the next empty frame
+  // (Inquest afterPick), so the frame we want may already be showing in it.
+  const shown = NARROW && (await has(page, `.sheet-root [data-choice-for="${panelId}"]`));
+  if (!shown) {
+    if (NARROW && (await has(page, '.sheet-root'))) {
+      await page.keyboard.press('Escape');
+      await waitGone(page, '.sheet-root');
+    }
+    await page.locator(`[data-panel-id="${panelId}"]`).scrollIntoViewIfNeeded();
+    await page.click(`[data-panel-id="${panelId}"]`);
+  }
   await waitSel(page, `${scope}[data-choice-for="${panelId}"]`);
   await tick(page, NARROW ? 400 : 150);
   await page.locator(`${scope}.choice__opt`, { hasText: text }).first().click();
-  if (NARROW) await waitGone(page, '.sheet-root');
+  if (NARROW) {
+    // the sheet either shows the next empty frame or closes (no empty frame left)
+    await waitFor(page, (id) => !document.querySelector('.sheet-root') || !document.querySelector(`.sheet-root [data-choice-for="${id}"]`), panelId, {
+      label: 'the choice sheet to move on or close',
+    });
+  }
   await tick(page, 200);
 }
 async function evidenceIds(page) {

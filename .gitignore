@@ -1,0 +1,9 @@
+node_modules
+dist
+logs
+bench/reports/*.json
+.env
+.env.*
+!.env.example
+qa/*.png
+.vercel

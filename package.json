@@ -1,0 +1,38 @@
+{
+  "name": "janedoe",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "build:static": "tsc --noEmit && vite build --mode static",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "validate": "tsx scripts/validate-cases.ts",
+    "bench": "tsx scripts/bench.ts",
+    "qa": "node scripts/qa.mjs",
+    "qa:mobile": "node scripts/qa.mjs --mobile"
+  },
+  "dependencies": {
+    "@fontsource/anton": "^5.3.0",
+    "@fontsource/dela-gothic-one": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/shippori-mincho-b1": "^5.3.0",
+    "@fontsource/zen-kaku-gothic-new": "^5.3.0",
+    "@preact/signals": "^2.11.2",
+    "gsap": "^3.15.0",
+    "preact": "^10.29.8",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "@types/node": "^26.6.2",
+    "playwright": "1.62.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
+  }
+}

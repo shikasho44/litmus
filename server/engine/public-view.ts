@@ -2,9 +2,10 @@
  * The ONLY place where case data is turned into browser-facing DTOs. Secret fields
  * (truth, probes, answer elements, judge notes, victim identity, leak terms …) never
  * pass through here unless the token proves the case is solved (solutionView).
+ * verdictModes are shown at the verdict (verdictSetupView) without the `correct` flags / answers.
  */
-import type { Case, Fact } from '../../shared/case-schema.js';
-import type { CasePublic, CaseSummary, PublicFact, ReconstructionView, ScienceMemoView, SolutionResponse, InquestRoundView } from '../../shared/api.js';
+import type { Case, Fact, VerdictModes } from '../../shared/case-schema.js';
+import type { CasePublic, CaseSummary, PublicFact, ReconstructionView, ScienceMemoView, SolutionResponse, InquestRoundView, VerdictMode, VerdictSetupResponse } from '../../shared/api.js';
 import { shardWeights } from './state.js';
 import { hashString } from './lines.js';
 
@@ -119,6 +120,84 @@ export function reconstructionView(c: Case, full = false): ReconstructionView {
       return v;
     }),
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* Verdict modes (choice / cloze / free) — shared by the setup view    */
+/* and the judge (verdict-modes.ts) so both use the same display order */
+/* ------------------------------------------------------------------ */
+
+/** Display order of the choice options (`order[i]` = authored index shown at position i). */
+export function verdictChoiceOrder(c: Case, vm: VerdictModes): number[] {
+  return optionOrder(c.id, 'verdict:choice', vm.choice.options.length);
+}
+
+/** Display order of one cloze blank's options (`order[i]` = authored index shown at position i). */
+export function verdictBlankOrder(c: Case, blank: VerdictModes['cloze']['blanks'][number]): number[] {
+  return optionOrder(c.id, `verdict:cloze:${blank.id}`, blank.options.length);
+}
+
+/**
+ * Debate assists that apply to one verdict mode, as distinct targets (a wrong choice option id,
+ * a blank id or an answer element id). Assists pointing at nothing valid for the mode — a
+ * correct / unknown option, an unknown blank or element — are ignored (the validator reports
+ * them). `earned` holds the targets of rounds the player has cleared.
+ */
+export function verdictAssists(c: Case, vm: VerdictModes, cleared: readonly string[], mode: VerdictMode): { earned: Set<string>; total: Set<string> } {
+  const valid = (t: string | undefined): t is string => {
+    if (!t) return false;
+    if (mode === 'choice') return vm.choice.options.some((o) => o.id === t && !o.correct);
+    if (mode === 'cloze') return vm.cloze.blanks.some((b) => b.id === t);
+    return c.answerElements.some((e) => e.id === t);
+  };
+  const earned = new Set<string>();
+  const total = new Set<string>();
+  for (const a of vm.assists) {
+    const t = mode === 'choice' ? a.removeOption : mode === 'cloze' ? a.fillBlank : a.element;
+    if (!valid(t)) continue;
+    total.add(t);
+    if (cleared.includes(a.round)) earned.add(t);
+  }
+  return { earned, total };
+}
+
+/**
+ * What the verdict screen shows for a mode, with the assists earned by the cleared debate rounds
+ * applied. Never says which choice option is correct: options are in a fixed per-case shuffled
+ * order and only assisted WRONG options are marked removed. A cloze blank's `filled` (the correct
+ * answer's display index) is only present when an assist pre-fills it. Cases without
+ * verdictModes answer `available: false` with the free-text view (the UI falls back to it).
+ */
+export function verdictSetupView(c: Case, cleared: readonly string[], mode: VerdictMode): VerdictSetupResponse {
+  const vm = c.verdictModes;
+  const labels: Record<string, string> = {};
+  for (const e of c.answerElements) labels[e.id] = e.label;
+  if (!vm) return { mode: 'free', free: { labels, revealed: [] }, assistsEarned: 0, assistsTotal: 0, available: false };
+  const { earned, total } = verdictAssists(c, vm, cleared, mode);
+  const out: VerdictSetupResponse = { mode, assistsEarned: earned.size, assistsTotal: total.size, available: true };
+  if (mode === 'choice') {
+    out.choice = {
+      prompt: vm.choice.prompt,
+      options: verdictChoiceOrder(c, vm).map((i) => {
+        const o = vm.choice.options[i];
+        return { id: o.id, text: o.text, removed: earned.has(o.id) };
+      }),
+    };
+  } else if (mode === 'cloze') {
+    out.cloze = {
+      prompt: vm.cloze.prompt,
+      template: vm.cloze.template,
+      blanks: vm.cloze.blanks.map((b) => {
+        const order = verdictBlankOrder(c, b);
+        const v: { id: string; label: string; options: string[]; filled?: number } = { id: b.id, label: b.label, options: order.map((i) => b.options[i]) };
+        if (earned.has(b.id)) v.filled = order.indexOf(b.answer);
+        return v;
+      }),
+    };
+  } else {
+    out.free = { labels, revealed: c.answerElements.filter((e) => earned.has(e.id)).map((e) => e.id) };
+  }
+  return out;
 }
 
 export function solutionView(c: Case, unlocked: ReadonlySet<string>): SolutionResponse {

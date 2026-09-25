@@ -34,7 +34,8 @@
    │ normalize.ts  正規化・分割・否定・疑問詞・メタ・命題の極性             case-index.ts 事件ごとの前計算       │
    │ retrieve.ts   所見（キーワード＋bigram）と想定質問（Dice）の候補        rules-judge.ts オフライン判定        │
    │ pipeline.ts   ask の流れ（判定→規則→返答→検査→トレース）             policy.ts  所見を開けてよいかの規則   │
-   │ verdict.ts    死因宣告の判定                                          token.ts / sha256.ts  進行トークン   │
+   │ verdict.ts    死因宣告の判定（自由記述）                              token.ts / sha256.ts  進行トークン   │
+   │ verdict-modes.ts 難易度別の宣告（選択式 choice・穴埋め cloze）の判定。表示は public-view.ts の verdictSetupView │
    │ public-view.ts ブラウザへ出す形（秘密はここを通らない）                 state.ts   進行状態・進捗・破片     │
    │ factory.ts    env → 判定部品（Jev / LLM / 検査）                      budget.ts  1日の費用上限             │
    │ judge-types.ts 差し替え可能な Judge / VerdictJudge / Renderer / PostChecker の約束                          │
@@ -190,6 +191,21 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
   rules の一致をモデルの低確率で取り消す案（veto）は正解を落とすので採らない（veto 0.2 で回帰 137/144）。
 - 回帰: `tests/engine/verdict.test.ts`（c01 査読の3文・各事件の真相文が `correct`）、`tests/content/regression/*.json` の宣告セット。
 
+### 難易度別の宣告（verdict-modes.ts・2026-09-25）
+難易度はブラウザの保存に持つ（サーバーは知らない）。`VERDICT_MODE_BY_DIFFICULTY`: 見習い easy→`choice`、審問官 normal→`cloze`、教授 hard→`free`（従来の自由記述）。
+事件データは `verdictModes`（秘密。`shared/case-schema.ts`）。無い事件は `verdictSetup` が `available:false`＋free の形を返し、UI は自由記述に戻す。
+- **表示の順番**: 選択肢も穴埋めの候補も、再構成と同じ `optionOrder` で事件ごとに固定の並べ替え（鍵 `<caseId>:verdict:choice` / `<caseId>:verdict:cloze:<blankId>`）。
+  作者が正解を先頭に書いても、表示で先頭に固定されない。`verdictSetup` と判定は同じ並べ替えを使うので、ブラウザは正解を知らずに**表示順の番号**を送ればよい。
+- **議論の助け（assists）**: 突破したラウンド（トークンの `r`）の assist だけ効く。choice＝**誤りの**選択肢を `removed:true`（正解は絶対に消さない。データが正解を指していても無視）、
+  cloze＝その空欄の `filled`＝正解の表示番号、free＝`revealed` に要素 id（ラベルだけ。要素の説明・キーワードは出ない）。
+  `assistsEarned / assistsTotal` はそのモードで効く**対象の数**（重複・無効な参照は数えない）。
+- **choice の判定**: 正解の選択肢 → `correct`（matched＝全要素、labels＝要素ラベル）、それ以外 → `wrong`（matched 空）。
+  外れの選択肢の文が誤主張（wrongClaims）に当たれば、その `feedback` を台詞に添える（自由記述と同じ。答えは言わない）。
+- **cloze の判定**: 全空欄正解 → `correct` / 一部 → `missing`（matched＝正解した空欄 id、labels＝空欄 id→空欄ラベル）/ 0 → `wrong`。assist で埋まった空欄は送らなくてよい（正解として扱う）。
+- どのモードも `verdictAttempts` を1増やし、`correct` で `solved`・`nearCore` を立てる（解決済みなら数えずに `correct`）。台詞は line bank の verdictCorrect / Missing / Wrong。
+- **不正な入力は 400 `bad_request`（数えない）**: 不明な mode、choice が無い／不明／assist で消えた選択肢、blanks が無い・配列・不明な空欄・範囲外・整数でない・（assist 以外の）空欄の欠け、verdictModes の無い事件への choice/cloze。
+- 安全フィルター（`selfHarm`）と 600 字の上限は自由記述だけ（choice / cloze に文章は無い）。trace は `choice:<id>` / `cloze:place=0,…` だけを記録。
+
 ### AI 部品（実装済み・詳細は docs/ai.md）
 `server/engine/judge-types.ts` の冒頭コメントが契約。実装ファイルとシグネチャ（旧スタブはすべて置き換え済み）:
 - `server/engine/providers/jev.ts` → `createJevProvider(env): DecisionProvider`
@@ -233,6 +249,10 @@ requires の循環 / 議論の答えの span が `[[...]]` の中にあり、そ
 再構成の選択肢の正解がちょうど1つ / クイズの答え番号 / 公開欄（導入・**内容の注意書き contentWarning・場所 intro.location・時刻 intro.time**・ナレーション・例チップ・ジェーンとホルマの台詞・事件ごとのホルマの台詞（holmaLines.idle / nearCore）・科学メモ・
 spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画像ファイルの存在（背景・肖像・再構成コマの `image` → `public/<path>`。無ければ**警告**。
 `npm run validate` と管理 API が確認する。純粋関数の validate.ts には `assetExists` で注入）/ 想定質問の種類（yes/no/irrelevant/core/spoiler-bait/paraphrase/typo/negated）/
+**verdictModes**（選択肢の正解ちょうど1つ・id 重複なし・**正解を匂わせる id（correct / wrong / answer / dummy / seikai / hazure…）はエラー**＝ブラウザに出るため・
+空欄の `{{id}}` とテンプレートが双方向に一致・答えの番号・候補の重複、assist のラウンド／**誤りの**選択肢／空欄／要素の参照。
+警告: 公開事件に verdictModes が無い・誤りの選択肢が自由記述の判定で `correct` になる（ラベルの付け間違い？）・正解だけ極端に長い・assist が誤りの選択肢を全部消す／空欄を全部埋める。
+情報: 正解で埋めたテンプレートが自由記述の判定で `correct` にならない。**verdictModes の中の leakTerms は検査しない**（宣告の場面でしか出ないため）） /
 **rules 自己一致率 ≥95%**（想定質問をそのまま rules に通して正解ラベルが出るか。外れは警告に列挙）/
 真相の文章そのものが死因宣告で `correct` になるか（警告）/ 想定質問が一つも触れない所見（警告）/ leave-one-out 汎化率（情報）。
 
@@ -251,7 +271,8 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 | POST | `/api/inquest/start` | → `InquestStartResponse`（証拠 = 開示済み importance ≥1） |
 | POST | `/api/inquest/shot` | `ShotRequest` → `ShotResponse`（同ラウンド2回外すと `hint`） |
 | POST | `/api/inquest/grant` | `GrantRequest` → `ShotResponse`（`granted`。持っていれば減点なしでヒントだけ） |
-| POST | `/api/inquest/verdict` | `VerdictRequest`（≤600字）→ `VerdictResponse` |
+| POST | `/api/inquest/verdict-setup` | `VerdictSetupRequest`（`mode` 必須）→ `VerdictSetupResponse`（トークン検証のみ・新トークンは返さない。§3 難易度別の宣告） |
+| POST | `/api/inquest/verdict` | `VerdictRequest` → `VerdictResponse`。`mode` 省略＝`free`（`text` ≤600字）/ `choice`（`choice`＝選択肢 id）/ `cloze`（`blanks`＝空欄 id→表示順の番号） |
 | POST | `/api/reconstruction` | 解決済みのみ。空白コマは caption/scene/image を隠し、選択肢は事件ごとに固定の並べ替え。再構成完了後は全部見せる |
 | POST | `/api/reconstruction/submit` | `picks`（表示順の番号）→ コマごとの正誤・`allCorrect`・`finale` |
 | POST | `/api/solution` | 解決済みのみ `SolutionResponse` |
@@ -363,6 +384,10 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 - 集中力（5）とラウンド中の演出は UI 側で管理（サーバーは `correct` と `hint` を返すだけ）。泣きつき回数は `ProgressSnapshot` に無いので UI 側で数える（トークン内部には記録）。
 - 再構成の `picks` は**表示された順番の番号**。完了後に `reconstruction()` を呼び直すと空白コマの caption / image も返る。
 - 死因宣告が `correct` になるまで `reconstruction` / `solution` は 403（`bad_request`）。
+- 難易度別の宣告: 宣告画面を開くたびに `api.verdictSetup({caseId, token, mode: VERDICT_MODE_BY_DIFFICULTY[difficulty]})`。`available:false` なら自由記述の画面（返る `mode` は `'free'`）。
+  choice は `options[].id` をそのまま `verdict({mode:'choice', choice})` へ（`removed:true` は押せなくする。送ると 400）。
+  cloze は `blanks[].options` の**表示順の番号**を `verdict({mode:'cloze', blanks:{[id]: index}})` へ（`filled` のある空欄は固定表示。送っても省いてもよい）。
+  cloze の `missing` は `matched`（正解した空欄 id）と `labels`（空欄ラベル）で空欄ごとの正誤を出せる。ライフ（`LIVES_BY_DIFFICULTY`）は UI が数える（サーバーは `verdictAttempts` だけ）。
 
 ---
 

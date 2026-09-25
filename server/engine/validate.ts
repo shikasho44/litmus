@@ -210,6 +210,9 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
     if (q.answer < 0 || q.answer >= q.choices.length) errors.push(`quiz #${i + 1}: answer index ${q.answer} out of range`);
   });
 
+  // ── verdict modes (difficulty) ────────────────────────────────
+  validateVerdictModes(c, errors, warnings, info);
+
   // ── image files (warnings: art may land later than the case) ──
   if (opts.assetExists) {
     const images: [string, string | undefined][] = [
@@ -278,6 +281,111 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
     info,
     stats: { facts: c.facts.length, probes: c.probes.length, kinds, selfConsistency: self, generalization: gen },
   };
+}
+
+/** Option ids are sent to the browser: an id that names its own correctness gives the answer away. */
+const TELLTALE_ID = /(?:^|[-_])(?:correct|incorrect|right|wrong|answer|true|false|dummy|decoy|fake|trap|seikai|fuseikai|hazure|atari|ok|ng)(?:$|[-_\d])/;
+const PLACEHOLDER = /\{\{\s*([^{}]*?)\s*\}\}/g;
+
+/**
+ * verdictModes (choice / cloze / assists). They are only shown at the verdict, so leakTerms may
+ * appear in them (not scanned). A published case without them only warns (UI falls back to free).
+ */
+function validateVerdictModes(c: Case, errors: string[], warnings: string[], info: string[]): void {
+  const vm = c.verdictModes;
+  if (!vm) {
+    if (c.publish) warnings.push('no verdictModes: easy / normal difficulty fall back to the free-text verdict');
+    return;
+  }
+  // choice
+  const opts = vm.choice.options;
+  const nCorrect = opts.filter((o) => o.correct).length;
+  if (nCorrect !== 1) errors.push(`verdictModes.choice: ${nCorrect} correct options (expected exactly 1)`);
+  const seenIds = new Set<string>();
+  const seenTexts = new Set<string>();
+  for (const o of opts) {
+    if (seenIds.has(o.id)) errors.push(`verdictModes.choice: duplicate option id ${o.id}`);
+    seenIds.add(o.id);
+    if (!o.text.trim()) errors.push(`verdictModes.choice: option ${o.id} has empty text`);
+    else if (seenTexts.has(normalize(o.text))) errors.push(`verdictModes.choice: option ${o.id} repeats another option's text`);
+    seenTexts.add(normalize(o.text));
+    if (TELLTALE_ID.test(o.id.toLowerCase())) errors.push(`verdictModes.choice: option id "${o.id}" hints at its correctness (ids are sent to the browser — use neutral ids)`);
+  }
+  if (!vm.choice.prompt.trim()) warnings.push('verdictModes.choice.prompt is empty');
+  const right = opts.find((o) => o.correct);
+  const wrongOpts = opts.filter((o) => !o.correct);
+  if (right && wrongOpts.length > 0) {
+    const longestWrong = Math.max(...wrongOpts.map((o) => [...o.text].length));
+    const len = [...right.text].length;
+    if (len >= longestWrong * 1.4 && len - longestWrong >= 6) warnings.push(`verdictModes.choice: the correct option (${len} chars) is much longer than every wrong one (≤ ${longestWrong}) — players pick the longest`);
+    const rv = evaluateVerdict(c, right.text);
+    if (rv.wrongClaims.length > 0) warnings.push(`verdictModes.choice: the correct option ${right.id} affirms wrong claim(s) ${rv.wrongClaims.join(',')}`);
+  }
+  for (const o of wrongOpts) {
+    if (evaluateVerdict(c, o.text).result === 'correct') warnings.push(`verdictModes.choice: wrong option ${o.id} passes the free-text verdict as correct — is it mislabelled?`);
+  }
+
+  // cloze
+  const blanks = vm.cloze.blanks;
+  const blankIds = new Set<string>();
+  for (const b of blanks) {
+    if (blankIds.has(b.id)) errors.push(`verdictModes.cloze: duplicate blank id ${b.id}`);
+    blankIds.add(b.id);
+    if (b.answer >= b.options.length) errors.push(`verdictModes.cloze: blank ${b.id} answer index ${b.answer} out of range (${b.options.length} options)`);
+    const texts = b.options.map(normalize);
+    if (new Set(texts).size !== texts.length) errors.push(`verdictModes.cloze: blank ${b.id} has duplicate options`);
+    if (b.options.some((t) => !t.trim())) errors.push(`verdictModes.cloze: blank ${b.id} has an empty option`);
+    if (!b.label.trim()) warnings.push(`verdictModes.cloze: blank ${b.id} has an empty label`);
+  }
+  const used = [...vm.cloze.template.matchAll(PLACEHOLDER)].map((m) => m[1]);
+  for (const id of new Set(used)) if (!blankIds.has(id)) errors.push(`verdictModes.cloze: template placeholder {{${id}}} has no blank`);
+  for (const id of blankIds) {
+    const n = used.filter((u) => u === id).length;
+    if (n === 0) errors.push(`verdictModes.cloze: blank ${id} is not in the template`);
+    else if (n > 1) warnings.push(`verdictModes.cloze: blank ${id} appears ${n} times in the template`);
+  }
+  if (/\{\{|\}\}/.test(vm.cloze.template.replace(PLACEHOLDER, ''))) errors.push('verdictModes.cloze: template has an unbalanced {{ or }}');
+  if (errors.every((e) => !e.startsWith('verdictModes.cloze'))) {
+    const filled = vm.cloze.template.replace(PLACEHOLDER, (_, id: string) => {
+      const b = blanks.find((x) => x.id === id);
+      return b ? b.options[b.answer] : '';
+    });
+    const fv = evaluateVerdict(c, filled);
+    if (fv.result !== 'correct') info.push(`verdictModes.cloze: the completed sentence is "${fv.result}" under the free-text verdict (matched ${fv.matched.join(',') || 'none'})`);
+  }
+
+  // assists
+  const rounds = new Set(c.debate.map((r) => r.id));
+  const elements = new Set(c.answerElements.map((e) => e.id));
+  const removed = new Set<string>();
+  const filledBlanks = new Set<string>();
+  const revealed = new Set<string>();
+  vm.assists.forEach((a, i) => {
+    const at = `verdictModes.assists[${i}]`;
+    if (!rounds.has(a.round)) errors.push(`${at}: unknown debate round ${a.round}`);
+    if (!a.removeOption && !a.fillBlank && !a.element) warnings.push(`${at}: gives nothing (no removeOption / fillBlank / element)`);
+    if (a.removeOption) {
+      const o = opts.find((x) => x.id === a.removeOption);
+      if (!o) errors.push(`${at}: removeOption ${a.removeOption} is not a choice option`);
+      else if (o.correct) errors.push(`${at}: removeOption ${a.removeOption} is the CORRECT option (must be a wrong one)`);
+      else if (removed.has(o.id)) warnings.push(`${at}: option ${o.id} is already removed by another assist`);
+      removed.add(a.removeOption);
+    }
+    if (a.fillBlank) {
+      if (!blankIds.has(a.fillBlank)) errors.push(`${at}: fillBlank ${a.fillBlank} is not a cloze blank`);
+      else if (filledBlanks.has(a.fillBlank)) warnings.push(`${at}: blank ${a.fillBlank} is already filled by another assist`);
+      filledBlanks.add(a.fillBlank);
+    }
+    if (a.element) {
+      if (!elements.has(a.element)) errors.push(`${at}: element ${a.element} is not an answer element`);
+      else if (revealed.has(a.element)) warnings.push(`${at}: element ${a.element} is already revealed by another assist`);
+      revealed.add(a.element);
+    }
+  });
+  if (wrongOpts.length > 0 && wrongOpts.every((o) => removed.has(o.id))) warnings.push('verdictModes.assists remove every wrong choice option (the choice verdict answers itself once all rounds are cleared)');
+  if (blanks.length > 0 && blanks.every((b) => filledBlanks.has(b.id))) warnings.push('verdictModes.assists fill every cloze blank (the cloze verdict answers itself once all rounds are cleared)');
+  const noAssist = c.debate.filter((r) => !vm.assists.some((a) => a.round === r.id)).map((r) => r.id);
+  if (noAssist.length > 0 && vm.assists.length > 0) info.push(`verdictModes: debate round(s) ${noAssist.join(', ')} earn no assist`);
 }
 
 /** Runs every probe through the rules judge (optionally with that probe left out of the bank). */

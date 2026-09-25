@@ -31,7 +31,8 @@ function lazyEmbedded(): GameApi {
     (k: keyof GameApi) =>
     (...args: unknown[]): Promise<unknown> =>
       load().then((a) => (a[k] as (...x: unknown[]) => Promise<unknown>)(...args));
-  return {
+  // Record<keyof GameApi, …>: a GameApi method missing here is a type error (the cast below hid one).
+  const methods: Record<keyof GameApi, ReturnType<typeof wrap>> = {
     listCases: wrap('listCases'),
     getCase: wrap('getCase'),
     newToken: wrap('newToken'),
@@ -40,11 +41,13 @@ function lazyEmbedded(): GameApi {
     inquestStart: wrap('inquestStart'),
     shot: wrap('shot'),
     grant: wrap('grant'),
+    verdictSetup: wrap('verdictSetup'),
     verdict: wrap('verdict'),
     reconstruction: wrap('reconstruction'),
     submitReconstruction: wrap('submitReconstruction'),
     solution: wrap('solution'),
-  } as unknown as GameApi;
+  };
+  return methods as unknown as GameApi;
 }
 
 export const api: GameApi = API_MODE === 'embedded' ? lazyEmbedded() : httpApi;

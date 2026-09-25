@@ -17,7 +17,7 @@ import type {
   AskRequest, AskResponse, CasePublic, CaseSummary, GameApi, GrantRequest, HintRequest, HintResponse,
   InquestStartRequest, InquestStartResponse, ProgressSnapshot, ProgressToken, ReconstructionRequest,
   ReconstructionResult, ReconstructionSubmit, ReconstructionView, ShotRequest, ShotResponse, SolutionResponse,
-  VerdictRequest, VerdictResponse,
+  VerdictRequest, VerdictResponse, VerdictSetupRequest, VerdictSetupResponse,
 } from '../../shared/api';
 import { ApiError } from '../../shared/api';
 
@@ -126,6 +126,7 @@ export const httpApi: GameApi = {
   inquestStart: (req: InquestStartRequest) => call<InquestStartResponse>('POST', '/inquest/start', req),
   shot: (req: ShotRequest) => call<ShotResponse>('POST', '/inquest/shot', req),
   grant: (req: GrantRequest) => call<ShotResponse>('POST', '/inquest/grant', req),
+  verdictSetup: (req: VerdictSetupRequest) => call<VerdictSetupResponse>('POST', '/inquest/verdict-setup', req),
   verdict: (req: VerdictRequest) => call<VerdictResponse>('POST', '/inquest/verdict', req),
   reconstruction: (req: ReconstructionRequest) => call<ReconstructionView>('POST', '/reconstruction', req),
   submitReconstruction: (req: ReconstructionSubmit) => call<ReconstructionResult>('POST', '/reconstruction/submit', req),

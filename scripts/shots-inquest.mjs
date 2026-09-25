@@ -164,11 +164,12 @@ async function open(page, caseId, stage = 'investigated') {
     async ({ caseId, stage }) => {
       const J = window.__JD;
       J.resetSave();
-      J.setMeta({ prologueSeen: true });
+      J.setMeta({ prologueSeen: true, tutorial: { state: 'done', step: 0 } });
       J.setSettings({ textSpeed: 'fast' });
       const r = await fetch('api/admin/mint-token', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ caseId, stage }) });
       const { token, progress } = await r.json();
-      J.updateCase(caseId, { stage: 'inquest', token, snapshot: progress });
+      // 教授 (free-text verdict): this script covers the 宣告書; the other formats are in shots-modes.mjs
+      J.updateCase(caseId, { stage: 'inquest', token, snapshot: progress, difficulty: 'hard' });
       J.flushSave();
       J.goto('inquest', { caseId });
     },

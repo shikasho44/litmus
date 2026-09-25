@@ -7,6 +7,7 @@
  */
 import type { AnswerClass } from '../../shared/case-schema';
 import type {
+  Difficulty,
   HolmaMood,
   PipelineMode,
   ProgressSnapshot,
@@ -50,7 +51,8 @@ export type CaseStage =
   | 'result'
   | 'complete';
 
-export type Rank = 'S' | 'A' | 'B' | 'C';
+/** S+ = S with every noise-break round cleared by the player's own shots (none skipped, no begging). */
+export type Rank = 'S+' | 'S' | 'A' | 'B' | 'C';
 
 export interface LogAnswer {
   question: string;
@@ -98,6 +100,18 @@ export interface InquestState {
   reconstructionPicks?: Record<string, number>;
   reconstructionDone?: boolean;
   suspensions: number;
+  /** Jane's lights (やり直し): LIVES_BY_DIFFICULTY at the start of the inquest; each non-correct verdict costs one. */
+  lives?: number;
+  /** The player skipped the rest of the noise break (「議論を飛ばして死因宣告へ」). */
+  debateSkipped?: boolean;
+  /** Number of noise-break rounds of the case (for S+). */
+  rounds?: number;
+  /** choice mode: the option picked last (restored on reload). */
+  verdictChoice?: string;
+  /** choice mode: options already declared and judged wrong (shown crossed out). */
+  triedChoices?: string[];
+  /** cloze mode: blank id → option index (as displayed). */
+  verdictBlanks?: Record<string, number>;
 }
 
 export interface CaseResult {
@@ -106,6 +120,8 @@ export interface CaseResult {
   at: number;
   elapsedMs: number;
   stats: Record<string, number>;
+  /** The difficulty this run was played on (見習い / 審問官 / 教授). */
+  playDifficulty?: Difficulty;
   /** Best rank of this case BEFORE this run (set by completeCase; lets the result screen show the change). */
   prevBest?: Rank;
 }
@@ -119,6 +135,10 @@ export interface RestoredIdentity {
 export interface CaseProgress {
   caseId: string;
   stage: CaseStage;
+  /** Difficulty chosen when the run started (default 'normal'). Changeable until the inquest opens. */
+  difficulty?: Difficulty;
+  /** Game overs in this case (all runs). */
+  gameOvers?: number;
   startedAt: number;
   updatedAt: number;
   /** Active play time (ms). Advanced by useCaseTimer while the case scene is visible. */
@@ -152,8 +172,20 @@ export interface CaseProgress {
 /* ------------------------------------------------------------------ */
 /* Root                                                                */
 /* ------------------------------------------------------------------ */
+/**
+ * The coach-mark tutorial. 'off' = not started yet (starts on the first play of CASE 01),
+ * 'on' = running at `step`, 'done' = finished or skipped. `anyCase`: replayed from the menu,
+ * so it runs in whichever case is played next.
+ */
+export interface TutorialState {
+  state: 'off' | 'on' | 'done';
+  step: number;
+  anyCase?: boolean;
+}
+
 export interface SaveMeta {
   prologueSeen: boolean;
+  tutorial?: TutorialState;
   firstLaunchAt: number;
   lastCaseId?: string;
   launches: number;

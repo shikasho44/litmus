@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CaseProgress } from '../../state/types';
-import { computeRank, keyRateTarget, questionPar, rankAdvice, RANK_TITLES, type RankInput } from './rank';
+import { allRoundsCleared, computeRank, keyRateTarget, questionPar, rankAdvice, RANK_TITLES, type RankInput } from './rank';
 import { buildCaseResult, collectRankInput, quizMisses } from './stats';
 
 const base = (over: Partial<RankInput> = {}): RankInput => ({
@@ -18,7 +18,7 @@ const base = (over: Partial<RankInput> = {}): RankInput => ({
   ...over,
 });
 
-const ORDER = ['S', 'A', 'B', 'C'];
+const ORDER = ['S+', 'S', 'A', 'B', 'C'];
 const worseOrEqual = (a: string, b: string) => ORDER.indexOf(a) >= ORDER.indexOf(b);
 
 describe('computeRank', () => {
@@ -206,5 +206,64 @@ describe('rankAdvice', () => {
     expect(a.blockers.length).toBeGreaterThan(0);
     expect(a.line.length).toBeGreaterThan(5);
     expect(a.target === undefined || a.target === 'B' || a.target === 'S').toBe(true);
+  });
+});
+
+describe('S+ (every noise-break round cleared, none skipped)', () => {
+  it('S with every round cleared and no begging is S+ with its own title', () => {
+    const r = computeRank(base({ debateRounds: 2, debateCleared: 2 }));
+    expect(r.rank).toBe('S+');
+    expect(r.titleId).toBe('flawless');
+    expect(RANK_TITLES.find((t) => t.id === r.titleId)?.rank).toBe('S+');
+    expect(rankAdvice(base({ debateRounds: 2, debateCleared: 2 })).line).toContain('完璧');
+  });
+
+  it('a skipped round keeps a clean run at S, and Holma says what S+ needed', () => {
+    const inp = base({ debateRounds: 2, debateCleared: 1 });
+    expect(computeRank(inp).rank).toBe('S');
+    const a = rankAdvice(inp);
+    expect(a.target).toBe('S+');
+    expect(a.line).toContain('S+');
+  });
+
+  it('begging for evidence rules out S+ (and S)', () => {
+    expect(computeRank(base({ debateRounds: 2, debateCleared: 2, grants: 1 })).rank).not.toMatch(/^S/);
+  });
+
+  it('an unknown round count never gives S+', () => {
+    expect(computeRank(base({ debateCleared: 2 })).rank).toBe('S');
+    expect(allRoundsCleared({ debateRounds: 0, debateCleared: 0, grants: 0 })).toBe(false);
+  });
+
+  it('S+ is only the top of S: a penalised run is never lifted by the noise break', () => {
+    expect(computeRank(base({ debateRounds: 2, debateCleared: 2, hintsUsed: 1 })).rank).toBe('A');
+  });
+
+  it('collectRankInput reads the round count from the inquest and the clears from the snapshot', () => {
+    const p = {
+      caseId: 'c01-x',
+      stage: 'quiz',
+      startedAt: 0,
+      updatedAt: 0,
+      elapsedMs: 0,
+      log: [],
+      facts: {},
+      factOrder: [],
+      seenFacts: [],
+      memos: {},
+      hints: [],
+      notes: '',
+      completed: false,
+      clears: 0,
+      difficulty: 'hard',
+      snapshot: { unlocked: [], memos: [], asked: 10, hintsUsed: 0, debateCleared: ['r1', 'r2'], debateMisses: 0, verdictAttempts: 1, solved: true, reconstructed: true, progress: 1, nearCore: true },
+      inquest: { phase: 'done', roundIndex: 1, composure: 5, cleared: ['r1', 'r2'], misses: 0, grants: 0, verdictAttempts: 1, suspensions: 0, rounds: 2 },
+    } as CaseProgress;
+    const i = collectRankInput(p, { difficulty: 1 });
+    expect(i).toMatchObject({ debateRounds: 2, debateCleared: 2 });
+    const { result } = buildCaseResult(p, { difficulty: 1 });
+    expect(result.rank).toBe('S+');
+    expect(result.playDifficulty).toBe('hard');
+    expect(result.stats.debateCleared).toBe(2);
   });
 });

@@ -7,6 +7,8 @@
  * penalty sizes scale with the case difficulty (1..3), so a hard case forgives more.
  *
  *   S ≥ 88 (and no hints / no grants) · A ≥ 70 · B ≥ 50 · C otherwise
+ *   S+ = S, and every noise-break round of the case cleared by the player's own shots (none
+ *        skipped — the noise break is optional — and no begging Holma for evidence)
  *
  * Each rank comes with a one-line title in Holma's voice, chosen by the run's most telling
  * trait (e.g. no misses → 「ためらわぬ弾丸」, hints used → 「囁きに耳を貸す者」).
@@ -34,6 +36,10 @@ export interface RankInput {
   elapsedMs: number;
   /** The case's estimated play time; defaults to 10 + 5 × difficulty minutes. */
   estimatedMinutes?: number;
+  /** Noise-break rounds of the case (0 / unknown = no S+). */
+  debateRounds?: number;
+  /** Rounds the player cleared (skipped ones are not). */
+  debateCleared?: number;
 }
 
 export type PenaltyId = 'questions' | 'keyRate' | 'hints' | 'misses' | 'grants' | 'verdict' | 'suspensions' | 'time';
@@ -66,17 +72,19 @@ export interface RankResult {
   penalties: Penalty[];
 }
 
-export const RANK_THRESHOLDS: Record<Exclude<Rank, 'C'>, number> = { S: 88, A: 70, B: 50 };
+export const RANK_THRESHOLDS: Record<Exclude<Rank, 'C' | 'S+'>, number> = { S: 88, A: 70, B: 50 };
 
 export const RANK_LABEL: Record<Rank, { jp: string; en: string }> = {
+  'S+': { jp: '至高の審問官', en: 'PERFECT' },
   S: { jp: '特級審問官', en: 'SUPREME' },
   A: { jp: '上級審問官', en: 'EXCELLENT' },
   B: { jp: '審問官', en: 'GOOD' },
   C: { jp: '見習い審問官', en: 'APPRENTICE' },
 };
 
-/** All titles (12). Order inside a rank = priority when several apply; the last one is the default. */
+/** All titles (13). Order inside a rank = priority when several apply; the last one is the default. */
 export const RANK_TITLES: RankTitle[] = [
+  { id: 'flawless', rank: 'S+', title: '完全無欠の審問官', comment: 'すべての記憶を、ご自分の弾で。……私の出番は、ありませんでしたねェ。' },
   { id: 'one-shot', rank: 'S', title: '一撃の審問官', comment: '迷いのない一撃。……少々、つまらないくらいですねェ。' },
   { id: 'silent', rank: 'S', title: '寡黙な解剖医', comment: '言葉少なに、急所だけを。お見事ですとも。' },
   { id: 'ace', rank: 'S', title: '零番の切り札', comment: 'この部屋の切り札は、どうやらあなたのようで。' },
@@ -141,7 +149,7 @@ export function computeRank(input: RankInput): RankResult {
   const score = Math.round(clamp(100 - total, 0, 100));
 
   let rank: Rank;
-  if (score >= RANK_THRESHOLDS.S && hints === 0 && grants === 0) rank = 'S';
+  if (score >= RANK_THRESHOLDS.S && hints === 0 && grants === 0) rank = allRoundsCleared(input) ? 'S+' : 'S';
   else if (score >= RANK_THRESHOLDS.A) rank = 'A';
   else if (score >= RANK_THRESHOLDS.B) rank = 'B';
   else rank = 'C';
@@ -151,6 +159,8 @@ export function computeRank(input: RankInput): RankResult {
 
   const pick = (): string => {
     switch (rank) {
+      case 'S+':
+        return 'flawless';
       case 'S':
         if (verdicts === 1 && misses === 0) return 'one-shot';
         if (asked > 0 && asked <= par * 0.7) return 'silent';
@@ -173,6 +183,12 @@ export function computeRank(input: RankInput): RankResult {
   return { rank, score, title: t.title, titleId: t.id, comment: t.comment, keyRate, par, penalties };
 }
 
+/** Every noise-break round cleared by shooting (none skipped). Unknown round count → false. */
+export function allRoundsCleared(input: Pick<RankInput, 'debateRounds' | 'debateCleared' | 'grants'>): boolean {
+  const rounds = n(input.debateRounds);
+  return rounds > 0 && n(input.debateCleared) >= rounds && n(input.grants) === 0;
+}
+
 /* ------------------------------------------------------------------ */
 /* What cost the rank (result screen, in Holma's voice)                */
 /* ------------------------------------------------------------------ */
@@ -188,7 +204,7 @@ export interface RankAdvice {
   sCondition: string;
 }
 
-const RANK_ORDER: Rank[] = ['S', 'A', 'B', 'C'];
+const RANK_ORDER: Rank[] = ['S+', 'S', 'A', 'B', 'C'];
 const better = (a: Rank, b: Rank) => RANK_ORDER.indexOf(a) < RANK_ORDER.indexOf(b);
 
 /** The same run with one kind of penalty erased (used to test "without X you'd have had S"). */
@@ -239,6 +255,7 @@ export function penaltyText(id: PenaltyId, input: RankInput): string {
 }
 
 export const S_CONDITION = `減点${100 - RANK_THRESHOLDS.S}点以内、囁きと泣きつきなし`;
+export const S_PLUS_CONDITION = 'Sのうえ、議論を全部撃ち抜く';
 
 /**
  * Names the 1–2 heaviest penalties whose removal would have lifted the run to S (or, when S
@@ -249,7 +266,13 @@ export function rankAdvice(input: RankInput, result: RankResult = computeRank(in
   const pack = (ids: PenaltyId[]) => ids.map((id) => ({ id, text: penaltyText(id, input), points: sorted.find((p) => p.id === id)?.points ?? 0 }));
   const join = (ids: PenaltyId[]) => ids.map((id) => penaltyText(id, input)).join('と');
 
+  if (result.rank === 'S+') {
+    if (!sorted.length) return { line: '減点なし、記憶はすべてご自分の手で。……完璧、ですねェ。', blockers: [], sCondition: S_CONDITION };
+    return { line: `強いて言えば、${join([sorted[0].id])}。……贅沢な悩みですとも。`, blockers: pack([sorted[0].id]), sCondition: S_CONDITION };
+  }
   if (result.rank === 'S') {
+    if (n(input.debateRounds) > 0 && !allRoundsCleared(input))
+      return { line: 'ノイズ・ブレイクを全部撃ち抜いていれば、S+でしたねェ。', target: 'S+', blockers: [], sCondition: S_CONDITION };
     if (!sorted.length) return { line: '減点なし。……文句のつけようがありませんねェ。', blockers: [], sCondition: S_CONDITION };
     return { line: `強いて言えば、${join([sorted[0].id])}。……贅沢な悩みですとも。`, blockers: pack([sorted[0].id]), sCondition: S_CONDITION };
   }
@@ -257,6 +280,7 @@ export function rankAdvice(input: RankInput, result: RankResult = computeRank(in
   const reaches = (ids: PenaltyId[], target: Rank) => {
     const fixed = ids.reduce((inp, id) => withoutPenalty(inp, id), input);
     const r = computeRank(fixed).rank;
+    // (S+ also needs the noise break: reaching S counts for the 'S' target either way)
     return r === target || better(r, target);
   };
   const find = (target: Rank): PenaltyId[] | null => {
@@ -279,7 +303,7 @@ export function rankAdvice(input: RankInput, result: RankResult = computeRank(in
   const toS = find('S');
   if (toS) return { line: `${join(order(toS))}がなければ、Sでしたねェ。`, target: 'S', blockers: pack(order(toS)), sCondition: S_CONDITION };
   const up = RANK_ORDER[RANK_ORDER.indexOf(result.rank) - 1];
-  const toUp = up && up !== 'S' ? find(up) : null;
+  const toUp = up && up !== 'S' && up !== 'S+' ? find(up) : null;
   if (toUp) return { line: `${join(order(toUp))}がなければ、${up}でしたねェ。`, target: up, blockers: pack(order(toUp)), sCondition: S_CONDITION };
   const top2 = sorted.slice(0, 2).map((p) => p.id);
   if (!top2.length) return { line: 'もう少し、手際よく。……次は期待していますよ。', blockers: [], sCondition: S_CONDITION };

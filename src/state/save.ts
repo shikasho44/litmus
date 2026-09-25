@@ -10,7 +10,7 @@
  */
 import { batch, computed, effect, signal } from '@preact/signals';
 import { APP_CONFIG } from '../config/app';
-import type { ProgressSnapshot, ProgressToken, PublicFact, ScienceMemoView } from '../../shared/api';
+import type { Difficulty, ProgressSnapshot, ProgressToken, PublicFact, ScienceMemoView } from '../../shared/api';
 import { prefersReducedMotion, START_MUTED } from '../lib/env';
 import {
   SAVE_VERSION,
@@ -23,6 +23,7 @@ import {
   type Rank,
   type SaveData,
   type Settings,
+  type TutorialState,
 } from './types';
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -104,7 +105,10 @@ function sanitizeSettings(s: unknown): Settings {
 
 const PIPELINE_MODES: readonly unknown[] = ['rules', 'jev', 'jev+llm', 'jev+llm+check', 'llm'];
 const STAGES: readonly CaseStage[] = ['new', 'intro', 'investigation', 'inquest', 'resolution', 'science', 'quiz', 'result', 'complete'];
-const RANKS: readonly Rank[] = ['S', 'A', 'B', 'C'];
+const RANKS: readonly Rank[] = ['S+', 'S', 'A', 'B', 'C'];
+export const DIFFICULTIES: readonly Difficulty[] = ['easy', 'normal', 'hard'];
+/** The recommended difficulty (審問官) — also what a save without a choice plays on. */
+export const DEFAULT_DIFFICULTY: Difficulty = 'normal';
 
 function sanitizeCase(id: string, c: unknown): CaseProgress | null {
   if (!isObj(c)) return null;
@@ -114,6 +118,8 @@ function sanitizeCase(id: string, c: unknown): CaseProgress | null {
     ...c,
     caseId: id,
     stage: oneOf(c.stage, STAGES, 'new'),
+    difficulty: DIFFICULTIES.includes(c.difficulty) ? c.difficulty : undefined,
+    gameOvers: num(c.gameOvers, 0, 0),
     startedAt: num(c.startedAt, base.startedAt),
     updatedAt: num(c.updatedAt, base.updatedAt),
     elapsedMs: num(c.elapsedMs, 0, 0),
@@ -150,11 +156,16 @@ function sanitize(raw: unknown): SaveData {
     }
   }
   const meta = isObj(m.meta) ? m.meta : {};
+  const tut = isObj(meta.tutorial) ? meta.tutorial : null;
+  const tutorial: TutorialState | undefined = tut
+    ? { state: oneOf(tut.state, ['off', 'on', 'done'] as const, 'off'), step: num(tut.step, 0, 0, 99), ...(tut.anyCase === true ? { anyCase: true } : {}) }
+    : undefined;
   return {
     version: SAVE_VERSION,
     settings: sanitizeSettings(m.settings),
     meta: {
       prologueSeen: bool(meta.prologueSeen, false),
+      ...(tutorial ? { tutorial } : {}),
       firstLaunchAt: num(meta.firstLaunchAt, fresh.meta.firstLaunchAt),
       lastCaseId: typeof meta.lastCaseId === 'string' ? meta.lastCaseId : undefined,
       launches: num(meta.launches, 0, 0),
@@ -335,7 +346,7 @@ export function setInquest(caseId: string, patch: Partial<InquestState>) {
   }));
 }
 
-const RANK_ORDER: Rank[] = ['S', 'A', 'B', 'C'];
+const RANK_ORDER: Rank[] = ['S+', 'S', 'A', 'B', 'C'];
 export const betterRank = (a: Rank | undefined, b: Rank | undefined): Rank | undefined =>
   !a ? b : !b ? a : RANK_ORDER.indexOf(a) <= RANK_ORDER.indexOf(b) ? a : b;
 
@@ -357,9 +368,27 @@ export function setRestored(caseId: string, name: string, kana: string) {
   updateCase(caseId, (c) => ({ ...c, restored: { name, kana } }));
 }
 
-/** Start the case over (keeps best rank, clear count and the restored name). */
+/** Start the case over (keeps best rank, clear count, the restored name and the chosen difficulty). */
 export function resetCase(caseId: string) {
-  updateCase(caseId, (c) => ({ ...freshCase(caseId), bestRank: c.bestRank, clears: c.clears, completed: c.completed, lastResult: c.lastResult, restored: c.restored }));
+  updateCase(caseId, (c) => ({
+    ...freshCase(caseId),
+    bestRank: c.bestRank,
+    clears: c.clears,
+    completed: c.completed,
+    lastResult: c.lastResult,
+    restored: c.restored,
+    ...(c.difficulty ? { difficulty: c.difficulty } : {}),
+    ...(c.gameOvers ? { gameOvers: c.gameOvers } : {}),
+  }));
+}
+
+/** The difficulty a case is played on (default 審問官). */
+export function caseDifficulty(caseId: string | undefined): Difficulty {
+  return (caseId && saveData.value.cases[caseId]?.difficulty) || DEFAULT_DIFFICULTY;
+}
+
+export function setCaseDifficulty(caseId: string, difficulty: Difficulty) {
+  updateCase(caseId, { difficulty });
 }
 
 export function addElapsed(caseId: string, ms: number) {

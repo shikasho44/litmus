@@ -26,6 +26,9 @@ import { StageView } from '../../features/investigation/StageView';
 import { TopBar } from '../../features/investigation/TopBar';
 import { WhisperOverlay } from '../../features/investigation/WhisperOverlay';
 import { Notebook, unseenFacts } from '../../features/notebook/Notebook';
+import { canChangeDifficulty, DIFFICULTY_META } from '../../features/difficulty/meta';
+import { maybeStartTutorial, replayTutorial } from '../../features/tutorial/tutorial';
+import { caseDifficulty } from '../../state/save';
 import '../../features/investigation/investigation.css';
 
 const SIDE_PREF = 'janedoe:notebook-side';
@@ -83,6 +86,7 @@ export function InvestigationScene({ params }: SceneProps) {
   useEffect(() => {
     const c = getCaseProgress(caseId);
     if (!c?.snapshot?.solved) setStage(caseId, 'investigation');
+    maybeStartTutorial(caseId);
     ctl.syncFromSave();
     try {
       const d = localStorage.getItem(draftKey(caseId));
@@ -286,6 +290,7 @@ export function InvestigationScene({ params }: SceneProps) {
         line={inquest?.line ?? { text: '', mood: 'normal' }}
         low={!!inquest?.low}
         progress={progress}
+        difficulty={canChangeDifficulty(progress) ? DIFFICULTY_META[caseDifficulty(caseId)].jp : undefined}
       />
       <HintConfirm
         open={hintOpen}
@@ -331,6 +336,16 @@ export function InvestigationScene({ params }: SceneProps) {
         onTitle={() => {
           setMenuOpen(false);
           goto('title');
+        }}
+        difficulty={progress?.difficulty ?? 'normal'}
+        canChangeDifficulty={canChangeDifficulty(progress)}
+        onDifficulty={() => {
+          setMenuOpen(false);
+          setTimeout(() => openOverlay('difficulty', { caseId, mode: 'change' }), 60);
+        }}
+        onTutorial={() => {
+          setMenuOpen(false);
+          replayTutorial();
         }}
       />
       <p class="sr-only" aria-live="polite" aria-atomic="true">

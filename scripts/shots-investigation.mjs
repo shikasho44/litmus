@@ -162,7 +162,8 @@ async function freshApp(page, extra = '') {
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'load', timeout: 180000 });
   await ready(page);
-  await page.evaluate(() => window.__JD.setMeta({ prologueSeen: true }));
+  // the coach-mark tutorial has its own shots (scripts/shots-modes.mjs)
+  await page.evaluate(() => window.__JD.setMeta({ prologueSeen: true, tutorial: { state: 'done', step: 0 } }));
 }
 async function openFromFiles(page, tag, n) {
   await page.evaluate(() => window.__JD.goto('files'));
@@ -171,6 +172,10 @@ async function openFromFiles(page, tag, n) {
   await wait(1200);
   await shot(page, `${n}-files-${tag}`);
   await page.locator('.tag__open').first().click();
+  // a fresh case asks for the difficulty first (審問官 = the default choice)
+  await page.waitForSelector('[data-difficulty-confirm]', { timeout: 30000 });
+  await wait(600);
+  await page.click('[data-difficulty-confirm]');
   await page.waitForSelector('.intro', { timeout: 30000 });
 }
 async function waitInvestigation(page) {

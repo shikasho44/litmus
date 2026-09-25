@@ -7,16 +7,21 @@
 //   node scripts/qa.mjs --no-smoke  full flow only          --smoke-only   smoke runs only
 //   node scripts/qa.mjs --port 5198 (default; a dev server already answering there is reused if it runs in rules mode)
 //
-// Full flow: title (gate → 審問を始める) → prologue (skip) → files → intro (title card, narration,
-// skip → catch cut-in) → investigation (starter chip, then case probes until the findings the
-// debate needs are unlocked, one hint, notebook) → 審問を開く → inquest (one miss, every round,
-// an incomplete verdict, the truth summary, reconstruction with one wrong pick, finale) →
-// resolution (ceremony → record) → science → quiz (one wrong answer) → result → files (rank).
+// Full flow: title (gate → 審問を始める) → prologue (skip) → files → difficulty chooser → intro
+// (title card, narration, skip → catch cut-in) → investigation (coach-mark tutorial on CASE 01,
+// starter chip, then case probes until the findings the debate needs are unlocked, one hint,
+// notebook) → 審問を開く → inquest (one miss, every round, an incomplete verdict in the
+// difficulty's format, the right one, reconstruction with one wrong pick, finale) → resolution
+// (ceremony → record) → science → quiz (one wrong answer) → result → files (rank).
 // Resume checks: reload in investigation / inquest / verdict / resolution / science / quiz /
 // result lands on the same scene with its state, and title 「続きから」 reopens the case.
 //
-// Smoke (other cases): files → intro (skip) → 3 questions, then a dev-minted 'investigated'
-// token (POST /api/admin/mint-token) → inquest → endings → files rank.
+// Smoke (other cases): files → difficulty → intro (skip) → 3 questions, then a dev-minted
+// 'investigated' token (POST /api/admin/mint-token) → inquest → endings → files rank.
+// Difficulty per case (every verdict format runs in the default `npm run qa`):
+//   c01 審問官 (cloze) · c02 見習い (choice, noise break skipped after round 1) · c03 教授 (free).
+// Game over: 審問官 on the last light → the case restarts (new token, other cases untouched);
+// 見習い on the last light → back to the start of the inquest with the lights refilled.
 //
 // Time: every page runs on Playwright's virtual clock and the script advances it (tick), so
 // GSAP timelines / typewriters / timers are frame-exact however busy the machine is. The API
@@ -61,6 +66,14 @@ if (!SMOKE_ONLY && !FULL.length) {
   process.exit(1);
 }
 const SMOKES = SMOKE ? CASES.filter((c) => !FULL.includes(c)) : [];
+
+/** Difficulty per case (VERDICT_MODE_BY_DIFFICULTY: easy choice · normal cloze · hard free). */
+const LEVEL = { c01: 'normal', c02: 'easy', c03: 'hard' };
+const MODE = { easy: 'choice', normal: 'cloze', hard: 'free' };
+const LIVES = { easy: 10, normal: 3, hard: 3 };
+/** Smoke runs that skip the rest of the noise break after this many rounds. */
+const SKIP_AFTER = { c02: 1 };
+const levelOf = (c) => LEVEL[c.id.slice(0, 3)] ?? 'normal';
 
 /** Verdicts that name part of the story but not all of it (never 'correct'). */
 const INCOMPLETE = {
@@ -303,12 +316,22 @@ async function titleToFiles(page, name) {
   check(seen === true, 'prologue skip marks the prologue as seen');
 }
 
-async function openFromFiles(page, c) {
+async function openFromFiles(page, c, name) {
   const tag = page.locator(`article.tag:has(#case-${c.id}-title)`);
   await tag.scrollIntoViewIfNeeded();
   await tick(page, 300);
   await tag.locator('.tag__open').click();
+  // a fresh case asks for the difficulty first
+  const level = levelOf(c);
+  await waitSel(page, '.dfc .dcard.is-selected', { label: 'difficulty chooser' });
+  await tick(page, 1100);
+  check((await page.getAttribute('.dcard.is-selected', 'data-difficulty')) === 'normal', `${c.id}: the chooser preselects 審問官`);
+  await page.click(`.dcard[data-difficulty="${level}"]`);
+  await tick(page, 400);
+  if (name) await shot(page, name('difficulty'));
+  await page.click('[data-difficulty-confirm]');
   await waitScene(page, 'intro');
+  check((await saveOf(page, c.id))?.difficulty === level, `${c.id}: difficulty ${level} is saved`);
 }
 
 async function intro(page, c, name, { watchSome = true } = {}) {
@@ -386,10 +409,28 @@ async function investigation(page, c, name, { questions, full }) {
   const { plan, probeFor, used } = questionPlan(c);
   const list = questions ? plan.slice(0, questions) : plan;
 
+  // 0) CASE 01's first play runs the coach-mark tutorial
+  const tutorial = full && c.id.startsWith('c01');
+  if (tutorial) {
+    await waitSel(page, '.coach[data-coach-step="ask"]', { label: 'tutorial: ask' });
+    await tick(page, 600);
+    await shot(page, name('tutorial-ask'));
+  }
   // 1) the first starter chip (fills, then sent with Enter)
   const chipQ = await page.locator('.dock__chip').first().textContent();
   const a0 = await ask(page, c, chipQ, { viaChip: true });
   check(a0.length >= 1, `${c.id}: starter chip question answered (${a0.map((a) => a.answerClass).join(',')})`);
+  if (tutorial) {
+    await waitSel(page, '.coach[data-coach-step="stamp"]', { label: 'tutorial: stamp (after the first answer)' });
+    await tick(page, 500);
+    await shot(page, name('tutorial-stamp'));
+    await page.click('[data-coach-next]');
+    await waitSel(page, '.coach[data-coach-step="notebook"]', { label: 'tutorial: notebook' });
+    await tick(page, 400);
+    await page.click('[data-coach-skip]');
+    await waitGone(page, '.coach');
+    check((await page.evaluate(() => window.__JD.getState().save.meta.tutorial?.state)) === 'done', `${c.id}: the tutorial can be skipped`);
+  }
   await shot(page, name('inv-first-answer'));
 
   // 2) probes — shots of the first finding cut-in / flight
@@ -506,7 +547,18 @@ const iq = (page) =>
   page.evaluate(() => {
     const el = document.querySelector('.iq');
     return el
-      ? { phase: el.dataset.phase, step: el.dataset.step, vstep: el.dataset.verdictStep, dlg: el.dataset.dialogue, busy: el.dataset.busy, card: el.dataset.card, cut: !!document.querySelector('.fx-cutin'), scene: window.__JD.getState().route.scene }
+      ? {
+          phase: el.dataset.phase,
+          step: el.dataset.step,
+          vstep: el.dataset.verdictStep,
+          dlg: el.dataset.dialogue,
+          busy: el.dataset.busy,
+          card: el.dataset.card,
+          cut: !!document.querySelector('.fx-cutin'),
+          writable: !!document.querySelector('.vpanel[data-writable="on"]'),
+          lives: Number(document.querySelector('.lives')?.getAttribute('data-lives') ?? -1),
+          scene: window.__JD.getState().route.scene,
+        }
       : { phase: null, scene: window.__JD.getState().route.scene };
   });
 /** Advance time until pred(state); finishes and advances dialogue lines on the way when asked. */
@@ -586,7 +638,52 @@ async function evidenceIds(page) {
   return page.evaluate(() => [...document.querySelectorAll('.iq-mag [data-fact-id]')].map((e) => e.getAttribute('data-fact-id')));
 }
 
-async function inquest(page, c, name, { full, held }) {
+/** Fill one cloze blank with the option whose text is `text` (the server shows its own order). */
+async function fillBlank(page, blankId, text) {
+  if (!(await has(page, `.vblank[data-blank-id="${blankId}"].is-open`))) {
+    if (NARROW && (await has(page, '.sheet-root'))) {
+      await page.keyboard.press('Escape');
+      await waitGone(page, '.sheet-root');
+    }
+    await page.locator(`.vblank[data-blank-id="${blankId}"]`).scrollIntoViewIfNeeded();
+    await page.click(`.vblank[data-blank-id="${blankId}"]`);
+  }
+  await waitSel(page, '.vpick');
+  await tick(page, NARROW ? 450 : 150);
+  await page.locator('.vpick__opt', { hasText: text }).first().click();
+  await tick(page, NARROW ? 500 : 250);
+}
+
+/** Declare in the difficulty's format: the right answer, or a partly / wholly wrong one. */
+async function declare(page, c, mode, { correct }) {
+  const key = c.id.slice(0, 3);
+  if (mode === 'free') {
+    await page.fill('#verdict-text', correct ? c.truth.summary : INCOMPLETE[key] ?? '事故だったと思う。');
+  } else if (mode === 'choice') {
+    const off = await page.$$eval('.vopt.is-removed, .vopt.is-wrong', (els) => els.map((e) => e.getAttribute('data-option-id')));
+    const opt = c.verdictModes.choice.options.find((o) => (correct ? o.correct : !o.correct && !off.includes(o.id)));
+    await page.locator(`.vopt[data-option-id="${opt.id}"]`).scrollIntoViewIfNeeded();
+    await page.click(`.vopt[data-option-id="${opt.id}"]`);
+  } else {
+    let wrongOne = !correct;
+    for (const b of c.verdictModes.cloze.blanks) {
+      if (await has(page, `.vblank.is-locked[data-blank-id="${b.id}"]`)) continue;
+      const text = wrongOne ? b.options.find((_, i) => i !== b.answer) : b.options[b.answer];
+      wrongOne = false; // one wrong blank, the rest right → 要素不足 (missing)
+      await fillBlank(page, b.id, text);
+    }
+    if (NARROW && (await has(page, '.sheet-root'))) {
+      await page.keyboard.press('Escape');
+      await waitGone(page, '.sheet-root');
+    }
+  }
+  await tick(page, 200);
+  await page.locator('[data-verdict-submit]').scrollIntoViewIfNeeded();
+  await page.click('[data-verdict-submit]');
+}
+
+async function inquest(page, c, name, { full, held, level = levelOf(c), skipAfter }) {
+  const mode = MODE[level];
   await until(page, (s) => s.card === 'on' || (s.step === 'play' && s.dlg === 'off'), { label: 'round card' });
   await tick(page, 900);
   await shot(page, name('inquest-round1-card'));
@@ -594,8 +691,18 @@ async function inquest(page, c, name, { full, held }) {
   await tick(page, 1200);
   await shot(page, name('inquest-debate'));
 
+  check((await iq(page)).lives === LIVES[level], `${c.id}: ${LIVES[level]} lights for ${level} in the header`);
   for (const [ri, round] of c.debate.entries()) {
     if (ri > 0) await until(page, (s) => s.step === 'play' && s.dlg === 'off' && s.card === 'off', { label: `round ${ri + 1}` });
+    if (skipAfter !== undefined && ri >= skipAfter) {
+      // the noise break is optional: skip the rest (confirm) → the verdict
+      await page.click('[data-skip-debate]');
+      await waitSel(page, '[data-skip-confirm]');
+      await tick(page, 500);
+      await shot(page, name('inquest-skip-confirm'));
+      await page.click('[data-skip-confirm]');
+      break;
+    }
     const okIds = [round.answer.fact, ...(round.alsoAccept ?? [])];
     // the evidence the player actually holds for this round
     const listed = await evidenceIds(page);
@@ -623,6 +730,16 @@ async function inquest(page, c, name, { full, held }) {
       await shot(page, name('inquest-refute'));
     }
     await until(page, (s) => s.step === 'success' || s.phase === 'verdict', { advance: false, label: `hit ${round.id}` });
+    if (ri === 0) {
+      // the cleared round's reward is announced on the 「記憶修復」 card
+      await until(page, (s) => s.card === 'on', { label: 'memory restored card' });
+      const txt = await page.textContent('.tcard');
+      check(/手がかり獲得/.test(txt ?? ''), `${c.id}: a cleared round announces its assist (${(txt ?? '').replace(/\s+/g, ' ').slice(0, 60)})`);
+      if (full) {
+        await tick(page, 500);
+        await shot(page, name('inquest-assist-card'));
+      }
+    }
     if (ri === 0 && full) {
       // resume check: reload after the first round → the next round
       await until(page, (s) => (s.step === 'play' && s.dlg === 'off' && s.card === 'off') || s.phase === 'verdict', { label: 'after round 1' });
@@ -637,29 +754,41 @@ async function inquest(page, c, name, { full, held }) {
     }
   }
 
-  // verdict
-  await until(page, (s) => s.phase === 'verdict' && s.vstep === 'write' && s.dlg === 'off' && !s.cut, { label: 'verdict' });
+  // verdict (in the difficulty's format)
+  await until(page, (s) => s.phase === 'verdict' && s.vstep === 'write' && s.dlg === 'off' && !s.cut && s.writable, { label: 'verdict' });
   await tick(page, 2400);
-  await shot(page, name('verdict'));
-  if (full) {
-    await page.fill('#verdict-text', INCOMPLETE[c.id.slice(0, 3)] ?? '事故だったと思う。');
-    await page.click('[data-verdict-submit]');
+  await shot(page, name(`verdict-${mode}`));
+  check((await page.getAttribute('.vpanel', 'data-verdict-mode')) === mode, `${c.id}: ${level} declares in the ${mode} format`);
+  const cleared = (await saveOf(page, c.id)).snapshot?.debateCleared ?? [];
+  if (mode === 'choice') {
+    const struck = (await page.$$('.vopt.is-removed')).length;
+    const want = c.verdictModes.assists.filter((a) => cleared.includes(a.round) && a.removeOption).length;
+    check(struck === want, `${c.id}: ${cleared.length} cleared round(s) strike out ${want} option(s) (${struck})`);
+  } else if (mode === 'cloze') {
+    const locked = (await page.$$('.vblank.is-locked')).length;
+    const want = c.verdictModes.assists.filter((a) => cleared.includes(a.round) && a.fillBlank).length;
+    check(locked === want, `${c.id}: ${cleared.length} cleared round(s) pre-fill ${want} blank(s) (${locked})`);
+  }
+  if (full || mode !== 'free') {
+    await declare(page, c, mode, { correct: false });
     await until(page, (s) => s.vstep === 'result', { advance: false, label: 'verdict result' });
     await tick(page, 1100);
     const res = await page.evaluate(() => window.__JD.getState().save.cases);
     const lv = res[c.id]?.inquest?.lastVerdict?.result;
-    check(lv && lv !== 'correct', `${c.id}: an incomplete verdict is not accepted (${lv})`);
-    await shot(page, name('verdict-incomplete'));
-    await until(page, (s) => s.vstep === 'write' && s.dlg === 'off', { label: 'rewrite' });
-    // resume check at the verdict
-    await tick(page, 800);
-    await boot(page, { reload: true });
-    await waitScene(page, 'inquest');
-    await until(page, (s) => s.phase === 'verdict' && s.vstep === 'write' && s.dlg === 'off' && !s.cut, { label: 'resume verdict' });
-    check(true, `${c.id}: reload at the verdict returns to the verdict`);
+    check(lv && lv !== 'correct', `${c.id}: a wrong ${mode} verdict is not accepted (${lv})`);
+    check(res[c.id]?.inquest?.lives === LIVES[level] - 1, `${c.id}: the miss puts out one light (${res[c.id]?.inquest?.lives}/${LIVES[level]})`);
+    await shot(page, name('verdict-miss'));
+    await until(page, (s) => s.vstep === 'write' && s.dlg === 'off' && s.writable, { label: 'rewrite' });
+    if (full) {
+      // resume check at the verdict
+      await tick(page, 800);
+      await boot(page, { reload: true });
+      await waitScene(page, 'inquest');
+      await until(page, (s) => s.phase === 'verdict' && s.vstep === 'write' && s.dlg === 'off' && !s.cut && s.writable, { label: 'resume verdict' });
+      check((await iq(page)).lives === LIVES[level] - 1, `${c.id}: reload at the verdict returns to the verdict with the lights left`);
+    }
   }
-  await page.fill('#verdict-text', c.truth.summary);
-  await page.click('[data-verdict-submit]');
+  await declare(page, c, mode, { correct: true });
   await until(page, (s) => s.vstep === 'result', { advance: false, label: 'verdict correct' });
   await tick(page, 1100);
   await shot(page, name('verdict-correct'));
@@ -854,7 +983,7 @@ async function fullFlow(browser, c) {
     await boot(page);
     await page.evaluate(() => window.__JD.setSettings({ textSpeed: 'fast' }));
     await titleToFiles(page, name);
-    await openFromFiles(page, c);
+    await openFromFiles(page, c, name);
     await intro(page, c, name);
     await drainRoutes(page, routes);
     const held = await investigation(page, c, name, { full: true });
@@ -914,11 +1043,101 @@ async function smoke(browser, c) {
       window.__JD.goto('inquest', { caseId: id });
     }, c.id);
     await waitScene(page, 'inquest');
-    await inquest(page, c, name, { full: false });
+    await inquest(page, c, name, { full: false, skipAfter: SKIP_AFTER[key] });
     await resolution(page, c, name, { full: false });
     await science(page, c, name, { full: false });
     await quiz(page, c, name, { full: false });
     await result(page, c, name, { full: false });
+  } catch (e) {
+    problems.push(`${tag}: ${e.message.split('\n')[0]}`);
+    console.error(`  ✗ ${tag}: ${e.message.split('\n')[0]}`);
+    await page.screenshot({ path: resolve(out, `${SIZE.tag}-${tag}-FAIL.png`) }).catch(() => {});
+  } finally {
+    console.log(`  (${Math.round((Date.now() - t0) / 1000)} s)`);
+    await ctx.close();
+  }
+}
+
+/**
+ * Game over: the last light goes out.
+ *   審問官 (c01) → the case starts over (stage intro, a new token, no inquest), c02 untouched.
+ *   見習い (c02) → back to the start of the inquest, lights refilled, token (findings) kept;
+ *                  title 「続きから」 reopens the noise break.
+ */
+async function gameOverRun(browser) {
+  const tag = 'gameover';
+  const name = namer(tag);
+  console.log(`\n[qa] GAME OVER @ ${SIZE.tag}`);
+  const { ctx, page } = await newPage(browser, tag);
+  const t0 = Date.now();
+  const c1 = CASES.find((c) => c.id.startsWith('c01'));
+  const c2 = CASES.find((c) => c.id.startsWith('c02'));
+  const seed = (caseId, difficulty, extra) =>
+    page.evaluate(
+      async ({ caseId, difficulty, extra }) => {
+        const r = await fetch('api/admin/mint-token', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ caseId, stage: 'investigated' }) });
+        const { token, progress } = await r.json();
+        window.__JD.updateCase(caseId, {
+          stage: 'inquest',
+          token,
+          snapshot: progress,
+          difficulty,
+          inquest: { phase: 'verdict', roundIndex: 0, composure: 5, cleared: [], misses: 0, grants: 0, verdictAttempts: 2, suspensions: 0, lives: 1, debateSkipped: true, ...extra },
+        });
+        window.__JD.flushSave();
+        window.__JD.goto('inquest', { caseId });
+        return token;
+      },
+      { caseId, difficulty, extra },
+    );
+  const lastLight = async (c, level) => {
+    await waitScene(page, 'inquest');
+    await until(page, (s) => s.phase === 'verdict' && s.vstep === 'write' && s.dlg === 'off' && !s.cut && s.writable, { label: 'verdict (last light)' });
+    check((await iq(page)).lives === 1, `${c.id}: one light left`);
+    await declare(page, c, MODE[level], { correct: false });
+    await until(page, (s) => s.phase === 'gameover', { label: 'game over' });
+    await waitSel(page, '.gover[data-gameover]:not([data-gameover="pending"])', { label: 'restart rule applied' });
+    await tick(page, 5600);
+    await waitSel(page, '[data-gameover-title]:not([disabled])');
+  };
+  try {
+    await boot(page);
+    await page.evaluate(() => {
+      window.__JD.setMeta({ prologueSeen: true, tutorial: { state: 'done', step: 0 } });
+      window.__JD.setSettings({ textSpeed: 'fast' });
+    });
+    // 審問官: the case restarts from the beginning
+    await page.evaluate((id) => window.__JD.updateCase(id, { stage: 'investigation', difficulty: 'easy', notes: 'keep me', elapsedMs: 4242 }), c2.id);
+    const other = await page.evaluate((id) => JSON.stringify(window.__JD.getState().save.cases[id]), c2.id);
+    const oldToken = await seed(c1.id, 'normal');
+    await lastLight(c1, 'normal');
+    await shot(page, name('gameover-restart'));
+    const s1 = await saveOf(page, c1.id);
+    check(s1.stage === 'intro' && !s1.inquest && s1.log.length === 0 && !!s1.token && s1.token !== oldToken && s1.difficulty === 'normal' && s1.gameOvers === 1, `${c1.id}: 審問官 game over restarts the case with a new token (stage ${s1.stage})`);
+    check((await page.evaluate((id) => JSON.stringify(window.__JD.getState().save.cases[id]), c2.id)) === other, `${c2.id}: another case's record is untouched`);
+    await page.click('[data-gameover-title]');
+    await waitScene(page, 'title');
+    check(true, `${c1.id}: game over → title`);
+    // 見習い: back to the start of the inquest
+    await seed(c2.id, 'easy', { triedChoices: [] });
+    const unlockedBefore = (await saveOf(page, c2.id)).snapshot?.unlocked?.length ?? -1;
+    await lastLight(c2, 'easy');
+    await shot(page, name('gameover-inquest'));
+    const s2 = await saveOf(page, c2.id);
+    // (every server call re-issues the token, so "kept" = the same unlocked findings, not the same string)
+    check(
+      s2.stage === 'inquest' && s2.inquest?.phase === 'debate' && s2.inquest?.lives === 10 && !!s2.token && (s2.snapshot?.unlocked?.length ?? 0) === unlockedBefore && s2.gameOvers === 1,
+      `${c2.id}: 見習い game over → start of the inquest, lights refilled, findings kept (${JSON.stringify({ stage: s2.stage, phase: s2.inquest?.phase, lives: s2.inquest?.lives, unlocked: s2.snapshot?.unlocked?.length, gameOvers: s2.gameOvers })})`,
+    );
+    await page.click('[data-gameover-title]');
+    await waitScene(page, 'title');
+    await titleGate(page);
+    await tick(page, 600);
+    await page.locator('.menu__item', { hasText: '続きから' }).click();
+    await waitScene(page, 'inquest');
+    await until(page, (s) => s.phase === 'debate' && s.step === 'play' && s.dlg === 'off' && s.card === 'off' && !s.cut, { label: 'noise break again' });
+    check((await iq(page)).lives === 10, `${c2.id}: 「続きから」 reopens the noise break with 10 lights`);
+    await shot(page, name('gameover-resumed'));
   } catch (e) {
     problems.push(`${tag}: ${e.message.split('\n')[0]}`);
     console.error(`  ✗ ${tag}: ${e.message.split('\n')[0]}`);
@@ -936,6 +1155,7 @@ const browser = await chromium.launch({
 try {
   for (const c of FULL) await fullFlow(browser, c);
   for (const c of SMOKES) await smoke(browser, c);
+  if (SMOKE) await gameOverRun(browser);
 } finally {
   await browser.close();
   if (server) await server.close();

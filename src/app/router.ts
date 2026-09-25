@@ -28,7 +28,12 @@ export interface SceneProps {
 /** Scenes that cannot be shown without a caseId. */
 export const CASE_SCENES: SceneName[] = ['intro', 'investigation', 'inquest', 'resolution', 'science', 'quiz', 'result'];
 
-export type OverlayName = 'settings' | 'howto' | 'credits' | 'sheet';
+export type OverlayName = 'settings' | 'howto' | 'credits' | 'difficulty' | 'sheet';
+/** Props of the difficulty chooser: 'start' begins the case, 'change' only saves the choice. */
+export interface DifficultyOverlayProps {
+  caseId: string;
+  mode: 'start' | 'change';
+}
 export interface SheetOverlayProps {
   title: string;
   en?: string;
@@ -40,6 +45,7 @@ export interface SheetOverlayProps {
 }
 export type OverlayState =
   | { name: 'settings' | 'howto' | 'credits'; props?: Record<string, unknown> }
+  | { name: 'difficulty'; props: DifficultyOverlayProps }
   | { name: 'sheet'; props: SheetOverlayProps };
 
 interface HistState {
@@ -56,6 +62,7 @@ export const transitioning = signal(false);
 
 let idx = 0;
 let sheetProps: SheetOverlayProps | null = null;
+let difficultyProps: DifficultyOverlayProps | null = null;
 
 function isScene(s: string): s is SceneName {
   return (SCENE_NAMES as readonly string[]).includes(s);
@@ -107,6 +114,7 @@ export function initRouter() {
     if (r.scene !== route.peek().scene || JSON.stringify(r.params) !== JSON.stringify(route.peek().params)) route.value = r;
     if (s.overlay) {
       if (s.overlay === 'sheet') overlay.value = sheetProps ? { name: 'sheet', props: sheetProps } : null;
+      else if (s.overlay === 'difficulty') overlay.value = difficultyProps ? { name: 'difficulty', props: difficultyProps } : null;
       else overlay.value = { name: s.overlay };
     } else overlay.value = null;
   });
@@ -139,12 +147,14 @@ export function back() {
 }
 
 export function openOverlay(name: 'settings' | 'howto' | 'credits', props?: Record<string, unknown>): void;
+export function openOverlay(name: 'difficulty', props: DifficultyOverlayProps): void;
 export function openOverlay(name: 'sheet', props: SheetOverlayProps): void;
 export function openOverlay(name: OverlayName, props?: any) {
   if (overlay.peek()?.name === name) return;
   if (name === 'sheet') sheetProps = props;
+  if (name === 'difficulty') difficultyProps = props;
   const replacing = !!overlay.peek();
-  overlay.value = name === 'sheet' ? { name, props } : { name, props };
+  overlay.value = { name, props } as OverlayState;
   if (replacing) history.replaceState(state(route.peek(), name), '');
   else {
     idx++;

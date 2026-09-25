@@ -547,3 +547,88 @@
   grid-template-columns: 1fr;
   gap: 4px;
 }
+
+/* ==========================================================================
+   How to play — optional noise break, verdict formats by difficulty
+   ========================================================================== */
+.howto-art--inquest {
+  position: relative;
+}
+.howto-optional {
+  justify-self: end;
+  padding: 2px 12px;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  background: var(--cyan);
+  transform: rotate(4deg);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.howto-modes {
+  display: grid;
+  gap: 12px;
+}
+.howto-mode {
+  display: grid;
+  grid-template-columns: 4.6em minmax(0, 1fr);
+  grid-template-areas: 'name body' 'name lights';
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border-left: 4px solid var(--dc);
+}
+.howto-mode--easy { --dc: var(--cyan); }
+.howto-mode--normal { --dc: var(--formalin); }
+.howto-mode--hard { --dc: var(--alarm); }
+.howto-mode__name {
+  grid-area: name;
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  color: var(--dc);
+}
+.howto-mode__body {
+  grid-area: body;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.howto-mode .lights {
+  grid-area: lights;
+}
+.howto-mode__opt {
+  padding: 2px 8px;
+  border: 1px solid var(--bone-a24);
+  color: var(--bone-2);
+}
+.howto-mode__opt.is-on {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+.howto-mode__opt.is-off {
+  opacity: 0.45;
+}
+.howto-mode__cloze,
+.howto-mode__free {
+  display: block;
+  padding: 4px 10px;
+  color: var(--paper-ink);
+  background: #F1ECDF;
+}
+.howto-mode__blank {
+  display: inline-block;
+  margin: 0 2px;
+  padding: 0 8px;
+  border-bottom: 2px solid var(--formalin-deep);
+  background: rgba(198, 255, 61, 0.35);
+}
+.howto-tutorial {
+  margin-right: 4px;
+}
+[data-layout='narrow'] .howto-tutorial {
+  order: 5;
+  flex-basis: 100%;
+  justify-content: center;
+}

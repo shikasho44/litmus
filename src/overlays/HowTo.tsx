@@ -3,6 +3,11 @@ import type { ComponentChildren } from 'preact';
 import type { PublicFact } from '../../shared/api';
 import { ANSWER_CLASSES } from '../../shared/constants';
 import { audio } from '../audio';
+import { route } from '../app/router';
+import { LightsRow } from '../features/difficulty/Lights';
+import { DIFFICULTY_META } from '../features/difficulty/meta';
+import { replayTutorial } from '../features/tutorial/tutorial';
+import { toast } from '../ui/Toast';
 import { Button } from '../ui/Button';
 import { EvidenceCard } from '../ui/EvidenceCard';
 import { HolmaSprite } from '../ui/HolmaSprite';
@@ -98,6 +103,7 @@ function HintArt() {
 function InquestArt() {
   return (
     <div class="howto-art howto-art--inquest">
+      <span class="howto-optional">任意</span>
       <div class="howto-band">
         <span class="howto-band__who">ジェーン・ドゥ</span>
         <p class="howto-band__text t-jane">
@@ -117,22 +123,28 @@ function InquestArt() {
 
 function VerdictArt() {
   return (
-    <div class="howto-art howto-art--verdict">
-      <div class="howto-verdict__input">
-        <span class="howto-verdict__label">死因宣告</span>
-        <p>◯◯のせいで△△が起き、彼女は……</p>
+    <div class="howto-art howto-art--verdict howto-modes">
+      <div class="howto-mode howto-mode--easy">
+        <span class="howto-mode__name">{DIFFICULTY_META.easy.jp}</span>
+        <span class="howto-mode__body">
+          <span class="howto-mode__opt is-on">A 選択肢</span>
+          <span class="howto-mode__opt">B 選択肢</span>
+          <s class="howto-mode__opt is-off">C 選択肢</s>
+        </span>
+        <LightsRow count={10} label="やり直し10回" />
       </div>
-      <ul class="howto-verdict__list">
-        <li class="is-ok">
-          <Icon name="check" size={16} /> 直接死因
-        </li>
-        <li class="is-ok">
-          <Icon name="check" size={16} /> 原因となった出来事
-        </li>
-        <li>
-          <span class="howto-verdict__q">?</span> 科学的な仕組み
-        </li>
-      </ul>
+      <div class="howto-mode howto-mode--normal">
+        <span class="howto-mode__name">{DIFFICULTY_META.normal.jp}</span>
+        <span class="howto-mode__body howto-mode__cloze">
+          <span class="howto-mode__blank">◯◯</span>によって<span class="howto-mode__blank">△△</span>が起き……
+        </span>
+        <LightsRow count={3} label="やり直し3回" />
+      </div>
+      <div class="howto-mode howto-mode--hard">
+        <span class="howto-mode__name">{DIFFICULTY_META.hard.jp}</span>
+        <span class="howto-mode__body howto-mode__free">彼女は、◯◯のせいで……</span>
+        <LightsRow count={3} label="やり直し3回" />
+      </div>
     </div>
   );
 }
@@ -223,28 +235,32 @@ const STEPS: Step[] = [
     ),
   },
   {
-    en: 'INQUEST',
-    title: '審問で記憶のノイズを撃ち抜く',
+    en: 'NOISE BREAK',
+    title: '記憶のノイズを撃ち抜く（任意）',
     art: () => <InquestArt />,
     body: (
       <>
         <p>
-          審問では、ジェーンが<strong>間違った記憶</strong>を本気で主張します。発言の中で光る<strong>ノイズ</strong>を選び、それを否定できる<strong>所見</strong>で撃ちましょう。
+          審問では、ジェーンが<strong>間違った記憶</strong>を本気で主張します。発言の中で光る<strong>ノイズ</strong>を選び、それを否定できる<strong>所見</strong>で撃ち抜くと、<strong>死因宣告で使える手がかり</strong>がもらえます（選択肢が消える・空欄が埋まる など）。
         </p>
-        <p class="t-sm t-bone2">外すと集中力が減ります。手持ちの所見が足りないときは「ホルマに泣きつく」ことも。詰むことはありません。</p>
+        <p class="t-sm t-bone2">
+          ノイズ・ブレイクは<strong>任意</strong>です。「議論を飛ばして死因宣告へ」で、すぐに宣告へ進めます。外すと集中力が減り、所見が足りないときは「ホルマに泣きつく」ことも（ランクに響きます）。全部撃ち抜いてSを取れば、最高ランク S+。
+        </p>
       </>
     ),
   },
   {
     en: 'VERDICT',
-    title: '死因を、あなたの言葉で',
+    title: '死因宣告と、難易度',
     art: () => <VerdictArt />,
     body: (
       <>
         <p>
-          最後に<strong>何が起きて、なぜ死んだのか</strong>を自由に書いて宣告します。足りない要素はチェックリストで分かりますが、答えそのものは教えてもらえません。
+          最後に<strong>何が起きて、なぜ死んだのか</strong>を宣告します。答え方は事件を始めるときに選ぶ難易度で変わります——<strong>見習い</strong>は選択肢から、<strong>審問官</strong>は文の穴埋め、<strong>教授</strong>は自分の言葉で。
         </p>
-        <p class="t-sm t-bone2">何度でも挑戦できます。通れば真相を漫画のコマで組み直し、彼女の名前が戻ります。</p>
+        <p class="t-sm t-bone2">
+          外すと彼女の<strong>灯</strong>（やり直し）がひとつ消え、尽きるとゲームオーバー。見習いは審問の最初から、審問官・教授は事件の最初からやり直しです。通れば真相を漫画のコマで組み直し、彼女の名前が戻ります。
+        </p>
       </>
     ),
   },
@@ -311,6 +327,22 @@ export function HowToOverlay({ open, onClose }: { open: boolean; onClose: () => 
             {String(i + 1).padStart(2, '0')} / {String(STEPS.length).padStart(2, '0')}
           </span>
           <div class="spacer" />
+          <Button
+            variant="quiet"
+            size="sm"
+            icon="info"
+            sfx="page"
+            class="howto-tutorial"
+            data-howto-tutorial
+            onClick={() => {
+              replayTutorial();
+              onClose();
+              const inCase = route.peek().scene === 'investigation' || route.peek().scene === 'inquest';
+              toast(inCase ? 'チュートリアルを始めます' : '次に事件を開くと、チュートリアルが始まります', { icon: 'info' });
+            }}
+          >
+            チュートリアル
+          </Button>
           <Button variant="ghost" size="sm" icon="chevronLeft" sfx={false} disabled={i === 0} onClick={() => go(i - 1)}>
             前へ
           </Button>

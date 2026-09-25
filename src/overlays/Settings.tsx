@@ -9,6 +9,8 @@ import { Segmented, Slider, Switch } from '../ui/Controls';
 import { DialogueBox } from '../ui/DialogueBox';
 import { Modal } from '../ui/Modal';
 import { toast } from '../ui/Toast';
+import { route } from '../app/router';
+import { replayTutorial } from '../features/tutorial/tutorial';
 import './overlays.css';
 
 const SAMPLE = 'さァ——解剖を始めましょう。訊かれたことには、正直に答えますとも。';
@@ -93,6 +95,29 @@ export function SettingsOverlay({ open, onClose }: { open: boolean; onClose: () 
               checked={s.reduceMotion}
               onChange={(v) => updateSettings({ reduceMotion: v })}
             />
+          </section>
+
+          <section class="settings__group" aria-labelledby="set-tutorial">
+            <h3 class="settings__h" id="set-tutorial">
+              <span class="settings__en">TUTORIAL</span>チュートリアル
+            </h3>
+            <p class="settings__note">捜査と審問の画面で、ホルマが操作をひとつずつ案内します。いつでもスキップできます。</p>
+            <div>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="info"
+                data-settings-tutorial
+                onClick={() => {
+                  replayTutorial();
+                  onClose();
+                  const inCase = route.peek().scene === 'investigation' || route.peek().scene === 'inquest';
+                  toast(inCase ? 'チュートリアルを始めます' : '次に事件を開くと、チュートリアルが始まります', { icon: 'info' });
+                }}
+              >
+                チュートリアルをもう一度
+              </Button>
+            </div>
           </section>
 
           <section class="settings__group" aria-labelledby="set-data">

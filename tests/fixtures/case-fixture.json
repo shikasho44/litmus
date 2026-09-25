@@ -248,5 +248,29 @@
     "idle": ["雨の音でも聞いていますか？"],
     "solved": ["見えないものほど、恐ろしいのですよ。"]
   },
-  "leakTerms": ["一酸化炭素", "CO中毒"]
+  "leakTerms": ["一酸化炭素", "CO中毒"],
+  "verdictModes": {
+    "choice": {
+      "prompt": "彼女の死因は、どれですか？",
+      "options": [
+        { "id": "co", "text": "テントの中で燃やした炭火による一酸化炭素中毒", "correct": true },
+        { "id": "cold", "text": "雨に濡れて体温を奪われた低体温症", "correct": false },
+        { "id": "poison", "text": "何者かに毒を盛られた毒殺", "correct": false },
+        { "id": "heart", "text": "眠っている間に起きた突然の心臓発作", "correct": false }
+      ]
+    },
+    "cloze": {
+      "prompt": "空欄を埋めて、彼女に起きたことを宣告なさい。",
+      "template": "彼女は{{place}}で{{source}}を燃やし、換気のないまま眠った。死因は{{cause}}だ。",
+      "blanks": [
+        { "id": "place", "label": "場所", "options": ["テントの中", "車の中", "山小屋の中"], "answer": 0 },
+        { "id": "source", "label": "燃やした物", "options": ["炭火のコンロ", "石油ストーブ", "たき火"], "answer": 0 },
+        { "id": "cause", "label": "直接死因", "options": ["一酸化炭素中毒", "低体温症", "心臓発作", "脱水症"], "answer": 0 }
+      ]
+    },
+    "assists": [
+      { "round": "R1", "removeOption": "cold", "fillBlank": "place", "element": "C" },
+      { "round": "R2", "removeOption": "heart", "fillBlank": "source", "element": "B" }
+    ]
+  }
 }

@@ -1,17 +1,26 @@
 /**
- * ② 死因宣告 — the player's own words. A 宣告書 (declaration sheet) with an IME-safe
- * textarea, the element checklist from the last judgement (✔ matched / ？ missing — never
- * the answer), and the result stamp. The scene runs the suspense beat and Holma's lines.
+ * ② 死因宣告 — in the format of the case difficulty (session.verdictMode):
+ *   choice  見習い  big selectable cards; options struck out by a debate assist cannot be picked
+ *   cloze   審問官  the truth sentence with inline blanks; each opens a small picker of its options
+ *   free    教授    the 宣告書 (declaration sheet) with an IME-safe textarea (the original verdict)
+ * Common: the assists earned in the noise break, the element checklist from the last judgement
+ * (✔ matched / ？ missing — never the answer), the result stamp, and 宣告する. The scene runs
+ * the suspense beat and Holma's lines.
  */
 import { gsap } from 'gsap';
+import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import type { VerdictResult } from '../../../shared/api';
+import type { VerdictResult, VerdictSetupResponse } from '../../../shared/api';
 import { motionReduced } from '../../fx/motion';
+import { BottomSheet } from '../../ui/BottomSheet';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
-import { SUPPORT_URL, VERDICT_MAX, type InquestSession, type VerdictView } from './session';
+import { ASSIST_TEXT, DIFFICULTY_META } from '../difficulty/meta';
+import { parseCloze, SUPPORT_URL, VERDICT_MAX, type InquestSession, type VerdictView } from './session';
 
 export const VERDICT_PROMPT = '彼女に、何が起きたのか。なぜ死んだのか。あなたの言葉で。';
+const CHOICE_PROMPT = '彼女は、なぜ死んだのか。';
+const CLOZE_PROMPT = '空欄を埋めて、彼女の死を宣告せよ。';
 
 /** The submit shortcut as the player's keyboard names it (none on touch). */
 function isMac(): boolean {
@@ -84,15 +93,17 @@ export function ResultStamp({ result, attempt, animate, onImpact }: { result: Ve
   );
 }
 
-/** ✔ / ？ per answer element. Order: element id (A, B, C …). */
-export function ElementChecklist({ view, animate }: { view: VerdictView; animate?: boolean }) {
+/** ✔ / ？ per answer element (or per cloze blank). Order: `order` when given, else element id (A, B, C …). */
+export function ElementChecklist({ view, animate, order }: { view: VerdictView; animate?: boolean; order?: string[] }) {
   const ref = useRef<HTMLUListElement>(null);
-  const ids = Object.keys(view.labels).sort();
+  const keys = Object.keys(view.labels);
+  const ids = order?.length ? [...order.filter((id) => keys.includes(id)), ...keys.filter((id) => !order.includes(id)).sort()] : keys.sort();
   useLayoutEffect(() => {
     if (!animate || !ref.current || motionReduced()) return;
     const tw = gsap.fromTo(ref.current.children, { opacity: 0, x: -18 }, { opacity: 1, x: 0, duration: 0.3, stagger: 0.12, ease: 'power3.out', delay: 0.25 });
     return () => tw.kill();
   }, [view, animate]);
+  if (!ids.length) return null;
   return (
     <ul ref={ref} class="vchk" aria-label="宣告に含まれた要素">
       {ids.map((id) => {
@@ -113,20 +124,283 @@ export function ElementChecklist({ view, animate }: { view: VerdictView; animate
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Assists earned in the noise break                                   */
+/* ------------------------------------------------------------------ */
+export function AssistNote({ session: s }: { session: InquestSession }) {
+  const a = s.assists.value;
+  const mode = s.verdictMode.value;
+  const st = s.setup.value;
+  if (!a || a.total <= 0) return null;
+  const revealed = mode === 'free' && st?.free ? st.free.revealed.map((id) => st.free!.labels[id]).filter(Boolean) : [];
+  return (
+    <div class={`vassist ${a.earned > 0 ? 'has-assist' : ''}`} role="note" data-assists={a.earned}>
+      <span class="vassist__k">
+        <Icon name="shard" size={15} />
+        ノイズ・ブレイクの手がかり
+        <b class="t-mono">
+          {a.earned}/{a.total}
+        </b>
+      </span>
+      <p class="vassist__t">
+        {a.earned > 0
+          ? mode === 'choice'
+            ? `撃ち抜いた記憶のおかげで、選択肢が${a.earned}つ消えています。`
+            : mode === 'cloze'
+              ? `撃ち抜いた記憶のおかげで、空欄が${a.earned}つ埋まっています。`
+              : '撃ち抜いた記憶が、宣告に欠かせない要素を教えてくれます。'
+          : s.debateSkipped.value
+            ? `議論を飛ばしたので、手がかりはありません（撃ち抜くと、1ラウンドごとに${ASSIST_TEXT[mode].replace('死因宣告で', '')}）。`
+            : '手がかりは、まだありません。'}
+      </p>
+      {revealed.length > 0 && (
+        <ul class="vassist__els" aria-label="明かされた要素">
+          {revealed.map((l) => (
+            <li key={l}>
+              <Icon name="check" size={13} />
+              {l}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* choice — 見習い                                                      */
+/* ------------------------------------------------------------------ */
+function ChoiceBoard({ session: s, setup, writable }: { session: InquestSession; setup: NonNullable<VerdictSetupResponse['choice']>; writable: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const picked = s.choice.value;
+  const tried = s.triedChoices.value;
+  const options = setup.options;
+  const usable = options.filter((o) => !o.removed && !tried.includes(o.id));
+  const focusId = picked && usable.some((o) => o.id === picked) ? picked : usable[0]?.id;
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || motionReduced()) return;
+    const tw = gsap.fromTo(el.querySelectorAll('.vopt'), { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, stagger: 0.06, ease: 'power3.out' });
+    return () => tw.kill();
+  }, []);
+
+  const onKey = (e: KeyboardEvent) => {
+    if (!['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    const i = usable.findIndex((o) => o.id === (document.activeElement as HTMLElement | null)?.dataset.optionId);
+    const n = e.key === 'Home' ? 0 : e.key === 'End' ? usable.length - 1 : (i + (e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : -1) + usable.length) % usable.length;
+    const next = usable[n];
+    if (!next) return;
+    s.pickChoice(next.id);
+    requestAnimationFrame(() => ref.current?.querySelector<HTMLElement>(`[data-option-id="${next.id}"]`)?.focus());
+  };
+
+  return (
+    <div ref={ref} class="vchoice" role="radiogroup" aria-label="死因の選択肢" onKeyDown={onKey}>
+      {options.map((o, i) => {
+        const removed = o.removed;
+        const wrong = tried.includes(o.id);
+        const off = removed || wrong;
+        const on = picked === o.id && !off;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            aria-disabled={off || !writable ? 'true' : undefined}
+            tabIndex={o.id === focusId ? 0 : -1}
+            class={`vopt ${on ? 'is-on' : ''} ${removed ? 'is-removed' : ''} ${wrong ? 'is-wrong' : ''}`}
+            data-option-id={o.id}
+            onClick={() => !off && writable && s.pickChoice(o.id)}
+          >
+            <span class="vopt__n t-mono" aria-hidden="true">
+              {String.fromCharCode(65 + i)}
+            </span>
+            <span class="vopt__t">{o.text}</span>
+            {removed && (
+              <span class="vopt__tag">
+                <Icon name="shard" size={13} />
+                手がかりで除外
+              </span>
+            )}
+            {wrong && !removed && (
+              <span class="vopt__tag vopt__tag--wrong">
+                <Icon name="cross" size={13} />
+                宣告済み・違った
+              </span>
+            )}
+            <span class="vopt__mark" aria-hidden="true">
+              {on ? '✔' : ''}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* cloze — 審問官                                                       */
+/* ------------------------------------------------------------------ */
+type ClozeBlank = NonNullable<VerdictSetupResponse['cloze']>['blanks'][number];
+
+function BlankPicker({ blank, value, onPick, onClose, id }: { blank: ClozeBlank; value?: number; onPick: (i: number) => void; onClose: () => void; id: string }) {
+  const ref = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const el = ref.current?.querySelector<HTMLElement>(`[data-index="${value ?? 0}"]`) ?? ref.current?.querySelector<HTMLElement>('[data-index]');
+      el?.focus({ preventScroll: true });
+    }, 20);
+    return () => clearTimeout(t);
+  }, []);
+  const onKey = (e: KeyboardEvent) => {
+    const items = [...(ref.current?.querySelectorAll<HTMLElement>('[data-index]') ?? [])];
+    const i = items.indexOf(document.activeElement as HTMLElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus();
+    } else if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault();
+      items[e.key === 'Home' ? 0 : items.length - 1]?.focus();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
+    } else if (e.key === 'Tab') {
+      onClose();
+    }
+  };
+  return (
+    <ul ref={ref} id={id} class="vpick" role="listbox" aria-label={`${blank.label}を選ぶ`} onKeyDown={onKey}>
+      {blank.options.map((opt, i) => (
+        <li key={i} role="none">
+          <button type="button" role="option" aria-selected={value === i} class={`vpick__opt ${value === i ? 'is-on' : ''}`} data-index={i} onClick={() => onPick(i)}>
+            <span class="vpick__n t-mono" aria-hidden="true">
+              {i + 1}
+            </span>
+            {opt}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ClozeSheet({ session: s, setup, writable, narrow }: { session: InquestSession; setup: NonNullable<VerdictSetupResponse['cloze']>; writable: boolean; narrow: boolean }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const picks = s.clozePicks.value;
+  const parts = parseCloze(setup.template);
+  const wrap = useRef<HTMLDivElement>(null);
+  const blankOf = (id: string) => setup.blanks.find((b) => b.id === id);
+
+  useEffect(() => {
+    if (!writable) setOpen(null);
+  }, [writable]);
+
+  // click outside closes the popover (PC)
+  useEffect(() => {
+    if (!open || narrow) return;
+    const onDown = (e: PointerEvent) => {
+      if (!(e.target as Element | null)?.closest?.('.vpick, .vblank')) setOpen(null);
+    };
+    window.addEventListener('pointerdown', onDown, true);
+    return () => window.removeEventListener('pointerdown', onDown, true);
+  }, [open, narrow]);
+
+  const focusSlot = (id: string) => requestAnimationFrame(() => wrap.current?.querySelector<HTMLElement>(`[data-blank-id="${id}"]`)?.focus({ preventScroll: true }));
+  const pick = (id: string, i: number) => {
+    s.pickBlank(id, i);
+    setOpen(null);
+    // on to the next empty blank (keyboard / tap flow), else back on this slot
+    const next = setup.blanks.find((b) => b.id !== id && typeof (s.clozePicks.peek()[b.id]) !== 'number' && typeof b.filled !== 'number');
+    if (next && !narrow) {
+      focusSlot(next.id);
+      setTimeout(() => setOpen(next.id), 120);
+    } else if (next && narrow) setTimeout(() => setOpen(next.id), 260);
+    else if (!narrow) focusSlot(id);
+    else requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-verdict-submit]')?.focus({ preventScroll: true }));
+  };
+
+  const openBlank = open ? blankOf(open) : undefined;
+  return (
+    <div ref={wrap} class="vcloze">
+      <p class="vcloze__text">
+        {parts.map((p, k) => {
+          if ('text' in p) return <span key={k}>{p.text}</span>;
+          const b = blankOf(p.blank);
+          if (!b) return <span key={k}>＿＿</span>;
+          const v = picks[b.id];
+          const locked = typeof b.filled === 'number';
+          const filled = typeof v === 'number';
+          const isOpen = open === b.id && !narrow;
+          const listId = `vpick-${b.id}`;
+          return (
+            <span key={k} class="vblank-wrap">
+              <button
+                type="button"
+                class={`vblank ${filled ? 'is-filled' : ''} ${locked ? 'is-locked' : ''} ${open === b.id ? 'is-open' : ''}`}
+                data-blank-id={b.id}
+                aria-haspopup="listbox"
+                aria-expanded={open === b.id}
+                aria-controls={isOpen ? listId : undefined}
+                aria-disabled={locked || !writable ? 'true' : undefined}
+                aria-label={`${b.label}：${filled ? b.options[v] : '未選択'}${locked ? '（手がかりで確定）' : ''}`}
+                onClick={() => {
+                  if (locked || !writable) return;
+                  setOpen(open === b.id ? null : b.id);
+                }}
+              >
+                {locked && <Icon name="lock" size={13} />}
+                <span class="vblank__t">{filled ? b.options[v] : b.label}</span>
+                {!locked && <Icon name="chevronDown" size={14} />}
+              </button>
+              {isOpen && (
+                <BlankPicker
+                  id={listId}
+                  blank={b}
+                  value={v}
+                  onPick={(i) => pick(b.id, i)}
+                  onClose={() => {
+                    setOpen(null);
+                    focusSlot(b.id);
+                  }}
+                />
+              )}
+            </span>
+          );
+        })}
+      </p>
+      {narrow && (
+        <BottomSheet open={!!openBlank} onClose={() => setOpen(null)} title={openBlank?.label ?? ''} en="FILL THE BLANK" side="bottom">
+          {openBlank && <BlankPicker key={openBlank.id} id={`vpick-${openBlank.id}`} blank={openBlank} value={picks[openBlank.id]} onPick={(i) => pick(openBlank.id, i)} onClose={() => setOpen(null)} />}
+        </BottomSheet>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* panel                                                               */
+/* ------------------------------------------------------------------ */
 export interface VerdictPanelProps {
   session: InquestSession;
   onSubmit: () => void;
   onOpenEvidence: () => void;
+  /** Back to the noise break (only offered while rounds are open). */
+  onBackToDebate?: () => void;
   /** The stamp slams in when this key changes. */
   stampKey: number;
   /** Focus the sheet when writing becomes possible (off on phones: no surprise keyboard). */
   autoFocus?: boolean;
   /** Touch device: no keyboard-shortcut copy; the writing tip goes into the placeholder. */
   touch?: boolean;
+  narrow?: boolean;
   onStampImpact?: () => void;
 }
 
-export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, stampKey, onStampImpact, autoFocus = true, touch = false }: VerdictPanelProps) {
+export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, onBackToDebate, stampKey, onStampImpact, autoFocus = true, touch = false, narrow = false }: VerdictPanelProps) {
   const ta = useRef<HTMLTextAreaElement>(null);
   const step = s.verdictStep.value;
   const draft = s.draft.value;
@@ -135,19 +409,27 @@ export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, stampKey, o
   const count = [...draft].length;
   const talking = !!s.dialogue.value;
   const intro = s.verdictIntro.value;
+  const mode = s.verdictMode.value;
+  const setup = s.setup.value;
+  const setupState = s.setupState.value;
+  const lives = s.lives.value;
+  const diff = DIFFICULTY_META[s.difficulty.value];
   /** Writing is possible (not while Holma talks, the cut-in plays or the judgement runs). */
   const writable = step === 'write' && !talking && !intro && !s.tokenDead.value;
-  const canSubmit = writable && draft.trim().length >= 4;
+  const canSubmit = writable && s.verdictReady.value;
   const promptRef = useRef<HTMLParagraphElement>(null);
   /** ~1 s after the slam the stamp shrinks to a seal in the corner, so the sentence reads again. */
   const [sealed, setSealed] = useState(false);
+  const prompt =
+    mode === 'choice' ? setup?.choice?.prompt || CHOICE_PROMPT : mode === 'cloze' ? setup?.cloze?.prompt || CLOZE_PROMPT : VERDICT_PROMPT;
+  const loading = mode !== 'free' && setupState !== 'ready';
 
   useLayoutEffect(() => {
     const el = promptRef.current;
     if (!el || motionReduced()) return;
     const tw = gsap.fromTo(el.querySelectorAll('.vprompt__ch'), { opacity: 0, y: 8, filter: 'blur(4px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.5, stagger: 0.045, ease: 'power2.out' });
     return () => tw.kill();
-  }, []);
+  }, [prompt]);
 
   // Never keep the caret while Holma talks: Enter must advance his line, not type a newline.
   useEffect(() => {
@@ -155,11 +437,11 @@ export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, stampKey, o
   }, [writable]);
 
   useEffect(() => {
-    if (autoFocus && writable) {
+    if (autoFocus && writable && mode === 'free') {
       const t = setTimeout(() => ta.current?.focus({ preventScroll: true }), 60);
       return () => clearTimeout(t);
     }
-  }, [writable]);
+  }, [writable, mode]);
 
   useEffect(() => {
     setSealed(false);
@@ -168,27 +450,70 @@ export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, stampKey, o
     return () => clearTimeout(t);
   }, [stampKey, step]);
 
-  return (
-    <div class={`vpanel is-${step}`} data-verdict-step={step}>
-      <header class="vpanel__head">
-        <span class="vpanel__kicker">
-          <Icon name="gavel" size={16} /> 死因宣告 <b>VERDICT</b>
-        </span>
-        <span class="vpanel__attempt t-mono">{attempts > 0 ? `宣告 ${attempts}回` : '初回の宣告'}</span>
-      </header>
-      <p ref={promptRef} class="vprompt" aria-label={VERDICT_PROMPT}>
-        {/* per-character spans for the reveal, grouped into phrases that never break inside */}
-        {(VERDICT_PROMPT.match(/[^、。]+[、。]?/g) ?? [VERDICT_PROMPT]).map((ph, pi) => (
-          <span key={pi} class="vprompt__ph" aria-hidden="true">
-            {[...ph].map((ch, i) => (
-              <span key={i} class={`vprompt__ch ${ch === '。' ? 'is-stop' : ''}`}>
-                {ch}
-              </span>
-            ))}
+  const overlay: ComponentChildren = (
+    <>
+      {step === 'judging' && (
+        <div class="vsheet__judging" role="status" aria-live="polite">
+          <span class="vsheet__gavel" aria-hidden="true">
+            <Icon name="gavel" size={40} />
           </span>
-        ))}
-      </p>
+          <span class="vsheet__judging-t">判定中</span>
+          <span class="vsheet__dots" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+        </div>
+      )}
+      {view && step === 'result' && (
+        <div class={`vsheet__stamp ${sealed ? 'is-sealed' : ''}`}>
+          <ResultStamp key={stampKey} result={view.result} attempt={attempts} animate onImpact={onStampImpact} />
+        </div>
+      )}
+    </>
+  );
 
+  let body: ComponentChildren;
+  if (loading) {
+    body = (
+      <div class="vsheet vsheet--loading" aria-busy={setupState === 'loading'}>
+        {setupState === 'error' ? (
+          <div class="vload" role="alert">
+            <p>宣告の書式を読み込めませんでした。通信を確かめて、もう一度お試しください。</p>
+            <Button size="sm" icon="refresh" onClick={() => void s.loadSetup()}>
+              もう一度
+            </Button>
+          </div>
+        ) : (
+          <p class="vload t-mono">
+            LOADING<span class="vload__dots">…</span>
+          </p>
+        )}
+      </div>
+    );
+  } else if (mode === 'choice' && setup?.choice) {
+    body = (
+      <div class="vbody vbody--choice">
+        <ChoiceBoard session={s} setup={setup.choice} writable={writable} />
+        {overlay}
+      </div>
+    );
+  } else if (mode === 'cloze' && setup?.cloze) {
+    body = (
+      <div class="vsheet vsheet--cloze">
+        <div class="vsheet__rule" aria-hidden="true">
+          <span>宣告書</span>
+          <span class="t-mono">No.{String(attempts + (step === 'write' ? 1 : 0)).padStart(3, '0')}</span>
+        </div>
+        <ClozeSheet session={s} setup={setup.cloze} writable={writable} narrow={narrow} />
+        <div class="vsheet__foot">
+          <span class="vsheet__tip">{touch ? '空欄をタップして、言葉を選びます。' : '空欄を押して（Enter）、言葉を選びます。↑↓ で選び、Enter で決定。'}</span>
+        </div>
+        {overlay}
+      </div>
+    );
+  } else {
+    body = (
       <div class="vsheet">
         <div class="vsheet__rule" aria-hidden="true">
           <span>宣告書</span>
@@ -224,26 +549,44 @@ export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, stampKey, o
           </span>
           <span class="vsheet__tip">直接の死因・きっかけの出来事・その仕組みまで書くと、宣告が通りやすくなります。</span>
         </div>
-
-        {step === 'judging' && (
-          <div class="vsheet__judging" role="status" aria-live="polite">
-            <span class="vsheet__gavel" aria-hidden="true">
-              <Icon name="gavel" size={40} />
-            </span>
-            <span class="vsheet__judging-t">判定中</span>
-            <span class="vsheet__dots" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </span>
-          </div>
-        )}
-        {view && step === 'result' && (
-          <div class={`vsheet__stamp ${sealed ? 'is-sealed' : ''}`}>
-            <ResultStamp key={stampKey} result={view.result} attempt={attempts} animate onImpact={onStampImpact} />
-          </div>
-        )}
+        {overlay}
       </div>
+    );
+  }
+
+  const fellBack = s.difficulty.value !== 'hard' && mode === 'free' && setup && !setup.available;
+  const canGoBack = !!onBackToDebate && s.openRounds.value.length > 0 && step === 'write';
+
+  return (
+    <div class={`vpanel vpanel--${mode} is-${step}`} data-verdict-step={step} data-verdict-mode={mode} data-writable={writable && !loading ? 'on' : 'off'}>
+      <header class="vpanel__head">
+        <span class="vpanel__kicker">
+          <Icon name="gavel" size={16} /> 死因宣告 <b>VERDICT</b>
+        </span>
+        <span class="vpanel__meta">
+          <span class="vpanel__mode">
+            {diff.jp}・{mode === 'choice' ? '選択式' : mode === 'cloze' ? '穴埋め式' : '自由記述'}
+          </span>
+          <span class="vpanel__attempt t-mono">{attempts > 0 ? `宣告 ${attempts}回` : '初回の宣告'}</span>
+        </span>
+      </header>
+      <p ref={promptRef} class="vprompt" aria-label={prompt} key={prompt}>
+        {/* per-character spans for the reveal, grouped into phrases that never break inside */}
+        {(prompt.match(/[^、。？]+[、。？]?/g) ?? [prompt]).map((ph, pi) => (
+          <span key={pi} class="vprompt__ph" aria-hidden="true">
+            {[...ph].map((ch, i) => (
+              <span key={i} class={`vprompt__ch ${ch === '。' || ch === '？' ? 'is-stop' : ''}`}>
+                {ch}
+              </span>
+            ))}
+          </span>
+        ))}
+      </p>
+      {fellBack && <p class="vfallback">この事件の宣告は、自由記述で行います。</p>}
+
+      <AssistNote session={s} />
+
+      <div class="vpanel__body">{body}</div>
 
       {s.support.value && step !== 'judging' && (
         <aside class="vsupport" role="note" aria-label="相談窓口のご案内">
@@ -259,7 +602,8 @@ export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, stampKey, o
           <span class="vresult__label">
             {step === 'result' ? '判定' : '前回の判定'}：<b style={{ color: RESULT_META[view.result].color }}>{RESULT_META[view.result].jp}</b>
           </span>
-          <ElementChecklist key={`${stampKey}-${step}`} view={view} animate={step === 'result'} />
+          {/* choice: the elements say nothing about a picked option — the stamp and Holma's note do */}
+          {mode !== 'choice' && <ElementChecklist key={`${stampKey}-${step}`} view={view} animate={step === 'result'} order={mode === 'cloze' ? setup?.cloze?.blanks.map((b) => b.id) : undefined} />}
           {step === 'write' && view.notes.length > 0 && (
             <div class="vnote" role="note" aria-label="ホルマの指摘">
               <span class="vnote__k">
@@ -277,12 +621,24 @@ export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, stampKey, o
       )}
 
       <div class="vpanel__actions">
-        <Button variant="ghost" icon="notebook" onClick={onOpenEvidence} sfx="open">
-          所見を見返す
-        </Button>
-        <Button variant="danger" size="lg" icon="gavel" en="DECLARE" disabled={!canSubmit} onClick={onSubmit} data-verdict-submit>
-          宣告する
-        </Button>
+        <span class="vpanel__left">
+          <Button variant="ghost" icon="notebook" onClick={onOpenEvidence} sfx="open">
+            所見を見返す
+          </Button>
+          {canGoBack && (
+            <Button variant="quiet" icon="shard" onClick={onBackToDebate} sfx="page" data-back-debate>
+              ノイズ・ブレイクに戻る
+            </Button>
+          )}
+        </span>
+        <span class="vpanel__submit">
+          <span class={`vpanel__lives t-mono ${lives <= 1 ? 'is-low' : ''}`} aria-hidden="true">
+            やり直し 残り{lives}
+          </span>
+          <Button variant="danger" size="lg" icon="gavel" en="DECLARE" disabled={!canSubmit} onClick={onSubmit} data-verdict-submit>
+            宣告する
+          </Button>
+        </span>
       </div>
     </div>
   );

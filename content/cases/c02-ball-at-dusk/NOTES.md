@@ -240,3 +240,14 @@
 - **出典**：追加17件（s-maron2013・s-maron2002・s-humble2021・s-link2003-velocity・s-link2003-review・s-link2002・s-koshimizu2009・s-koshimizu2020・s-nata2015・s-jaam-heat2024・s-gakkohoken-ecg・s-fukushima2017・s-harada2025・s-holmberg2000・s-shibahashi2023・s-deveci2025・s-kralj2015）。s-msd-vf の URL を転送先の正規 URL に。PubMed の URL はボット確認の画面になるため、抄録は Europe PMC の API で確認した（従来どおり）。輿水 2009・2020 は J-STAGE の全文 PDF を画像にして読んだ（テキスト層が文字化けしている）。
 - **反映しなかったもの**：R2 の alsoAccept から F17 を外す（謎解きの設計で、科学の誤りではない）。F13 に「死後の遺伝子検査でも異常なし」を足す（日本では一般的でないため、§8-15 で専門家に確認）。「体が震えていましたか？」＝いいえ（§8-13 で確認）。
 - **検証**：`npm run validate` → 3/3 PASS、エラー0・警告0。c02 は probes 287、rules 自己一致 100%（287/287）、leave-one-out 57.8%。`npx vitest run tests/content tests/engine` → 19ファイル・244件すべて通過。`STRICT_PENDING=1 npx vitest run tests/content` も通過。回帰セットの期待値は変更不要だった。
+
+---
+
+## Verdict modes（2026-09-25、難易度別の宣告）
+
+`case.json` に `verdictModes` を追加した。見習い＝選択式、審問官＝穴埋め式、教授＝自由記述（従来の answerElements）。宣告の画面でだけ出す（leakTerms の語を使ってよい）。並びはサーバーが事件ごとに固定の順でシャッフルする。
+
+- **見習い（選択式）**: 正解 d「胸に当たったボールで心臓のリズムが乱れ、血を送れなくなった」。誤答: a 熱中症（W-heat／F17・F18）、b 心臓の持病（W-disease／F13）、c 強いボールで骨が折れ心臓が傷ついた（W-structural／F12・F34）、e 驚いたショック（W-fright）。弟の故意（W-murder）は、未成年の家族を責める文を画面に出さない方針（design-bible §6）なので選択肢にしていない。28〜30字で、正解だけが最長にはならない。誤答はどれも wrongClaims の語に当たる。
+- **審問官（穴埋め式）**: 完成文「逆光で見失ったボールが［左胸の、心臓の真上］に当たり、強い球ではなかったのに、当たった瞬間が［鼓動の中の、衝撃を受けやすい一瞬］と重なって、［心臓が細かく震え、血を送れなくなった］。倒れたあと［心臓マッサージとAED］のないまま時間が過ぎ、心臓は元のリズムに戻らなかった。」 強さの扱いは docs/science-check/c02.md §4 の6〜8 に合わせ、「強さは関係ない」とは書かず「強い球ではなかったのに」（F34）とした。誤答: 力み（W-reflex）・夕日の光（W-light）・驚き（W-fright）／心臓の損傷・骨折（W-structural）・熱（W-heat）／水分と塩分・胸を強く叩く（よくある誤解）・頭のけが（F30）。球速・到着までの分数などの数字は入れていない。完成文は自由記述の判定でも correct（A・B・C・D）。
+- **assists**: r1（捕れずに胸に当たった。球を見失っていた）→ 選択肢 e（驚いたショック。見失った球には驚けない）を消す・空欄 hit を埋める・要素 B を示す。r2（当たって数秒で倒れた。当たる前は不調なし）→ 選択肢 a（熱中症）を消す・空欄 heart を埋める・要素 A を示す。残るのは b・c（持病／骨と心臓の損傷）と、空欄 timing・rescue（この事件の科学と救命の教訓）。
+- **検証**: `npm run validate` → 3/3 PASS・エラー0・警告0。`npx vitest run tests/content` → 全件通過。

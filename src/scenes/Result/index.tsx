@@ -17,13 +17,15 @@ import { openCase } from '../../app/flow';
 import { goto, type SceneProps } from '../../app/router';
 import { audio } from '../../audio';
 import { APP_CONFIG } from '../../config/app';
-import { buildCaseResult, computeRank, questionPar, rankAdvice, RANK_LABEL, RANK_TITLES, S_CONDITION, type RankInput } from '../../features/rank';
+import { buildCaseResult, computeRank, questionPar, rankAdvice, RANK_LABEL, RANK_TITLES, S_CONDITION, S_PLUS_CONDITION, type RankInput } from '../../features/rank';
+import { DifficultyBadge } from '../../features/difficulty/Badge';
+import { DIFFICULTY_META } from '../../features/difficulty/meta';
 import { fx } from '../../fx';
 import { motionReduced } from '../../fx/motion';
 import { useImage } from '../../lib/asset';
 import { caseList, loadCases } from '../../lib/cases';
 import { formatElapsed, useCaseProgress } from '../../state/hooks';
-import { completeCase, getCaseProgress, resetCase, saveData, setStage } from '../../state/save';
+import { completeCase, getCaseProgress, resetCase, saveData } from '../../state/save';
 import type { CaseResult, Rank } from '../../state/types';
 import { Button } from '../../ui/Button';
 import { HolmaSprite } from '../../ui/HolmaSprite';
@@ -34,8 +36,9 @@ import { toast } from '../../ui/Toast';
 import { caseNumber, pad2 } from '../Resolution/solution';
 import './result.css';
 
-const RANK_COLOR: Record<Rank, string> = { S: 'var(--formalin)', A: 'var(--cyan)', B: 'var(--amber)', C: 'var(--bone-2)' };
-const RANK_ORDER: Rank[] = ['S', 'A', 'B', 'C'];
+const RANK_COLOR: Record<Rank, string> = { 'S+': 'var(--formalin)', S: 'var(--formalin)', A: 'var(--cyan)', B: 'var(--amber)', C: 'var(--bone-2)' };
+const RANK_ORDER: Rank[] = ['S+', 'S', 'A', 'B', 'C'];
+const isTop = (r: Rank) => r === 'S' || r === 'S+';
 
 export function ResultScene({ params }: SceneProps) {
   const caseId = params.caseId!;
@@ -96,6 +99,8 @@ function rankInputFrom(r: CaseResult, estimatedMinutes?: number): RankInput {
     verdictAttempts: s.verdictAttempts ?? 1,
     suspensions: s.suspensions ?? 0,
     elapsedMs: r.elapsedMs ?? 0,
+    debateRounds: s.debateRounds ?? 0,
+    debateCleared: s.debateCleared ?? 0,
   };
 }
 
@@ -129,8 +134,8 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
     tl.fromTo(el, { scale: 2.6, opacity: 0, rotation: 14 }, { scale: 0.94, opacity: 1, rotation: -6, duration: 0.26, ease: 'power4.in' })
       .add(() => {
         audio.sfx('stamp');
-        fx.shake(rank === 'S' ? 1.2 : 0.7, 0.4);
-        if (rank === 'S') fx.flash('#C6FF3D', { opacity: 0.3, duration: 0.5 });
+        fx.shake(isTop(rank) ? 1.2 : 0.7, 0.4);
+        if (isTop(rank)) fx.flash('#C6FF3D', { opacity: rank === 'S+' ? 0.45 : 0.3, duration: 0.5 });
       })
       .to(el, { scale: 1, duration: 0.45, ease: 'elastic.out(1.1, 0.5)' });
     return () => {
@@ -140,7 +145,7 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
 
   const share = async () => {
     const hashtag = `#${APP_CONFIG.GAME_TITLE.replace(/[\s・]/g, '')}`;
-    const text = `CASE ${pad2(num)}${summary?.title ? `『${summary.title}』` : ''}をランク${rank}で解決。${hashtag}`;
+    const text = `CASE ${pad2(num)}${summary?.title ? `『${summary.title}』` : ''}を難易度「${DIFFICULTY_META[level].jp}」・ランク${rank}で解決。${hashtag}`;
     const url = location.href.split('#')[0].replace(/[?&]debug=1/, '');
     try {
       if (typeof navigator.share === 'function') {
@@ -159,11 +164,15 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
   // Counts stay bare: 回 set next to a big number, at any weight, reads as a missing-glyph box.
   const verdicts = s.verdictAttempts ?? 1;
   const quizMiss = s.quizMisses ?? 0;
+  const rounds = s.debateRounds ?? 0;
+  const roundsCleared = s.debateCleared ?? 0;
   const stats: { icon: IconName; label: string; num: string; unit?: string; sub?: string; tone?: 'good' | 'warn' }[] = [
     { icon: 'send', label: '質問数', num: `${s.asked ?? 0}`, unit: '問', sub: `目安 ${par}問`, tone: (s.asked ?? 0) <= par ? 'good' : undefined },
     { icon: 'star', label: '重要質問率', num: keyRate === null ? '—' : `${keyRate}`, unit: keyRate === null ? undefined : '%', sub: s.answered ? `所見を得た質問 ${s.keyQuestions ?? 0} / ${s.answered}` : '記録なし' },
     { icon: 'hint', label: 'ホルマの囁き', num: `${s.hintsUsed ?? 0}`, sub: 'ヒントを使った回数', tone: (s.hintsUsed ?? 0) === 0 ? 'good' : 'warn' },
-    { icon: 'shard', label: '撃ち損じ', num: `${s.debateMisses ?? 0}`, sub: 'ノイズ・ブレイク', tone: (s.debateMisses ?? 0) === 0 ? 'good' : undefined },
+    rounds > 0
+      ? { icon: 'shard', label: 'ノイズ・ブレイク', num: `${roundsCleared}/${rounds}`, sub: `撃ち損じ ${s.debateMisses ?? 0}${roundsCleared < rounds ? '・飛ばしたラウンドあり' : ''}`, tone: roundsCleared >= rounds && (s.debateMisses ?? 0) === 0 ? 'good' : undefined }
+      : { icon: 'shard', label: '撃ち損じ', num: `${s.debateMisses ?? 0}`, sub: 'ノイズ・ブレイク', tone: (s.debateMisses ?? 0) === 0 ? 'good' : undefined },
     { icon: 'help', label: '泣きつき', num: `${s.grants ?? 0}`, sub: '所見を借りた回数', tone: (s.grants ?? 0) === 0 ? 'good' : 'warn' },
     { icon: 'gavel', label: '死因宣告', num: `${verdicts}`, sub: verdicts <= 1 ? '一度で通った' : `${verdicts}度目で通った`, tone: verdicts <= 1 ? 'good' : undefined },
     { icon: 'time', label: '所要時間', num: formatElapsed(result.elapsedMs ?? 0) },
@@ -182,9 +191,10 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
           ? ''
           : `（今回 ${rank}）`;
   const improved = !!prev && RANK_ORDER.indexOf(rank) < RANK_ORDER.indexOf(prev);
+  const level = result.playDifficulty ?? 'normal';
 
   return (
-    <section class={`scene rs rs--${rank}`} style={{ '--rank-color': RANK_COLOR[rank] }}>
+    <section class={`scene rs rs--${rank === 'S+' ? 'Splus' : rank}`} style={{ '--rank-color': RANK_COLOR[rank] }} data-rank={rank}>
       <div class="rs__bg" aria-hidden="true">
         {bg && <img src={bg} alt="" />}
         <div class="rs__shade" />
@@ -201,14 +211,25 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
               <span class="rs-title__en">CASE COMPLETE</span>
               <span class="rs-title__jp">審問の記録</span>
             </h1>
+            <p class="rs-level">
+              <span class="rs-level__k t-mono">DIFFICULTY</span>
+              <DifficultyBadge difficulty={level} />
+              <span class="rs-level__mode">{DIFFICULTY_META[level].modeJp}の死因宣告</span>
+            </p>
           </header>
 
           <div class="rs-main">
             <div class="rs-rank">
               <div class={`rs-rank__seal ${revealed ? 'is-in' : ''}`} ref={rankRef} style={fresh && !motionReduced() ? { opacity: 0 } : undefined} role="img" aria-label={`審問官ランク ${rank}`}>
                 <span class="rs-rank__ring" aria-hidden="true" />
-                <span class="rs-rank__letter" aria-hidden="true">
-                  {rank}
+                <span class={`rs-rank__letter ${rank === 'S+' ? 'is-plus' : ''}`} aria-hidden="true">
+                  {rank === 'S+' ? (
+                    <>
+                      S<sup>+</sup>
+                    </>
+                  ) : (
+                    rank
+                  )}
                 </span>
                 <span class="rs-rank__en t-mono" aria-hidden="true">
                   RANK · {RANK_LABEL[rank].en}
@@ -221,7 +242,7 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
                 <p class="rs-rank__title">「{result.title}」</p>
                 <div class="rs-rank__holma">
                   <div class="rs-rank__face" aria-hidden="true">
-                    <HolmaSprite mood={rank === 'S' || rank === 'A' ? 'laugh' : 'normal'} framing="bust" />
+                    <HolmaSprite mood={isTop(rank) || rank === 'A' ? 'laugh' : 'normal'} framing="bust" />
                   </div>
                   <p>
                     <span class="rs-rank__name">ホルマ</span>
@@ -232,6 +253,10 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
                 <p class="rs-rank__cond">
                   <span class="rs-rank__cond-k t-mono">RANK S</span>
                   {S_CONDITION}
+                </p>
+                <p class="rs-rank__cond">
+                  <span class="rs-rank__cond-k t-mono">RANK S+</span>
+                  {S_PLUS_CONDITION}
                 </p>
                 {best && (
                   <p class={`rs-rank__best t-mono ${improved ? 'is-up' : ''}`}>
@@ -318,9 +343,9 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
               icon="refresh"
               onClick={() => {
                 setConfirm(false);
+                // the run is reset now; the difficulty chooser then starts the new one
                 resetCase(caseId);
-                setStage(caseId, 'intro');
-                goto('intro', { caseId });
+                setTimeout(() => openCase(caseId), 220);
               }}
             >
               はじめから
@@ -329,7 +354,7 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
         }
       >
         <p class="rs-confirm">
-          この事件の進行（質問の記録・所見・審問）をリセットして、最初から捜査します。
+          この事件の進行（質問の記録・所見・審問）をリセットして、最初から捜査します。難易度は、このあと選び直せます。
           <br />
           最高ランク（{best ?? rank}）と解決回数は残ります。
         </p>

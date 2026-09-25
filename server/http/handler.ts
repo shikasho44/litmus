@@ -13,7 +13,8 @@
  *   POST /api/inquest/start             InquestStartRequest → InquestStartResponse
  *   POST /api/inquest/shot              ShotRequest → ShotResponse
  *   POST /api/inquest/grant             GrantRequest → ShotResponse
- *   POST /api/inquest/verdict           VerdictRequest → VerdictResponse
+ *   POST /api/inquest/verdict-setup     VerdictSetupRequest → VerdictSetupResponse
+ *   POST /api/inquest/verdict           VerdictRequest (mode free|choice|cloze) → VerdictResponse
  *   POST /api/reconstruction            ReconstructionRequest → ReconstructionView
  *   POST /api/reconstruction/submit     ReconstructionSubmit → ReconstructionResult
  *   POST /api/solution                  {caseId, token} → SolutionResponse
@@ -29,11 +30,12 @@
  * every POST route (they all sign or verify a progress token) answers
  * 503 { code: 'server', message: 'server misconfigured', retryable: false }.
  */
-import { ApiError, type PipelineMode } from '../../shared/api.js';
+import { ApiError, type PipelineMode, type VerdictMode, type VerdictRequest } from '../../shared/api.js';
 import { EngineError, statusOf } from '../engine/errors.js';
 import { MAX_QUESTION_CHARS } from '../engine/normalize.js';
 import { detectSafety } from '../engine/safety.js';
 import { MAX_VERDICT_CHARS } from '../engine/game.js';
+import { parseVerdictMode } from '../engine/verdict-modes.js';
 import { PIPELINE_MODES } from '../engine/env.js';
 import { hmacSha256 } from '../engine/sha256.js';
 import type { ContentRegistry } from '../engine/registry.js';
@@ -210,12 +212,22 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
       const b = await body();
       return json(200, await svc.grant(b as never, { admin }));
     },
+    'inquest/verdict-setup': async ({ body, admin, ip }) => {
+      limit('write', ip);
+      const b = await body();
+      return json(200, await svc.verdictSetup({ caseId: b.caseId as string, token: b.token as string, mode: b.mode as VerdictMode }, { admin }));
+    },
     'inquest/verdict': async ({ body, admin, ip }) => {
       limit('verdict', ip);
       const b = await body();
-      if (typeof b.text !== 'string') throw new EngineError('bad_request', 'text is required', 400);
-      if ([...b.text].length > MAX_VERDICT_CHARS && detectSafety(b.text)?.kind !== 'selfHarm') throw new EngineError('bad_request', `text is too long (max ${MAX_VERDICT_CHARS})`, 400);
-      return json(200, await svc.verdict({ caseId: b.caseId as string, token: b.token as string, text: b.text }, { admin, withTrace: dev || admin }));
+      const mode = parseVerdictMode(b.mode, 'free');
+      if (mode === 'free') {
+        if (typeof b.text !== 'string') throw new EngineError('bad_request', 'text is required', 400);
+        if ([...b.text].length > MAX_VERDICT_CHARS && detectSafety(b.text)?.kind !== 'selfHarm') throw new EngineError('bad_request', `text is too long (max ${MAX_VERDICT_CHARS})`, 400);
+        return json(200, await svc.verdict({ caseId: b.caseId as string, token: b.token as string, mode, text: b.text }, { admin, withTrace: dev || admin }));
+      }
+      const req: VerdictRequest = { caseId: b.caseId as string, token: b.token as string, mode, choice: b.choice as string | undefined, blanks: b.blanks as Record<string, number> | undefined };
+      return json(200, await svc.verdict(req, { admin, withTrace: dev || admin }));
     },
     reconstruction: async ({ body, admin, ip }) => {
       limit('write', ip);

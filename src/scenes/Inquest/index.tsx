@@ -1,8 +1,10 @@
 /**
  * 死因審問 (INQUEST) — design bible §3-2.
- *   ① ノイズ・ブレイク  Jane's false memories flow across the stage as diagonal bands; shoot the
- *                      glowing noise with a finding. Composure 5; 2 misses → hint; 泣きつく → grant.
- *   ② 死因宣告          the player's own words; element checklist; unlimited retries.
+ *   ① ノイズ・ブレイク  (optional) Jane's false memories flow across the stage as diagonal bands; shoot
+ *                      the glowing noise with a finding. Composure 5; 2 misses → hint; 泣きつく → grant.
+ *                      Each cleared round earns an assist for the verdict; 「議論を飛ばして死因宣告へ」 skips.
+ *   ② 死因宣告          in the difficulty's format (choice / cloze / free); element checklist;
+ *                      Jane's lights (lives) — each miss puts one out, none left → GAME OVER.
  *   ③ 真相再構成        fill the blank comic frames; Holma narrates the finale → resolution.
  * State machine: src/features/inquest/session.ts. Components: src/features/inquest/*.
  */
@@ -18,6 +20,7 @@ import { isTouch } from '../../lib/env';
 import { pickLine } from '../../lib/lines';
 import { layout } from '../../lib/viewport';
 import { useCaseTimer } from '../../state/hooks';
+import { getCaseProgress } from '../../state/save';
 import { BottomSheet } from '../../ui/BottomSheet';
 import { Button, IconButton } from '../../ui/Button';
 import { DialogueBox } from '../../ui/DialogueBox';
@@ -31,13 +34,18 @@ import { ComposureMeter } from '../../features/inquest/Composure';
 import { DebateStage } from '../../features/inquest/DebateStage';
 import { EvidenceList, LoadedCard } from '../../features/inquest/EvidenceList';
 import { mapFinaleToPanels } from '../../features/inquest/finaleMap';
-import { FireButton, HintBanner, InquestStatus, InstructionStrip, PhaseRail, Quip } from '../../features/inquest/Hud';
+import { GameOverOverlay } from '../../features/inquest/GameOver';
+import { FireButton, HintBanner, InquestStatus, InstructionStrip, PhaseRail, Quip, SkipPanel } from '../../features/inquest/Hud';
+import { DifficultyBadge } from '../../features/difficulty/Badge';
+import { LivesMeter } from '../../features/difficulty/Lights';
+import { ASSIST_TEXT } from '../../features/difficulty/meta';
 import { ChoicePicker, ReconBoard } from '../../features/inquest/ReconBoard';
 import { InquestSession, successSpeaker } from '../../features/inquest/session';
 import { SuspendedOverlay } from '../../features/inquest/SuspendedOverlay';
 import { TitleCard, type TitleCardSpec } from '../../features/inquest/TitleCard';
 import { VERDICT_PROMPT, VerdictPanel } from '../../features/inquest/VerdictPanel';
 import '../../features/inquest/inquest.css';
+import '../../features/inquest/modes.css';
 import './inquest.css';
 
 const SHARDS = 34;
@@ -58,6 +66,8 @@ export function InquestScene({ params }: SceneProps) {
   const [drawer, setDrawer] = useState(false);
   const [evSheet, setEvSheet] = useState(false);
   const [begAsk, setBegAsk] = useState(false);
+  const [skipAsk, setSkipAsk] = useState(false);
+  const [gameOver, setGameOver] = useState<{ outcome: 'inquest' | 'restart' | null } | null>(null);
   const [filter, setFilter] = useState<FactCategory | 'all'>('all');
   const [stampKey, setStampKey] = useState(0);
   const [choosing, setChoosing] = useState<string | null>(null);
@@ -143,7 +153,7 @@ export function InquestScene({ params }: SceneProps) {
     }
   };
 
-  const enterVerdict = async (resumed: boolean) => {
+  const enterVerdict = async (resumed: boolean, skipped = false) => {
     // The sheet stays read-only (and unfocused) until the cut-in and Holma's prompt are over,
     // so Enter advances his line instead of typing blank lines into the verdict.
     s.verdictIntro.value = true;
@@ -152,10 +162,15 @@ export function InquestScene({ params }: SceneProps) {
     s.target.value = null;
     s.selected.value = null;
     s.persist();
+    // the verdict format (options with the debate assists applied) loads during the cut-in
+    const setupP = s.loadSetup();
     cam({ x: -2, scale: 1.08 }, 1.6);
     await fx.cutIn({ text: '死因宣告', en: 'DECLARE THE CAUSE OF DEATH', tone: 'bone', hold: 0.8, character: 'holma', mood: 'serious' });
+    await setupP;
     if (s.disposed) return;
-    if (!resumed) {
+    if (skipped) {
+      await s.say([{ speaker: 'holma', text: '議論は、ここまでで結構——ですか。よろしい。では、宣告を聞きましょう。', mood: 'serious' }]);
+    } else if (!resumed) {
       let l = pickLine('inquest.verdictPrompt', 'serious');
       for (let k = 0; k < 3 && l.text === VERDICT_PROMPT; k++) l = pickLine('inquest.verdictPrompt', 'serious');
       if (l.text !== VERDICT_PROMPT) await s.say([{ speaker: 'holma', text: l.text, mood: l.mood }]);
@@ -219,6 +234,13 @@ export function InquestScene({ params }: SceneProps) {
   };
 
   const boot = async () => {
+    // A case that was restarted (game over on 審問官 / 教授) or never opened has no inquest to
+    // resume: an old history entry or bookmark leads back to its intro.
+    const stage = getCaseProgress(caseId)?.stage;
+    if (stage === 'new' || stage === 'intro') {
+      goto('intro', { caseId }, { replace: true });
+      return;
+    }
     await s.load();
     if (s.disposed || s.phase.peek() === 'error') return;
     await waitIdle();
@@ -302,14 +324,20 @@ export function InquestScene({ params }: SceneProps) {
       s.step.value = 'success';
       s.busy.value = false;
       fx.pulse('cyan', false);
+      // the assist this round earns for the verdict (asked while Jane speaks)
+      const assistP = s.loadSetup();
       // The server says who remembers (ShotResponse.speaker); the wording guess is only a fallback.
       await s.say(res.lines.map((l) => ({ speaker: res.speaker ?? successSpeaker(l), text: l, mood: 'serious' as const })));
+      if (s.disposed) return;
+      const gained = await assistP;
       if (s.disposed) return;
       s.step.value = 'clear';
       audio.sfx('findingCore');
       const title = s.round.peek()?.title ?? '';
-      await showCard({ kicker: 'MEMORY RESTORED', title: '記憶修復', sub: title, tone: 'cyan', hold: 0.9 });
+      const reward = gained > 0 ? `手がかり獲得：${ASSIST_TEXT[s.verdictMode.peek()]}` : '';
+      await showCard({ kicker: reward ? 'MEMORY RESTORED · CLUE' : 'MEMORY RESTORED', title: '記憶修復', sub: reward || title, tone: 'cyan', hold: reward ? 1.5 : 0.9 });
       if (s.disposed) return;
+      if (reward) s.quip(`${reward}。`, 'hint', 'laugh');
       const last = s.nextRound();
       if (last) await enterVerdict(false);
       else await startRound(false);
@@ -359,6 +387,35 @@ export function InquestScene({ params }: SceneProps) {
       s.quip('その所見なら、もうお持ちですよ。……撃つ場所を、よくお考えなさい。', 'hint', 'normal');
     }
     requestAnimationFrame(() => document.querySelector(`.iq-mag [data-fact-id="${res.fact.id}"]`)?.scrollIntoView({ block: 'nearest', behavior: motionReduced() ? 'auto' : 'smooth' }));
+  };
+
+  /** 「議論を飛ばして死因宣告へ」 (confirmed). */
+  const skipDebate = async () => {
+    setSkipAsk(false);
+    if (s.phase.peek() !== 'debate' || s.busy.peek() || s.dialogue.peek()) return;
+    s.skipDebate();
+    audio.sfx('whoosh');
+    s.bark.value = null;
+    await enterVerdict(false, true);
+  };
+
+  /** From the verdict back to the first open round (to earn assists). */
+  const backToDebate = async () => {
+    if (s.verdictStep.peek() !== 'write' || s.dialogue.peek()) return;
+    if (!s.backToDebate()) return;
+    audio.sfx('whoosh');
+    cam({ scale: 1.02 }, 0.8);
+    await startRound(false);
+  };
+
+  /** Jane's last light went out: the save gets the restart rule, the scene plays the farewell. */
+  const runGameOver = async () => {
+    audio.bgm('none', 2.4);
+    audio.sfx('heartbeat');
+    fx.pulse('alarm', false);
+    setGameOver({ outcome: null });
+    const outcome = await s.applyGameOver();
+    setGameOver({ outcome });
   };
 
   /*
@@ -611,8 +668,11 @@ export function InquestScene({ params }: SceneProps) {
       await fx.cutIn({ text: '死因確定', en: 'CAUSE OF DEATH CONFIRMED', tone: 'formalin', hold: 1.0 });
       if (s.disposed) return;
       await enterRecon(false);
+    } else if (view.gameOver) {
+      await runGameOver();
     } else {
       s.verdictStep.value = 'write';
+      if (s.lives.peek() === 1) s.quip('……彼女の灯は、あと一つ。慎重に。', 'warn', 'serious');
     }
   };
 
@@ -683,6 +743,8 @@ export function InquestScene({ params }: SceneProps) {
   const inDebate = phase === 'debate';
   const inRecon = phase === 'reconstruction' || phase === 'finale' || phase === 'done';
   const canBeg = inDebate && step === 'play' && !s.busy.value && !s.tokenDead.value;
+  const canSkip = inDebate && step === 'play' && !s.busy.value && !dialogue && !s.tokenDead.value;
+  const showLives = phase === 'debate' || phase === 'verdict' || phase === 'suspended' || phase === 'gameover';
   const critical = inDebate && s.composure.value <= 1;
   touchUiRef.current = touchUi;
 
@@ -730,12 +792,21 @@ export function InquestScene({ params }: SceneProps) {
       {/* ---------- top bar ---------- */}
       <header class="iq__top">
         <div class="iq__title">
-          <span class="iq__en">INQUEST</span>
+          {/* phones: the difficulty badge takes the place of the INQUEST kicker (the bar is full) */}
+          {narrow && phase !== 'loading' && phase !== 'error' ? (
+            <span class="iq__kick">
+              <DifficultyBadge difficulty={s.difficulty.value} compact class="iq__diff" />
+            </span>
+          ) : (
+            <span class="iq__en">INQUEST</span>
+          )}
           <span class="iq__jp">死因審問</span>
           {!narrow && info && <span class="iq__case">{info.title}</span>}
         </div>
+        {!narrow && phase !== 'loading' && phase !== 'error' && <DifficultyBadge difficulty={s.difficulty.value} class="iq__diff" />}
         {!narrow && <PhaseRail phase={phase} />}
         <div class="spacer" />
+        {showLives && <LivesMeter value={s.lives.value} max={s.maxLives.value} compact={narrow} difficulty={s.difficulty.value} />}
         {inDebate && (
           <>
             <ComposureMeter value={s.composure.value} compact={narrow} />
@@ -786,7 +857,12 @@ export function InquestScene({ params }: SceneProps) {
                 <HintBanner text={s.hint.value} canBeg={canBeg} onBeg={() => setBegAsk(true)} />
               </div>
             )}
-            {bandsOn && <DebateStage session={s} narrow={narrow} hold={drawer || begAsk || evSheet} />}
+            {bandsOn && <DebateStage session={s} narrow={narrow} hold={drawer || begAsk || evSheet || skipAsk} />}
+            {bandsOn && (step === 'play' || step === 'firing') && (
+              <div class="iq__skip">
+                <SkipPanel session={s} narrow={narrow} disabled={!canSkip} onSkip={() => setSkipAsk(true)} />
+              </div>
+            )}
             {(step === 'play' || step === 'firing') && (
               <div class="iq__strip">
                 <InstructionStrip session={s} narrow={narrow} />
@@ -802,8 +878,10 @@ export function InquestScene({ params }: SceneProps) {
               stampKey={stampKey}
               autoFocus={!narrow}
               touch={touchUi}
+              narrow={narrow}
               onSubmit={() => void submitVerdict()}
               onOpenEvidence={() => setEvSheet(true)}
+              onBackToDebate={() => void backToDebate()}
               onStampImpact={() => {
                 const v = s.verdict.peek();
                 audio.sfx('stamp', { answerClass: v?.result === 'correct' ? 'yes' : v?.result === 'wrong' ? 'no' : 'partial' });
@@ -906,6 +984,20 @@ export function InquestScene({ params }: SceneProps) {
         />
       )}
 
+      {gameOver && (
+        <GameOverOverlay
+          caseId={caseId}
+          image={info?.portrait}
+          revealed={revealed}
+          difficulty={s.difficulty.value}
+          outcome={gameOver.outcome}
+          onTitle={() => {
+            audio.sfx('cancel');
+            goto('title', {}, { replace: true });
+          }}
+        />
+      )}
+
       {/* ---------- sheets & dialogs ---------- */}
       <BottomSheet open={drawer} onClose={() => setDrawer(false)} title="所見を装填" en="MAGAZINE" side="bottom">
         <EvidenceList
@@ -936,6 +1028,30 @@ export function InquestScene({ params }: SceneProps) {
       <BottomSheet open={choiceSheet && !!choosing} onClose={() => setChoiceSheet(false)} title="空白のコマ" en="BLANK PANEL" side="bottom">
         {choosing && <ChoicePicker key={choosing} session={s} panelId={choosing} onPicked={afterPick} />}
       </BottomSheet>
+
+      <Modal
+        open={skipAsk}
+        onClose={() => setSkipAsk(false)}
+        title="議論を飛ばしますか？"
+        en="SKIP THE NOISE BREAK"
+        size="sm"
+        tone="cyan"
+        footer={
+          <>
+            <Button variant="ghost" sfx="cancel" onClick={() => setSkipAsk(false)} data-autofocus>
+              議論を続ける
+            </Button>
+            <Button icon="gavel" onClick={() => void skipDebate()} data-skip-confirm>
+              死因宣告へ
+            </Button>
+          </>
+        }
+      >
+        <p class="iq-beg__p">残りのノイズ・ブレイク（{s.openRounds.value.length}ラウンド）を飛ばして、すぐに死因宣告へ進みます。</p>
+        <p class="iq-beg__note">
+          <Icon name="info" size={14} /> 撃ち抜かなかったラウンドの手がかりは、もらえません（1ラウンドごとに{ASSIST_TEXT[s.verdictMode.value].replace('死因宣告で', '')}）。死因宣告の画面から、いつでも議論に戻れます。
+        </p>
+      </Modal>
 
       <Modal
         open={begAsk}

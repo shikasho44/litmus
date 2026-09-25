@@ -85,6 +85,13 @@ describe('content rules', () => {
         ...c.reconstruction.panels
           .filter((p) => p.choice)
           .map((p) => ({ id: `panel ${p.id}`, texts: p.choice!.options.map((o) => o.text), right: p.choice!.options.findIndex((o) => o.correct) })),
+        // verdict by difficulty (見習い choice / 審問官 cloze blanks)
+        ...(c.verdictModes
+          ? [
+              { id: 'verdict choice', texts: c.verdictModes.choice.options.map((o) => o.text), right: c.verdictModes.choice.options.findIndex((o) => o.correct) },
+              ...c.verdictModes.cloze.blanks.map((b) => ({ id: `verdict blank ${b.id}`, texts: b.options, right: b.answer })),
+            ]
+          : []),
       ];
       const bad: string[] = [];
       for (const it of items) {
@@ -142,6 +149,25 @@ describe('content rules', () => {
       expect(bad, bad.join('\n')).toEqual([]);
     });
 
+    it('has verdict modes for every difficulty: one right choice ≤ 40 chars, an assist per debate round', () => {
+      const vm = c.verdictModes;
+      expect(vm, 'verdictModes').toBeDefined();
+      if (!vm) return;
+      const right = vm.choice.options.filter((o) => o.correct);
+      expect(right).toHaveLength(1);
+      expect([...right[0].text].length).toBeLessThanOrEqual(40);
+      expect(vm.assists.map((a) => a.round).sort()).toEqual(c.debate.map((r) => r.id).sort());
+      const bad = vm.assists.flatMap((a) => {
+        const o = vm.choice.options.find((x) => x.id === a.removeOption);
+        return [
+          ...(!o || o.correct ? [`${a.round}: removeOption ${a.removeOption} must be a wrong option`] : []),
+          ...(!vm.cloze.blanks.some((b) => b.id === a.fillBlank) ? [`${a.round}: fillBlank ${a.fillBlank}`] : []),
+          ...(!c.answerElements.some((e) => e.id === a.element) ? [`${a.round}: element ${a.element}`] : []),
+        ];
+      });
+      expect(bad, bad.join('\n')).toEqual([]);
+    });
+
     it('has ≥ 8 authored SAFETY probes (cannot, kind meta, no facts)', () => {
       const safety = c.probes.filter((p) => (p.note ?? '').startsWith('SAFETY:'));
       expect(safety.length).toBeGreaterThanOrEqual(8);
@@ -179,6 +205,34 @@ describe('Holma’s line bank (VOICE.md)', () => {
   it('fallback wrong-shot lines never say whether the target or the card was wrong', () => {
     const bad = texts((bank.inquest as Record<string, unknown>).wrongShot).filter((t) => /的違い|的が違|狙いは悪くない|所見が違う|どこを狙|横をすり抜け/u.test(t));
     expect(bad, bad.join('\n')).toEqual([]);
+  });
+});
+
+describe('prologue (content/prologue.json)', () => {
+  type L = { speaker: string; text: string; fx?: string };
+  const lines = (JSON.parse(read('prologue.json')) as { lines: L[] }).lines;
+
+  it('stays short (16–20 lines; the first case teaches the controls in play)', () => {
+    expect(lines.length).toBeGreaterThanOrEqual(16);
+    expect(lines.length).toBeLessThanOrEqual(20);
+  });
+
+  it('keeps the cues src/scenes/Prologue relies on', () => {
+    // practice: the line before the first 「はい」 stamp quotes a question to send
+    const yes = lines.findIndex((l) => l.fx === 'stamp-yes');
+    expect(yes).toBeGreaterThan(0);
+    expect(lines[yes - 1].text).toMatch(/『[^』]+？』/u);
+    // the other stamps quote their question first, so the stamp lands on the answer
+    for (const fx of ['stamp-no', 'stamp-irrelevant']) expect(lines.find((l) => l.fx === fx)?.text.startsWith('『'), fx).toBe(true);
+    // after Jane appears, a Holma line promises that findings light her shards
+    const jane = lines.findIndex((l) => l.speaker === 'jane');
+    expect(lines.some((l, k) => k > jane && l.speaker === 'holma' && /破片/u.test(l.text) && /灯/u.test(l.text))).toBe(true);
+    expect(lines.at(-1)).toMatchObject({ fx: 'cutin', text: 'さァ——解剖（しらべ）を始めましょう' });
+  });
+
+  it('introduces the rules, the optional debate, the three difficulties and the fade-out', () => {
+    const all = lines.map((l) => l.text).join('\n');
+    for (const w of ['嘘をつけません', '訊かれたことにしか答えません', 'ノイズ・ブレイク', '見習い', '審問官', '教授', '選択式', '穴埋め式', '自由記述', '消えて']) expect(all, w).toContain(w);
   });
 });
 

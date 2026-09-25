@@ -3,6 +3,7 @@ import { fxRefs } from '../fx';
 import { BackdropCanvas, FxLayer } from '../fx/FxLayer';
 import { settings, storageOk } from '../state/save';
 import { ToastHost, toast } from '../ui/Toast';
+import { CoachMarks } from '../features/tutorial/CoachMarks';
 import { OverlayHost } from './OverlayHost';
 import { SceneHost } from './SceneHost';
 import './shell.css';
@@ -39,6 +40,7 @@ export function App() {
       </div>
       <div class="grain" aria-hidden="true" />
       <FxLayer />
+      <CoachMarks />
       <OverlayHost />
       <ToastHost />
     </div>

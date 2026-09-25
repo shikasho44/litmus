@@ -9,7 +9,8 @@ import type {
   AskRequest, AskResponse, CasePublic, CaseSummary, GrantRequest, HintRequest, HintResponse,
   InquestStartRequest, InquestStartResponse, PipelineMode, ProgressSnapshot, ProgressToken,
   PublicFact, ReconstructionRequest, ReconstructionResult, ReconstructionSubmit, ReconstructionView,
-  ShotRequest, ShotResponse, SolutionResponse, VerdictRequest, VerdictResponse,
+  ShotRequest, ShotResponse, SolutionResponse, VerdictMode, VerdictRequest, VerdictResponse, VerdictSetupRequest,
+  VerdictSetupResponse,
 } from '../../shared/api.js';
 import { badRequest, forbidden, notFound, rateLimited } from './errors.js';
 import type { PipelineComponents, VerdictJudgeOutput } from './judge-types.js';
@@ -21,8 +22,9 @@ import { callModel, REDACTED, runAsk, STAGE_TIMEOUT_MS, TURN_DEADLINE_MS } from 
 import { detectSafety, safetyLine } from './safety.js';
 import { memoIdForFact, initialState, sanitizeState, snapshot, type GameState } from './state.js';
 import { signToken, verifyToken } from './token.js';
-import { optionOrder, parseSegments, publicFact, reconstructionView, roundViews, solutionView, toPublic, toSummary } from './public-view.js';
+import { optionOrder, parseSegments, publicFact, reconstructionView, roundViews, solutionView, toPublic, toSummary, verdictSetupView } from './public-view.js';
 import { evaluateVerdict } from './verdict.js';
+import { judgeChoice, judgeCloze, parseVerdictMode, type PickVerdict } from './verdict-modes.js';
 import { StageTimer, traceId, type EngineTrace, type TraceSink } from './trace.js';
 
 export const MAX_VERDICT_CHARS = 600;
@@ -274,9 +276,22 @@ export class GameService {
     return { correct: false, lines: [lines.pick(lines.lines.inquest.grant, ns.grants, 'grant').text], speaker: 'holma', granted: publicFact(fact), ...(await this.issue(c, ns)) };
   }
 
+  /**
+   * The verdict screen for a difficulty's mode (choice / cloze / free) with the assists earned by
+   * the cleared debate rounds applied. Read-only: verifies the token, issues no new one.
+   */
+  async verdictSetup(req: VerdictSetupRequest, o?: CallOptions): Promise<VerdictSetupResponse> {
+    const c = await this.loaded(req?.caseId, o);
+    const s = await this.state(c, req.token);
+    const mode = parseVerdictMode(req.mode);
+    return verdictSetupView(c.data, s.cleared, mode);
+  }
+
   async verdict(req: VerdictRequest, o?: CallOptions): Promise<VerdictResponse> {
     const c = await this.loaded(req?.caseId, o);
     const s = await this.state(c, req.token);
+    const mode = parseVerdictMode(req.mode, 'free');
+    if (mode !== 'free') return this.pickVerdict(c, s, mode, req, o);
     if (typeof req.text !== 'string' || req.text.trim().length === 0) throw badRequest('text is required');
     const text = req.text.trim();
     // A wish to die typed into the verdict box gets the serious line (even when over-long): it is
@@ -361,6 +376,50 @@ export class GameService {
     };
     this.opts.traces?.write({ id: traceId(), at: new Date(this.clock()).toISOString(), kind: 'verdict', caseId: c.data.id, input: text, result: [ev.result], trace });
     const res: VerdictResponse = { result: ev.result, matched: ev.matched, labels, lines: out, ...(await this.issue(c, ns)) };
+    if (o?.withTrace) res.trace = trace;
+    return res;
+  }
+
+  /**
+   * choice / cloze verdicts: judged against the case's verdictModes (no model, no free text).
+   * Counted and solved exactly like the free-text verdict; an invalid pick is a bad_request.
+   */
+  private async pickVerdict(c: LoadedCase, s: GameState, mode: Exclude<VerdictMode, 'free'>, req: VerdictRequest, o?: CallOptions): Promise<VerdictResponse> {
+    const pv: PickVerdict = mode === 'choice' ? judgeChoice(c.data, s.cleared, req.choice) : judgeCloze(c.data, s.cleared, req.blanks);
+    const lines = (await this.registry()).lines;
+    const L = lines.lines.inquest;
+
+    if (s.solved) {
+      const all = mode === 'cloze' ? Object.keys(pv.labels) : c.data.answerElements.map((e) => e.id);
+      return { result: 'correct', matched: all, labels: pv.labels, lines: [lines.pick(L.verdictCorrect, s.verdictAttempts, 'verdict.correct').text], ...(await this.issue(c, s)) };
+    }
+
+    const attempts = s.verdictAttempts + 1;
+    const out: string[] = [];
+    if (pv.result === 'correct') out.push(lines.pick(L.verdictCorrect, attempts, 'verdict.correct').text);
+    else if (pv.result === 'missing') out.push(lines.pick(L.verdictMissing, attempts, 'verdict.missing').text);
+    else {
+      out.push(lines.pick(L.verdictWrong, attempts, 'verdict.wrong').text);
+      // A wrong option that states a known false story gets that claim's authored answer.
+      for (const id of pv.wrongClaims.slice(0, 2)) {
+        const w = c.data.wrongClaims.find((x) => x.id === id);
+        if (w) out.push(w.feedback);
+      }
+    }
+    const solved = pv.result === 'correct';
+    const ns: GameState = { ...s, verdictAttempts: attempts, solved, nearCore: s.nearCore || solved };
+    const trace: EngineTrace = {
+      mode: 'rules',
+      normalized: [],
+      candidates: [],
+      judge: { verdictMode: mode, matched: pv.matched, wrongClaims: pv.wrongClaims },
+      fastPath: true,
+      timings: [],
+      tokens: { input: 0, output: 0 },
+      costUsd: 0,
+    };
+    this.opts.traces?.write({ id: traceId(), at: new Date(this.clock()).toISOString(), kind: 'verdict', caseId: c.data.id, input: pv.input, result: [pv.result], trace });
+    const res: VerdictResponse = { result: pv.result, matched: pv.matched, labels: pv.labels, lines: out, ...(await this.issue(c, ns)) };
     if (o?.withTrace) res.trace = trace;
     return res;
   }

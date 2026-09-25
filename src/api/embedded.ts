@@ -53,6 +53,7 @@ export function createEmbeddedApi(): GameApi {
     inquestStart: (req) => clone(svc.inquestStart(req)),
     shot: (req) => clone(svc.shot(req)),
     grant: (req) => clone(svc.grant(req)),
+    verdictSetup: (req) => clone(svc.verdictSetup(req)),
     verdict: (req) => clone(svc.verdict(req)),
     reconstruction: (req) => clone(svc.reconstruction(req)),
     submitReconstruction: (req) => clone(svc.submitReconstruction(req)),

@@ -142,6 +142,7 @@ describe('HTTP handler (end to end)', () => {
         ['/api/ask', { caseId, question: '雨でしたか', token: forged }],
         ['/api/hint', { caseId, token: forged }],
         ['/api/inquest/start', { caseId, token: forged }],
+        ['/api/inquest/verdict-setup', { caseId, token: forged, mode: 'choice' }],
         ['/api/inquest/verdict', { caseId, token: forged, text: '一酸化炭素中毒' }],
         ['/api/reconstruction', { caseId, token: forged }],
         ['/api/solution', { caseId, token: forged }],

@@ -32,6 +32,8 @@ export function collectRankInput(p: CaseProgress | undefined, meta: CaseMeta): R
     verdictAttempts: Math.max(1, num(snap?.verdictAttempts, p?.inquest?.verdictAttempts ?? 1)),
     suspensions: num(p?.inquest?.suspensions),
     elapsedMs: num(p?.elapsedMs),
+    debateRounds: num(p?.inquest?.rounds),
+    debateCleared: Array.isArray(snap?.debateCleared) ? snap.debateCleared.length : (p?.inquest?.cleared?.length ?? 0),
   };
 }
 
@@ -51,6 +53,7 @@ export function buildCaseResult(p: CaseProgress | undefined, meta: CaseMeta, now
     title: rank.title,
     at: now,
     elapsedMs: input.elapsedMs,
+    playDifficulty: p?.difficulty ?? 'normal',
     stats: {
       score: rank.score,
       asked: input.asked,
@@ -62,6 +65,8 @@ export function buildCaseResult(p: CaseProgress | undefined, meta: CaseMeta, now
       verdictAttempts: input.verdictAttempts,
       suspensions: input.suspensions ?? 0,
       quizMisses: quizMisses(p),
+      debateRounds: input.debateRounds ?? 0,
+      debateCleared: input.debateCleared ?? 0,
       difficulty: meta.difficulty,
       ...(meta.estimatedMinutes ? { estimatedMinutes: meta.estimatedMinutes } : {}),
     },

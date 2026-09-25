@@ -1,35 +1,47 @@
 /**
  * InquestSession — the state machine behind the 死因審問 scene.
  *
- *   loading → opening → debate (rounds…) → verdict → reconstruction → finale → done
+ *   loading → opening → debate (rounds… — optional: 「議論を飛ばして死因宣告へ」) → verdict → reconstruction → finale → done
  *                          └ composure 0 → suspended → back to investigation
+ *                                                         verdict: lights 0 → gameover
  *
  * The server is authoritative for everything that matters (cleared rounds, solved,
  * reconstructed) and returns a fresh signed token on every call. The UI keeps only what
- * the bible assigns to it: composure (集中力), grant count, verdict attempts, the current
+ * the bible assigns to it: composure (集中力), grant count, verdict attempts, lives, the current
  * phase and drafts — mirrored into the save (setInquest) so a reload resumes in place.
+ *
+ * The verdict format follows the case difficulty (VERDICT_MODE_BY_DIFFICULTY): choice / cloze /
+ * free. api.verdictSetup returns the options with the debate assists applied (each cleared round
+ * strikes out a choice, pre-fills a blank or reveals an element); available=false → free text.
+ * Lives (Jane's lights, LIVES_BY_DIFFICULTY) drop by one per non-correct verdict; at 0 the
+ * difficulty's game-over rule is written to the save (applyGameOver).
  *
  * Components read the signals; the scene drives the timed sequences (cut-ins, lines).
  */
 import { batch, computed, signal } from '@preact/signals';
 import type {
   CasePublic,
+  Difficulty,
   HolmaMood,
   InquestRoundView,
   ProgressSnapshot,
   PublicFact,
   ReconstructionView,
+  VerdictMode,
+  VerdictRequest,
   VerdictResult,
+  VerdictSetupResponse,
 } from '../../../shared/api';
-import { ApiError } from '../../../shared/api';
+import { ApiError, LIVES_BY_DIFFICULTY, VERDICT_MODE_BY_DIFFICULTY } from '../../../shared/api';
 import { api } from '../../api';
 import type { Speaker } from '../../audio';
-import { restartCaseAfterBadToken } from '../investigation/caseData';
+import { ensureToken, restartCaseAfterBadToken } from '../investigation/caseData';
 import { pickLine } from '../../lib/lines';
-import { addFacts, getCaseProgress, setInquest, setStage, setToken } from '../../state/save';
+import { addFacts, caseDifficulty, getCaseProgress, resetCase, setInquest, setStage, setToken, updateCase } from '../../state/save';
 import type { InquestPhase, InquestState } from '../../state/types';
+import { parseCloze } from './cloze';
 
-export type Phase = 'loading' | 'error' | 'debate' | 'suspended' | 'verdict' | 'reconstruction' | 'finale' | 'done';
+export type Phase = 'loading' | 'error' | 'debate' | 'suspended' | 'verdict' | 'reconstruction' | 'finale' | 'done' | 'gameover';
 /** Sub-state of a debate round. */
 export type DebateStep = 'intro' | 'play' | 'firing' | 'success' | 'clear';
 /** Sub-state of the verdict. */
@@ -70,7 +82,13 @@ export interface VerdictView {
    * not counted as an attempt. The UI shows no stamp — a calm line and a support card.
    */
   support?: boolean;
+  /** The verdict format this judgement was made in. */
+  mode?: VerdictMode;
+  /** This miss put out Jane's last light. */
+  gameOver?: boolean;
 }
+
+export { parseCloze, type ClozePart } from './cloze';
 
 export const SUPPORT_URL = 'https://www.mhlw.go.jp/mamorouyokokoro/';
 
@@ -137,6 +155,8 @@ export class InquestSession {
   freshFacts = signal<Set<string>>(new Set());
   /** Ricochet feedback: key increments on each wrong shot. */
   missKey = signal(0);
+  /** The player skipped the rest of the noise break. */
+  debateSkipped = signal(false);
 
   /* ---- verdict ---- */
   verdictStep = signal<VerdictStep>('write');
@@ -150,6 +170,24 @@ export class InquestSession {
   verdict = signal<VerdictView | null>(null);
   /** Show the support card (see VerdictView.support). */
   support = signal(false);
+
+  /* ---- difficulty, verdict format, lives, assists ---- */
+  difficulty = signal<Difficulty>('normal');
+  /** The format the verdict is declared in (free when the case has no verdictModes). */
+  verdictMode = signal<VerdictMode>('cloze');
+  setup = signal<VerdictSetupResponse | null>(null);
+  setupState = signal<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  /** choice: the picked option id. */
+  choice = signal<string | null>(null);
+  /** choice: options already declared and judged wrong (crossed out, not selectable). */
+  triedChoices = signal<string[]>([]);
+  /** cloze: blank id → option index (as displayed). Assist-filled blanks are included and locked. */
+  clozePicks = signal<Record<string, number>>({});
+  /** Jane's lights: verdict retries left. */
+  lives = signal(3);
+  maxLives = signal(3);
+  /** Debate assists earned / available (from verdictSetup; null = not known yet). */
+  assists = signal<{ earned: number; total: number } | null>(null);
 
   /* ---- reconstruction ---- */
   picks = signal<Record<string, number>>({});
@@ -165,6 +203,8 @@ export class InquestSession {
   speaking = signal<Speaker | null>(null);
 
   private seq = 0;
+  /** After a game over the save belongs to the restart rule: nothing may write the old run back. */
+  private retired = false;
   private sayResolve: (() => void) | null = null;
   private barkTimer: ReturnType<typeof setTimeout> | undefined;
   private draftTimer: ReturnType<typeof setTimeout> | undefined;
@@ -177,6 +217,23 @@ export class InquestSession {
   cleared = computed(() => this.progress.value?.debateCleared ?? []);
   blanks = computed(() => (this.recon.value?.panels ?? []).filter((p) => p.choice));
   allPicked = computed(() => this.blanks.value.every((p) => typeof this.picks.value[p.id] === 'number'));
+  /** Rounds not cleared yet (the player may go back to the noise break from the verdict). */
+  openRounds = computed(() => this.rounds.value.filter((r) => !this.cleared.value.includes(r.id)));
+  /** The verdict can be declared in the current format. */
+  verdictReady = computed(() => {
+    const mode = this.verdictMode.value;
+    if (mode === 'free') return this.draft.value.trim().length >= 4;
+    const st = this.setup.value;
+    if (this.setupState.value !== 'ready' || !st) return false;
+    if (mode === 'choice') {
+      const c = this.choice.value;
+      const opt = st.choice?.options.find((o) => o.id === c);
+      return !!opt && !opt.removed && !this.triedChoices.value.includes(opt.id);
+    }
+    const picks = this.clozePicks.value;
+    const blanks = st.cloze?.blanks ?? [];
+    return blanks.length > 0 && blanks.every((b) => typeof picks[b.id] === 'number');
+  });
 
   constructor(caseId: string) {
     this.caseId = caseId;
@@ -206,11 +263,13 @@ export class InquestSession {
   }
 
   private apply(res: { token: string; progress: ProgressSnapshot }) {
+    if (this.retired) return;
     setToken(this.caseId, res.token, res.progress);
     this.progress.value = res.progress;
   }
 
   persist(patch: Partial<InquestState> = {}) {
+    if (this.retired) return;
     if (this.disposed && !('verdictDraft' in patch)) return;
     const ph = this.phase.peek();
     const phase: InquestPhase = ph === 'verdict' ? 'verdict' : ph === 'reconstruction' || ph === 'finale' ? 'reconstruction' : ph === 'done' ? 'done' : 'debate';
@@ -225,6 +284,12 @@ export class InquestSession {
       suspensions: this.suspensions.peek(),
       reconstructionPicks: { ...this.picks.peek() },
       reconstructionDone: !!this.progress.peek()?.reconstructed,
+      lives: this.lives.peek(),
+      debateSkipped: this.debateSkipped.peek(),
+      rounds: this.rounds.peek().length,
+      verdictChoice: this.choice.peek() ?? undefined,
+      triedChoices: [...this.triedChoices.peek()],
+      verdictBlanks: { ...this.clozePicks.peek() },
       ...patch,
     });
   }
@@ -250,6 +315,14 @@ export class InquestSession {
     this.phase.value = 'loading';
     this.error.value = null;
     const saved = getCaseProgress(this.caseId)?.inquest;
+    const difficulty = caseDifficulty(this.caseId);
+    const maxLives = LIVES_BY_DIFFICULTY[difficulty] ?? 3;
+    batch(() => {
+      this.difficulty.value = difficulty;
+      this.verdictMode.value = VERDICT_MODE_BY_DIFFICULTY[difficulty] ?? 'free';
+      this.maxLives.value = maxLives;
+      this.lives.value = typeof saved?.lives === 'number' && saved.lives > 0 ? Math.min(maxLives, saved.lives) : maxLives;
+    });
     try {
       const [info, token] = await Promise.all([
         api.getCase(this.caseId).catch(() => null),
@@ -271,6 +344,10 @@ export class InquestSession {
         this.verdictAttempts.value = Math.max(saved?.verdictAttempts ?? 0, start.progress.verdictAttempts);
         this.draft.value = tidyDraft(saved?.verdictDraft ?? '');
         this.picks.value = saved?.reconstructionPicks ? { ...saved.reconstructionPicks } : {};
+        this.debateSkipped.value = !!saved?.debateSkipped;
+        this.choice.value = typeof saved?.verdictChoice === 'string' ? saved.verdictChoice : null;
+        this.triedChoices.value = strList(saved?.triedChoices);
+        this.clozePicks.value = saved?.verdictBlanks && typeof saved.verdictBlanks === 'object' ? { ...saved.verdictBlanks } : {};
         if (saved?.lastVerdict) {
           const lv = saved.lastVerdict;
           const req = strList(lv.required);
@@ -289,16 +366,20 @@ export class InquestSession {
         this.phase.value = 'reconstruction';
       } else {
         const firstOpen = start.rounds.findIndex((r) => !p.debateCleared.includes(r.id));
-        if (firstOpen < 0 || !start.rounds.length) {
-          this.roundIndex.value = Math.max(0, start.rounds.length - 1);
+        const skipped = this.debateSkipped.peek() && saved?.phase === 'verdict';
+        if (firstOpen < 0 || !start.rounds.length || skipped) {
+          this.roundIndex.value = Math.max(0, firstOpen < 0 ? start.rounds.length - 1 : firstOpen);
           this.verdictIntro.value = true; // until the scene's 死因宣告 cut-in has played
           this.phase.value = 'verdict';
           this.verdictStep.value = 'write';
         } else {
           this.roundIndex.value = firstOpen;
+          this.debateSkipped.value = false;
           this.phase.value = 'debate';
           this.step.value = 'intro';
         }
+        // the assists earned so far (HUD); entering the verdict awaits it again
+        void this.loadSetup();
       }
       this.persist();
     } catch (e) {
@@ -467,6 +548,32 @@ export class InquestSession {
     setStage(this.caseId, 'investigation');
   }
 
+  /** 「議論を飛ばして死因宣告へ」: the rounds left give no assists. */
+  skipDebate() {
+    batch(() => {
+      this.debateSkipped.value = true;
+      this.target.value = null;
+      this.selected.value = null;
+      this.hint.value = null;
+    });
+    this.persist({ debateSkipped: true });
+  }
+
+  /** From the verdict back to the first open noise-break round (to earn assists). */
+  backToDebate(): boolean {
+    const next = this.rounds.peek().findIndex((r) => !this.cleared.peek().includes(r.id));
+    if (next < 0) return false;
+    batch(() => {
+      this.debateSkipped.value = false;
+      this.roundIndex.value = next;
+      this.resetRoundUi();
+      this.step.value = 'intro';
+      this.phase.value = 'debate';
+    });
+    this.persist({ phase: 'debate', debateSkipped: false });
+    return true;
+  }
+
   /**
    * After a bad_token: wipe this case's unverifiable progress (best rank / clears survive) and
    * fetch a fresh token, so the save never keeps a dead token. Never throws.
@@ -492,19 +599,117 @@ export class InquestSession {
     }, 500);
   }
 
-  async declare(): Promise<VerdictView | null> {
-    const text = this.draft.peek().trim();
+  /**
+   * api.verdictSetup for the difficulty's format: the options with the debate assists applied.
+   * Resolves to the assist gain (earned now − earned before). A case without verdictModes
+   * (available=false) — or an engine without the endpoint — falls back to free text.
+   */
+  async loadSetup(): Promise<number> {
     const token = this.token();
-    if (!text || !token) return null;
-    const before = this.progress.peek()?.verdictAttempts ?? 0;
+    const want: VerdictMode = VERDICT_MODE_BY_DIFFICULTY[this.difficulty.peek()] ?? 'free';
+    if (!token) return 0;
+    const before = this.assists.peek()?.earned ?? 0;
+    if (typeof (api as { verdictSetup?: unknown }).verdictSetup !== 'function') {
+      this.useFreeFallback(want);
+      return 0;
+    }
+    if (!this.setup.peek()) this.setupState.value = 'loading';
     try {
-      const res = await api.verdict({ caseId: this.caseId, token, text });
+      const res = await api.verdictSetup({ caseId: this.caseId, token, mode: want });
+      if (this.disposed) return 0;
+      const mode: VerdictMode = res.available && res.mode === want ? want : 'free';
+      batch(() => {
+        this.setup.value = res;
+        this.verdictMode.value = mode;
+        this.assists.value = res.available ? { earned: res.assistsEarned ?? 0, total: res.assistsTotal ?? 0 } : null;
+        this.setupState.value = 'ready';
+        if (mode === 'cloze' && res.cloze) {
+          // assist-filled blanks are locked in; stale saved picks outside the options are dropped
+          const picks: Record<string, number> = {};
+          for (const b of res.cloze.blanks) {
+            const cur = this.clozePicks.peek()[b.id];
+            if (typeof b.filled === 'number') picks[b.id] = b.filled;
+            else if (typeof cur === 'number' && cur >= 0 && cur < b.options.length) picks[b.id] = cur;
+          }
+          this.clozePicks.value = picks;
+        }
+        if (mode === 'choice' && res.choice) {
+          const ids = new Set(res.choice.options.filter((o) => !o.removed).map((o) => o.id));
+          const c = this.choice.peek();
+          if (c && !ids.has(c)) this.choice.value = null;
+          this.triedChoices.value = this.triedChoices.peek().filter((id) => ids.has(id));
+        }
+      });
+      return res.available ? Math.max(0, (res.assistsEarned ?? 0) - before) : 0;
+    } catch (e) {
+      if (this.disposed) return 0;
+      const code = e instanceof ApiError ? e.code : 'server';
+      if (code === 'bad_token') this.tokenDead.value = true;
+      // A transport failure keeps the format and offers a retry; an engine that does not know
+      // the endpoint (404 / bad request) plays the original free-text verdict.
+      if (code === 'network' || code === 'timeout' || code === 'rate_limited') this.setupState.value = 'error';
+      else this.useFreeFallback(want);
+      return 0;
+    }
+  }
+
+  private useFreeFallback(want: VerdictMode) {
+    batch(() => {
+      this.verdictMode.value = 'free';
+      this.setupState.value = 'ready';
+      this.assists.value = null;
+      if (want !== 'free') this.setup.value = { mode: 'free', available: false, assistsEarned: 0, assistsTotal: 0 };
+    });
+  }
+
+  pickChoice(id: string) {
+    if (this.verdictStep.peek() !== 'write') return;
+    this.choice.value = id;
+    this.persist();
+  }
+
+  pickBlank(blankId: string, index: number) {
+    if (this.verdictStep.peek() !== 'write') return;
+    const b = this.setup.peek()?.cloze?.blanks.find((x) => x.id === blankId);
+    if (!b || typeof b.filled === 'number') return;
+    this.clozePicks.value = { ...this.clozePicks.peek(), [blankId]: index };
+    this.persist();
+  }
+
+  /** The sentence as declared (for the record): the chosen option, or the cloze filled in. */
+  private declaredText(mode: VerdictMode): string {
+    const st = this.setup.peek();
+    if (mode === 'choice') return st?.choice?.options.find((o) => o.id === this.choice.peek())?.text ?? '';
+    if (mode === 'cloze' && st?.cloze) {
+      const cloze = st.cloze;
+      const picks = this.clozePicks.peek();
+      return parseCloze(cloze.template)
+        .map((p) => ('text' in p ? p.text : (cloze.blanks.find((b) => b.id === p.blank)?.options[picks[p.blank]] ?? '＿＿')))
+        .join('');
+    }
+    return this.draft.peek().trim();
+  }
+
+  async declare(): Promise<VerdictView | null> {
+    const mode = this.verdictMode.peek();
+    const text = this.declaredText(mode);
+    const token = this.token();
+    if (!token || !this.verdictReady.peek() || !text) return null;
+    const before = this.progress.peek()?.verdictAttempts ?? 0;
+    const req: VerdictRequest =
+      mode === 'choice'
+        ? { caseId: this.caseId, token, mode, choice: this.choice.peek()! }
+        : mode === 'cloze'
+          ? { caseId: this.caseId, token, mode, blanks: { ...this.clozePicks.peek() } }
+          : { caseId: this.caseId, token, mode: 'free', text };
+    try {
+      const res = await api.verdict(req);
       if (this.disposed) return null;
       this.apply(res);
       // Every judged verdict increments the server's attempt count; the safety reply does not.
-      const support = res.notice === 'support' || (res.result !== 'correct' && res.matched.length === 0 && res.progress.verdictAttempts === before);
+      const support = res.notice === 'support' || (mode === 'free' && res.result !== 'correct' && (res.matched?.length ?? 0) === 0 && res.progress.verdictAttempts === before);
       if (support) {
-        const view: VerdictView = { result: res.result, matched: [], labels: res.labels, lines: res.lines, notes: [], text, support: true };
+        const view: VerdictView = { result: res.result, matched: [], labels: res.labels ?? {}, lines: res.lines, notes: [], text, support: true, mode };
         this.support.value = true;
         return view;
       }
@@ -513,17 +718,90 @@ export class InquestSession {
       const notes = res.result === 'correct' ? [] : res.lines.slice(1).filter((l) => l.trim());
       // `required` is optional on the wire: marks the other elements （任意） when present.
       const required = strList((res as { required?: unknown }).required);
-      const view: VerdictView = { result: res.result, matched: res.matched, labels: res.labels, lines: res.lines, notes, text, ...(required.length ? { required } : {}) };
+      const miss = res.result !== 'correct';
+      const lives = miss ? Math.max(0, this.lives.peek() - 1) : this.lives.peek();
+      const view: VerdictView = {
+        result: res.result,
+        matched: res.matched ?? [],
+        labels: res.labels ?? {},
+        lines: res.lines,
+        notes,
+        text,
+        mode,
+        ...(required.length ? { required } : {}),
+        ...(miss && lives <= 0 ? { gameOver: true } : {}),
+      };
       batch(() => {
         this.verdictAttempts.value = Math.max(this.verdictAttempts.peek() + 1, res.progress.verdictAttempts);
         this.verdict.value = view;
+        this.lives.value = lives;
+        const c = this.choice.peek();
+        if (miss && mode === 'choice' && c) {
+          this.triedChoices.value = [...new Set([...this.triedChoices.peek(), c])];
+          this.choice.value = null;
+        }
       });
-      this.persist({ lastVerdict: { result: view.result, matched: view.matched, labels: view.labels, text, notes, ...(view.required ? { required: view.required } : {}) }, verdictDraft: text });
+      this.persist({
+        lastVerdict: { result: view.result, matched: view.matched, labels: view.labels, text, notes, ...(view.required ? { required: view.required } : {}) },
+        ...(mode === 'free' ? { verdictDraft: text } : {}),
+      });
       return view;
     } catch (e) {
       this.quip(this.fail(e, '宣告').msg, 'warn');
       return null;
     }
+  }
+
+  /**
+   * Jane's last light went out. The difficulty's rule is written to the save at once (a reload
+   * during the game-over scene must not bring the dead run back):
+   *   easy         → the case resumes from the START OF THE INQUEST: findings, token and
+   *                  counters stay, the lights refill, the verdict drafts are cleared.
+   *   normal/hard  → this case starts over from the beginning (resetCase keeps best rank, clears,
+   *                  the restored name and the difficulty) with a new token. Other cases are
+   *                  never touched.
+   */
+  async applyGameOver(): Promise<'inquest' | 'restart'> {
+    const d = this.difficulty.peek();
+    batch(() => {
+      this.phase.value = 'gameover';
+      this.target.value = null;
+    });
+    this.retired = true;
+    this.sayResolve?.();
+    this.sayResolve = null;
+    clearTimeout(this.draftTimer);
+    this.draftTimer = undefined;
+    const gameOvers = (getCaseProgress(this.caseId)?.gameOvers ?? 0) + 1;
+    if (d === 'easy') {
+      const cur = getCaseProgress(this.caseId)?.inquest;
+      updateCase(this.caseId, (c) => ({
+        ...c,
+        stage: 'inquest',
+        gameOvers,
+        inquest: {
+          phase: 'debate',
+          roundIndex: 0,
+          composure: MAX_COMPOSURE,
+          cleared: [...(this.progress.peek()?.debateCleared ?? cur?.cleared ?? [])],
+          misses: cur?.misses ?? this.misses.peek(),
+          grants: cur?.grants ?? this.grants.peek(),
+          verdictAttempts: Math.max(cur?.verdictAttempts ?? 0, this.verdictAttempts.peek()),
+          suspensions: cur?.suspensions ?? this.suspensions.peek(),
+          rounds: this.rounds.peek().length,
+          lives: this.maxLives.peek(),
+          debateSkipped: false,
+        },
+      }));
+      return 'inquest';
+    }
+    batch(() => {
+      resetCase(this.caseId);
+      updateCase(this.caseId, { gameOvers });
+      setStage(this.caseId, 'intro');
+    });
+    await ensureToken(this.caseId, this.info.peek() ?? undefined);
+    return 'restart';
   }
 
   /* ------------------------------------------------------------------ */

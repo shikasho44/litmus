@@ -2075,3 +2075,43 @@
 [data-reduce-motion='true'] .dock__alert {
   animation: none !important;
 }
+
+/* ---------------------------------------------------------------- difficulty (top bar / menu) */
+.ivtop__tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  align-self: center;
+}
+[data-layout='narrow'] .ivtop__tags {
+  gap: 6px;
+}
+.ivmenu__diff {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  background: rgba(11, 13, 18, 0.5);
+  border: 1px solid var(--bone-a14);
+}
+.ivmenu__diff-k {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--bone-3);
+}
+.ivmenu__diff-mode {
+  font-size: var(--fs-xs);
+  color: var(--bone-2);
+}
+.ivmenu__diff .btn {
+  margin-left: auto;
+}
+.ivmenu__diff-note {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--fs-2xs);
+  color: var(--bone-3);
+}

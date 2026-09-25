@@ -410,3 +410,39 @@
 [data-reduce-motion='true'] .rs-stat {
   animation: none !important;
 }
+
+/* difficulty of the run */
+.rs-level {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 4px 0 0;
+}
+.rs-level__k {
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.3em;
+  color: var(--bone-3);
+}
+.rs-level__mode {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--bone-2);
+}
+
+/* S+ — the seal gains a second ring and a small superscript plus */
+.rs-rank__letter.is-plus {
+  display: inline-flex;
+  align-items: flex-start;
+}
+.rs-rank__letter.is-plus sup {
+  font-size: 0.5em;
+  line-height: 1;
+  margin-left: 0.02em;
+  margin-top: 0.08em;
+  color: var(--bone);
+  text-shadow: 3px 3px 0 var(--alarm);
+}
+.rs[data-rank='S+'] .rs-rank__seal {
+  box-shadow: 0 0 0 4px rgba(11, 13, 18, 0.9), 0 0 0 8px color-mix(in srgb, var(--formalin) 55%, transparent), 0 0 80px color-mix(in srgb, var(--formalin) 45%, transparent);
+}

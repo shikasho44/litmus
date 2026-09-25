@@ -1,4 +1,7 @@
+import type { Difficulty } from '../../../shared/api';
 import type { ResolvedLine } from '../../lib/lines';
+import { DifficultyBadge } from '../difficulty/Badge';
+import { DIFFICULTY_META } from '../difficulty/meta';
 import type { CaseProgress } from '../../state/types';
 import { Button } from '../../ui/Button';
 import { HolmaSprite } from '../../ui/HolmaSprite';
@@ -26,6 +29,7 @@ export function InquestConfirm({
   line,
   low,
   progress,
+  difficulty,
 }: {
   open: boolean;
   onClose: () => void;
@@ -33,6 +37,8 @@ export function InquestConfirm({
   line: ResolvedLine;
   low: boolean;
   progress?: CaseProgress;
+  /** The difficulty name (見習い…), shown while it can still change. */
+  difficulty?: string;
 }) {
   const facts = progress ? progress.factOrder.map((id) => progress.facts[id]).filter(Boolean) : [];
   const key = facts.filter((f) => f.importance >= 2).length;
@@ -72,7 +78,8 @@ export function InquestConfirm({
         </div>
       </dl>
       <p class="ivdlg__note">
-        審問では、集めた所見を使って彼女の記憶のノイズを撃ち抜きます。途中で捜査に戻っても、所見は失われません。
+        審問では、集めた所見で彼女の記憶のノイズを撃ち抜けます（撃ち抜くと死因宣告の手がかりに。飛ばして宣告へ進むこともできます）。途中で捜査に戻っても、所見は失われません。
+        {difficulty && <> 審問が始まると、難易度（{difficulty}）は変えられなくなります。</>}
       </p>
     </Modal>
   );
@@ -195,6 +202,10 @@ export function MenuDialog({
   onReplayIntro,
   onFiles,
   onTitle,
+  difficulty,
+  canChangeDifficulty,
+  onDifficulty,
+  onTutorial,
 }: {
   open: boolean;
   onClose: () => void;
@@ -203,10 +214,24 @@ export function MenuDialog({
   onReplayIntro: () => void;
   onFiles: () => void;
   onTitle: () => void;
+  difficulty: Difficulty;
+  canChangeDifficulty: boolean;
+  onDifficulty: () => void;
+  onTutorial: () => void;
 }) {
+  const d = DIFFICULTY_META[difficulty];
   return (
     <Modal open={open} onClose={onClose} title="メニュー" en="MENU" size="sm">
       <div class="ivmenu">
+        <div class="ivmenu__diff">
+          <span class="ivmenu__diff-k">難易度</span>
+          <DifficultyBadge difficulty={difficulty} />
+          <span class="ivmenu__diff-mode">{d.modeJp}・やり直し{d.lives}回</span>
+          <Button variant="quiet" size="sm" icon="refresh" onClick={onDifficulty} disabled={!canChangeDifficulty} data-menu-difficulty>
+            変更
+          </Button>
+          {!canChangeDifficulty && <p class="ivmenu__diff-note">審問が始まったため、この事件の難易度は変えられません。</p>}
+        </div>
         <Button variant="ghost" icon="settings" block onClick={onSettings} data-autofocus>
           設定
         </Button>
@@ -215,6 +240,9 @@ export function MenuDialog({
         </Button>
         <Button variant="ghost" icon="play" block onClick={onReplayIntro}>
           事件の導入をもう一度見る
+        </Button>
+        <Button variant="ghost" icon="info" block onClick={onTutorial} data-menu-tutorial>
+          チュートリアルをもう一度
         </Button>
         <Button variant="ghost" icon="tag" block onClick={onFiles}>
           事件ファイルへ戻る

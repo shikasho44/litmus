@@ -1,8 +1,34 @@
-/** Small HUD pieces of the inquest: fire button, instruction strip, hint, Holma's quip, phase rail, status panel. */
+/** Small HUD pieces of the inquest: fire button, instruction strip, skip panel, hint, Holma's quip, phase rail, status panel. */
 import type { ComponentChildren } from 'preact';
 import { HolmaSprite } from '../../ui/HolmaSprite';
 import { Icon } from '../../ui/Icon';
 import type { InquestSession, Phase } from './session';
+
+/**
+ * The noise break is optional: 「議論を飛ばして死因宣告へ」 with what shooting earns, and the
+ * assists earned so far (手がかり n/total).
+ */
+export function SkipPanel({ session: s, onSkip, disabled, narrow }: { session: InquestSession; onSkip: () => void; disabled?: boolean; narrow?: boolean }) {
+  const a = s.assists.value;
+  return (
+    <div class={`skipd ${narrow ? 'skipd--narrow' : ''}`} role="group" aria-label="ノイズ・ブレイクは任意です">
+      {a && a.total > 0 && (
+        <span class="skipd__assists" aria-label={`手がかり ${a.earned} / ${a.total}`}>
+          <Icon name="shard" size={14} />
+          手がかり
+          <b class="t-mono">
+            {a.earned}/{a.total}
+          </b>
+        </span>
+      )}
+      <button type="button" class="skipd__btn" onClick={onSkip} disabled={disabled} data-skip-debate>
+        <span class="skipd__jp">議論を飛ばして死因宣告へ</span>
+        <Icon name="skip" size={16} />
+      </button>
+      <p class="skipd__note">記憶のノイズを撃ち抜くと、死因宣告で手がかりがもらえます</p>
+    </div>
+  );
+}
 
 export function FireButton({ session: s, onFire, compact }: { session: InquestSession; onFire: () => void; compact?: boolean }) {
   const hasT = !!s.target.value;
@@ -80,14 +106,14 @@ export function Quip({ session: s }: { session: InquestSession }) {
   );
 }
 
-const RAIL: { id: 'debate' | 'verdict' | 'reconstruction'; jp: string; en: string }[] = [
-  { id: 'debate', jp: 'ノイズ・ブレイク', en: 'NOISE BREAK' },
+const RAIL: { id: 'debate' | 'verdict' | 'reconstruction'; jp: string; en: string; opt?: boolean }[] = [
+  { id: 'debate', jp: 'ノイズ・ブレイク', en: 'NOISE BREAK', opt: true },
   { id: 'verdict', jp: '死因宣告', en: 'VERDICT' },
   { id: 'reconstruction', jp: '真相再構成', en: 'RECONSTRUCTION' },
 ];
 
 export function PhaseRail({ phase }: { phase: Phase }) {
-  const cur = phase === 'finale' || phase === 'done' ? 'reconstruction' : phase === 'suspended' ? 'debate' : phase;
+  const cur = phase === 'finale' || phase === 'done' ? 'reconstruction' : phase === 'suspended' ? 'debate' : phase === 'gameover' ? 'verdict' : phase;
   const at = RAIL.findIndex((r) => r.id === cur);
   return (
     <ol class="prail" aria-label="審問の段階">
@@ -95,6 +121,7 @@ export function PhaseRail({ phase }: { phase: Phase }) {
         <li key={r.id} class={`prail__i ${i < at ? 'is-done' : ''} ${i === at ? 'is-now' : ''}`} aria-current={i === at ? 'step' : undefined}>
           <span class="prail__n">{i + 1}</span>
           <span class="prail__jp">{r.jp}</span>
+          {r.opt && <span class="prail__opt">任意</span>}
         </li>
       ))}
     </ol>

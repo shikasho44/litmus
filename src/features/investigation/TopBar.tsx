@@ -7,6 +7,7 @@ import { formatElapsed } from '../../state/hooks';
 import type { CaseProgress } from '../../state/types';
 import { IconButton } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
+import { DifficultyBadge } from '../difficulty/Badge';
 import { caseNo } from './caseData';
 import type { Controller } from './controller';
 
@@ -45,7 +46,10 @@ export function TopBar({ ctl, pub, progress, elapsed, newFacts, notebookOpen, on
     <div class="ivtop">
       <IconButton icon="menu" label="メニュー" onClick={onMenu} tooltipSide="right" />
       <div class="ivtop__title">
-        <span class="ivtop__case">CASE {caseNo(pub?.number)}</span>
+        <span class="ivtop__tags">
+          <span class="ivtop__case">CASE {caseNo(pub?.number)}</span>
+          <DifficultyBadge difficulty={progress?.difficulty ?? 'normal'} compact={narrow} class="ivtop__diff" />
+        </span>
         <span class="ivtop__jp">{pub?.title ?? '……'}</span>
         {!narrow && pub && <span class="ivtop__en">{pub.titleEn}</span>}
       </div>

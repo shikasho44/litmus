@@ -76,3 +76,12 @@ Codex（ChatGPT のサインイン枠）は2回だけ使用（費用 0）。仕�
 - 答えのデータは JavaScript から読める（静的版の仕様。持ち主は了承済み）。
 - ゲーム紹介ページ（fourthplace43.com/games/ の一覧）には**まだ載せていない**。権利確認前のため、URL を知っている人だけが遊べる状態。
 - 更新するときは `VITE_SITE_URL=https://fourthplace43.com/games/janedoe/ npm run build:static` → server-deploy スキルで `dist` を `games/janedoe` へ送る。
+
+## 2026-09-25 午後 科学の再チェックと公開準備
+
+- 3事件とも「条件つきで起こりうる（○）」と判定（筋書きの現実性・一文ずつの事実確認・反証役の3観点）。指摘は一次資料で確かめてから反映。詳細は `docs/science-check/`（README・事件ごとの報告・監修者への質問27問・公式シリーズとの重なり）。
+- 公式シリーズの公開28問と死因の重複なし。c01 は #16（ドライアイスの二酸化炭素）と型が近いことを監修依頼で先に伝える。
+- 監修の予算目安の提案: 3事件で10万円（税別）、先方の料金に合わせる（持ち主の最終判断待ち）。
+- Vercel: 持ち主のアカウントにプロジェクト `janedoe` を作成し、秘密でない設定（PIPELINE_MODE=jev、DAILY_COST_LIMIT_USD=1、VITE_OFFICIAL_RELEASE_ENABLED=false）を登録。`SESSION_SECRET` と `OPENROUTER_API_KEY` は持ち主が登録する（秘密の値はこちらで扱わない）。`.vercelignore` で qa・art-src などを送らない。
+- 企画概要ページ: `promo/proposal/index.html`（claude.ai の非公開ページとしても公開済み）。
+- 静的版（fourthplace43.com/games/janedoe/）を、直した事件データで更新。

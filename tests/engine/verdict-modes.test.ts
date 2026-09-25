@@ -143,18 +143,18 @@ describe('verdictSetup', () => {
     expect((await svc.verdict({ caseId, token: t, mode: 'free', text: '心臓発作' })).result).toBe('wrong');
   });
 
-  it('spreads the correct option over positions across cases (never always first)', () => {
+  it('puts the correct option in a middle position, varying across cases', () => {
     const base = fixtureCase();
+    const n = base.verdictModes!.choice.options.length;
     const positions = new Set<number>();
-    let first = 0;
     for (let i = 10; i < 70; i++) {
       const c = { ...base, id: `c${i}-shuffle` };
       const pos = verdictChoiceOrder(c, base.verdictModes!).indexOf(0); // authored index 0 = correct
+      expect(pos).toBeGreaterThan(0);
+      expect(pos).toBeLessThan(n - 1);
       positions.add(pos);
-      if (pos === 0) first++;
     }
-    expect(positions.size).toBe(4);
-    expect(first).toBeLessThan(30);
+    expect(positions.size).toBe(n - 2);
   });
 });
 

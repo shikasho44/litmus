@@ -22,7 +22,7 @@
 **A. 画面から（おすすめ）**
 1. このフォルダを GitHub の非公開リポジトリに push する（`.env.local` は `.gitignore` 済みで上がらない）。
 2. vercel.com → Add New → Project → そのリポジトリを Import。
-3. Framework Preset は「Other」のまま。ビルドの設定は `vercel.json` に書いてあるので変えない（`npm ci` → `npm run build` → `dist/`、API は `api/[...path].ts`）。
+3. Framework Preset は「Other」のまま。ビルドの設定は `vercel.json` に書いてあるので変えない（`npm ci` → `npm run build` → `dist/`、API は `api/router.ts`）。
 4. Deploy の前に、下の「環境変数」を Settings → Environment Variables に入れる。
 
 **B. コマンドから**

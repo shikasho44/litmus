@@ -18,7 +18,7 @@
  ─────────────── HTTP ─────────────┼──────────────────────────────────────────
                                    ▼
  Vite dev / preview : server/node/vite-plugin.ts ─┐
- Vercel            : api/[...path].ts ────────────┤→ server/node/handler.ts  handleApi(request, env)
+ Vercel            : api/router.ts ────────────┤→ server/node/handler.ts  handleApi(request, env)
                                                    │     ├ content-fs.ts   content/ を読む（dev は変更を自動再読込）
                                                    │     ├ trace-file.ts   logs/trace-YYYY-MM-DD.jsonl（dev のみ）
                                                    │     └ bench-reports.ts bench/reports/*.json 一覧
@@ -335,7 +335,7 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 
 ## 8. 配備
 
-- **Vercel**: `vercel.json` — build `npm run build`、出力 `dist`、関数 `api/[...path].ts`（Node、15秒、1GB、`content/**` 同梱）、
+- **Vercel**: `vercel.json` — build `npm run build`、出力 `dist`、関数 `api/router.ts`（Node、15秒、1GB、`content/**` 同梱）、
   拡張子の無いパスは `index.html` へ（`/api` 除く）、セキュリティヘッダー（CSP・HSTS・nosniff 等）、`/assets` は長期キャッシュ。
   環境変数は §7 を Vercel の Project Settings に入れる（`SESSION_SECRET` 必須・32文字以上。無いと token 系ルートが 503 — 配備直後に `/api/health` が 200 か確かめる）。
   事件開始時の Jev の目覚まし（§2）は応答後の非同期処理なので、Vercel では止められて効かないことがある（`@vercel/functions` の `waitUntil` を使えば確実だが、依存追加は持ち主の判断待ち）。

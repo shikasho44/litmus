@@ -290,7 +290,7 @@ WebAudio の合成音（音源ファイルなし）。初回のユーザー操�
 - Vite 8 + TypeScript 7 + Preact + @preact/signals + GSAP。`base: './'`。
 - `shared/` 型と検証（zod）。`server/` 判定エンジン（フレームワーク非依存の純粋な TS。Node でもブラウザでも動く。Node 専用処理は `server/node/` に隔離）。`api/` Vercel 用の入口。`src/` 画面。`content/` 事件データと台詞。
 - 開発サーバー: Vite プラグインで `/api/*` を同じエンジンに接続（`vite dev` と `vite preview` の両方）。
-- 本番: Vercel（`api/[...path].ts`、Node ランタイム）。環境変数 `OPENROUTER_API_KEY`, `SESSION_SECRET`, `DECISION_PROVIDER`, `LLM_PROVIDER`, `LLM_MODEL`, `PIPELINE_MODE`, `DAILY_COST_LIMIT_USD`, `ADMIN_TOKEN`。
+- 本番: Vercel（`api/router.ts`、Node ランタイム）。環境変数 `OPENROUTER_API_KEY`, `SESSION_SECRET`, `DECISION_PROVIDER`, `LLM_PROVIDER`, `LLM_MODEL`, `PIPELINE_MODE`, `DAILY_COST_LIMIT_USD`, `ADMIN_TOKEN`。
 - 静的版: `vite build --mode static` で埋め込みエンジン（rules）を同梱。
 - 設定値: `src/config/app.ts`（`APP_TITLE`, `GAME_TITLE`, `SUBTITLE`, `COPYRIGHT_NOTICE`, `OFFICIAL_RELEASE_ENABLED`, `CONTACT_URL`, `ANALYTICS_ID`）を `VITE_*` 環境変数で上書き可能。`OFFICIAL_RELEASE_ENABLED=false` の間は「PREVIEW」表記と `noindex`。
 - セーブ: `localStorage`（try/catch 必須）。事件ごとに質問ログ・所見・科学メモ・ヒント・経過時間・審問の進み具合・トークン。途中で閉じても再開。

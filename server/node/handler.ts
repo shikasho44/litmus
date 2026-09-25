@@ -1,6 +1,6 @@
 /**
  * Node entry: `handleApi(request, env)` — used by the Vite plugin (dev via ssrLoadModule,
- * preview via an internal module runner) and by the Vercel function api/[...path].ts.
+ * preview via an internal module runner) and by the Vercel function api/router.ts.
  * Wires the file-system content source, the dev JSONL trace sink (old files pruned on start),
  * the bench listing and the public/ asset check into the pure HTTP handler. The runtime is
  * cached per environment signature.

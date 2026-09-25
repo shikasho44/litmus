@@ -68,3 +68,11 @@
 | | **合計** | **約 $0.94（約141円、150円/$）** |
 
 Codex（ChatGPT のサインイン枠）は2回だけ使用（費用 0）。仕上げ・引き継ぎ作業（この日の最後）では有料 API を呼んでいない（QA はすべて rules モード）。
+
+## 2026-09-25 09:20 静的版を fourthplace43.com に配置（持ち主の指示）
+
+- 持ち主の指示で、静的版（`build:static`、rules 判定のみ・AI なし・費用 0）を **https://fourthplace43.com/games/janedoe/** に置いた。試遊用。
+- ビルドは `VITE_SITE_URL=https://fourthplace43.com/games/janedoe/` 付き（共有カードの画像を絶対URLにするため）。`VITE_OFFICIAL_RELEASE_ENABLED` は false のまま（PREVIEW 表示・noindex）。
+- 答えのデータは JavaScript から読める（静的版の仕様。持ち主は了承済み）。
+- ゲーム紹介ページ（fourthplace43.com/games/ の一覧）には**まだ載せていない**。権利確認前のため、URL を知っている人だけが遊べる状態。
+- 更新するときは `VITE_SITE_URL=https://fourthplace43.com/games/janedoe/ npm run build:static` → server-deploy スキルで `dist` を `games/janedoe` へ送る。

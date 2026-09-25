@@ -193,6 +193,39 @@ export const ScienceMemoSchema = z.object({
   text: z.string(),
 });
 
+/**
+ * Answer formats for the verdict by difficulty (added 2026-09-25):
+ *   見習い TRAINEE  (easy)   → choice : pick the cause of death from options
+ *   審問官 CORONER  (normal) → cloze  : fill the blanks of a sentence, each blank from options
+ *   教授   PROFESSOR (hard)  → free   : the original free-text verdict (answerElements)
+ * SECRET (server-side only). `assists` say what each cleared debate round gives the player
+ * in the verdict: remove one wrong choice option, pre-fill one cloze blank, reveal one element.
+ */
+export const VerdictModesSchema = z.object({
+  choice: z.object({
+    prompt: z.string(),
+    options: z.array(z.object({ id: z.string().regex(/^[a-z0-9_-]+$/), text: z.string(), correct: z.boolean() })).min(4).max(6),
+  }),
+  cloze: z.object({
+    prompt: z.string(),
+    /** The completed-truth sentence with blanks written as {{blankId}}. */
+    template: z.string(),
+    blanks: z.array(z.object({
+      id: z.string().regex(/^[a-z0-9_-]+$/),
+      label: z.string(),                       // what the blank asks for, e.g. 直接の死因
+      options: z.array(z.string()).min(3).max(5),
+      answer: z.number().int().min(0),
+    })).min(2).max(4),
+  }),
+  assists: z.array(z.object({
+    round: z.string(),                          // debate round id
+    removeOption: z.string().optional(),        // a wrong choice option id
+    fillBlank: z.string().optional(),           // a cloze blank id
+    element: z.string().optional(),             // an answerElement id revealed as a hint (free mode)
+  })).default([]),
+});
+export type VerdictModes = z.infer<typeof VerdictModesSchema>;
+
 export const CaseSchema = z.object({
   id: z.string().regex(/^c\d{2}-[a-z0-9-]+$/),
   number: z.number().int().min(1),
@@ -269,6 +302,8 @@ export const CaseSchema = z.object({
   }),
   /** SECRET. Terms that must never appear in model-written replies before the solution. */
   leakTerms: z.array(z.string()).min(1),
+  /** Verdict formats per difficulty (optional for older cases; validator warns when missing). */
+  verdictModes: VerdictModesSchema.optional(),
 });
 
 export type Case = z.infer<typeof CaseSchema>;

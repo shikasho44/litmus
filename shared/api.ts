@@ -165,7 +165,45 @@ export interface ShotResponse {
 export interface GrantRequest { caseId: string; token: ProgressToken; roundId: string }
 
 export type VerdictResult = 'correct' | 'almost' | 'missing' | 'wrong';
-export interface VerdictRequest { caseId: string; token: ProgressToken; text: string }
+/**
+ * Difficulty (chosen by the player per case, stored in the browser save):
+ *   easy = 見習い TRAINEE (choice verdict, 10 lives, game over → restart from the inquest)
+ *   normal = 審問官 CORONER (cloze verdict, 3 lives, game over → restart the case)
+ *   hard = 教授 PROFESSOR (free-text verdict, 3 lives, game over → restart the case)
+ */
+export type Difficulty = 'easy' | 'normal' | 'hard';
+export type VerdictMode = 'choice' | 'cloze' | 'free';
+export const VERDICT_MODE_BY_DIFFICULTY: Record<Difficulty, VerdictMode> = { easy: 'choice', normal: 'cloze', hard: 'free' };
+export const LIVES_BY_DIFFICULTY: Record<Difficulty, number> = { easy: 10, normal: 3, hard: 3 };
+
+export interface VerdictRequest {
+  caseId: string; token: ProgressToken;
+  /** Defaults to 'free'. */
+  mode?: VerdictMode;
+  /** free */
+  text?: string;
+  /** choice: the picked option id */
+  choice?: string;
+  /** cloze: blank id → index into that blank's options (as displayed) */
+  blanks?: Record<string, number>;
+}
+
+/** What the verdict screen needs for the chosen mode, with the debate assists already applied. */
+export interface VerdictSetupRequest { caseId: string; token: ProgressToken; mode: VerdictMode }
+export interface VerdictSetupResponse {
+  mode: VerdictMode;
+  /** choice: options in display order; removed = struck out by a debate assist */
+  choice?: { prompt: string; options: { id: string; text: string; removed: boolean }[] };
+  /** cloze: template with {{id}} blanks; filled = option index pre-filled by a debate assist */
+  cloze?: { prompt: string; template: string; blanks: { id: string; label: string; options: string[]; filled?: number }[] };
+  /** free: element labels (for the checklist) and ids revealed by assists */
+  free?: { labels: Record<string, string>; revealed: string[] };
+  /** How many assists the cleared debate rounds earned (for the UI) */
+  assistsEarned: number;
+  assistsTotal: number;
+  /** false when the case has no verdictModes yet → UI falls back to free text */
+  available: boolean;
+}
 export interface VerdictResponse {
   result: VerdictResult;
   matched: string[];             // answer element ids matched
@@ -249,6 +287,7 @@ export interface GameApi {
   inquestStart(req: InquestStartRequest): Promise<InquestStartResponse>;
   shot(req: ShotRequest): Promise<ShotResponse>;
   grant(req: GrantRequest): Promise<ShotResponse>;
+  verdictSetup(req: VerdictSetupRequest): Promise<VerdictSetupResponse>;
   verdict(req: VerdictRequest): Promise<VerdictResponse>;
   reconstruction(req: ReconstructionRequest): Promise<ReconstructionView>;
   submitReconstruction(req: ReconstructionSubmit): Promise<ReconstructionResult>;

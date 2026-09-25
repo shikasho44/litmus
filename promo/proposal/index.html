@@ -1,0 +1,291 @@
+<title>ジェーンドゥの死因 ゲーム企画</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* One deliberate look (the game's own): an ink-dark case file header on bone paper. */
+  :root {
+    color-scheme: light;
+    --ink: #0B0D12;
+    --ink-2: #1A1E27;
+    --paper: #F2EFE6;
+    --paper-2: #E8E3D6;
+    --text: #1B1E25;
+    --soft: #5C6270;
+    --rule: #D3CDBE;
+    --formalin: #C6FF3D;
+    --formalin-ink: #4E6B00;
+    --alarm: #E0244F;
+    --cyan: #1E9DB8;
+    --display: "Dela Gothic One", "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif;
+    --body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  }
+  html { background: var(--paper); }
+  body { background: var(--paper); color: var(--text); font-family: var(--body); font-size: 16px; line-height: 1.85; }
+  .wrap { max-width: 980px; margin: 0 auto; padding-inline: 20px; }
+  a { color: var(--cyan); text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible { outline: 3px solid var(--alarm); outline-offset: 3px; }
+  img { display: block; max-width: 100%; height: auto; }
+
+  /* Header */
+  .hero { background: var(--ink); color: var(--paper); padding-block: 28px 36px; }
+  .hero .wrap { display: grid; gap: 22px; }
+  .tag { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; color: var(--formalin); text-transform: uppercase; }
+  .hero h1 { font-family: var(--display); font-weight: 400; font-size: clamp(28px, 5vw, 44px); line-height: 1.3; margin: 0; text-wrap: balance; }
+  .hero h1 em { font-style: normal; color: var(--formalin); }
+  .hero .lead { margin: 0; max-width: 62ch; color: #C9CCD4; }
+  .hero figure { margin: 0; border: 1px solid #2C3240; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 12.5px; color: #9BA1AE; }
+  .meta b { color: var(--paper); font-weight: 600; }
+  .draft { display: inline-block; font-family: var(--mono); font-size: 11px; letter-spacing: .1em; padding: 2px 8px; border: 1px dashed var(--formalin); color: var(--formalin); }
+
+  /* Sections */
+  main { padding-block: 12px 56px; }
+  section { padding-block: 40px 8px; border-bottom: 1px solid var(--rule); }
+  section:last-of-type { border-bottom: 0; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; color: var(--soft); text-transform: uppercase; margin: 0 0 6px; }
+  h2 { font-family: var(--display); font-weight: 400; font-size: clamp(22px, 3.4vw, 30px); line-height: 1.35; margin: 0 0 18px; text-wrap: balance; }
+  h3 { font-size: 18px; margin: 0 0 6px; line-height: 1.5; }
+  p { margin: 0 0 14px; max-width: 68ch; }
+  .note { font-size: 14px; color: var(--soft); }
+
+  /* Play flow: a real sequence, so it is numbered */
+  .flow { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 34px; counter-reset: step; }
+  .flow li { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 22px; align-items: start; counter-increment: step; }
+  .flow figure { margin: 0; border: 1px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); background: var(--ink); }
+  .flow .step::before { content: "STEP " counter(step, decimal-leading-zero); display: block; font-family: var(--mono); font-size: 12px; letter-spacing: .14em; color: var(--alarm); margin-bottom: 4px; }
+  .flow p { font-size: 15px; }
+  figcaption { font-family: var(--mono); font-size: 11.5px; color: #9BA1AE; background: var(--ink); padding: 6px 10px; }
+
+  .phones { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 30px; }
+  .phones figure { margin: 0; border: 1px solid var(--ink); background: var(--ink); }
+
+  /* Specimen-label facts */
+  .labels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 18px 0 10px; }
+  .label { background: #FBF9F3; border: 1px solid var(--rule); border-left: 4px solid var(--ink); padding: 14px 16px; }
+  .label .v { font-family: var(--display); font-size: 26px; line-height: 1.2; display: block; font-variant-numeric: tabular-nums; }
+  .label .k { font-size: 13.5px; color: var(--soft); display: block; margin-top: 4px; line-height: 1.6; }
+
+  .points { margin: 0; padding-left: 1.2em; max-width: 70ch; }
+  .points li { margin-bottom: 8px; }
+
+  /* Cases */
+  .cases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .case { background: #FBF9F3; border: 1px solid var(--rule); padding: 16px; display: grid; gap: 6px; align-content: start; }
+  .case .no { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; color: var(--soft); }
+  .case h3 { font-family: var(--display); font-weight: 400; font-size: 20px; margin: 0; }
+  .case .en { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--alarm); }
+  .case p { font-size: 14px; margin: 4px 0 0; }
+  .case dl { margin: 6px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 13.5px; }
+  .case dt { color: var(--soft); }
+  .case dd { margin: 0; }
+
+  /* Two-column table */
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 520px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--rule); }
+  th { font-family: var(--mono); font-size: 12px; letter-spacing: .1em; color: var(--soft); font-weight: 600; background: var(--paper-2); }
+
+  /* Options */
+  .options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .option { border: 1px solid var(--ink); background: #FBF9F3; padding: 16px; }
+  .option h3 { font-size: 16.5px; }
+  .option p { font-size: 14px; margin: 0; }
+
+  .ask { background: var(--ink); color: var(--paper); padding: 22px; margin-top: 8px; }
+  .ask h3 { color: var(--formalin); }
+  .ask ol { margin: 8px 0 0; padding-left: 1.3em; }
+  .ask li { margin-bottom: 8px; }
+  .ask .note { color: #AEB3BF; }
+
+  .contact { font-size: 15px; }
+  .contact .url { font-family: var(--mono); font-size: 14px; word-break: break-all; }
+
+  footer { background: var(--ink); color: #9BA1AE; font-size: 12.5px; padding-block: 18px; }
+
+  @media (max-width: 760px) {
+    .flow li { grid-template-columns: 1fr; gap: 12px; }
+    .labels, .cases, .options { grid-template-columns: 1fr; }
+    .phones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .flow figure { transition: transform .25s ease, box-shadow .25s ease; }
+    .flow figure:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--ink); }
+  }
+</style>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="meta"><span class="tag">CASE FILE — 企画概要</span><span><b>2026年9月</b></span><span>ご相談用資料</span><span class="draft">DRAFT</span></div>
+    <h1>「ジェーンドゥの死因」を、<br><em>自分で質問して解ける</em>ブラウザゲームに。</h1>
+    <p class="lead">プレイヤーが自由に質問を打ち込み、AIのゲームマスターが「はい／いいえ」で答える水平思考型の推理ゲームです。死因を当てたあとは、その死の裏にある科学を図解で学んで帰ります。PC・スマートフォンのブラウザで遊べます。</p>
+    <figure><img src="img/01-title.jpg" alt="タイトル画面。白ウサギの剥製標本の案内役ホルマと、ガラス片でできた女性のシルエット" width="1280" height="800"></figure>
+    <div class="meta"><span>制作: <b>一般社団法人フォースプレイス　四ヶ所伸一（ヨンサン）</b></span></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section aria-labelledby="s-origin">
+    <p class="eyebrow">きっかけ</p>
+    <h2 id="s-origin">家族で番組を楽しむうちに、「自分たちで遊べたら」と思いました。</h2>
+    <p>妻が『Dr.STONE』をきっかけにくられ先生の動画を見るようになり、ドズル社さんとのコラボ回で、ドズル社が大好きな娘が「ジェーンドゥの死因」にすっかりハマりました。家族で一緒に推理するのが楽しく、「これを誰でも自分で遊べる形にできないか」と考えて、ブラウザゲームとして試作しました。</p>
+    <p>現在、3つの事件を最後まで遊べる状態になっています。公開の前に、名称の使用と科学解説の監修について、薬理凶室さんにご相談させてください。</p>
+  </section>
+
+  <section aria-labelledby="s-flow">
+    <p class="eyebrow">遊びの流れ</p>
+    <h2 id="s-flow">質問して、論破して、名前を取り戻し、科学を持ち帰る。</h2>
+    <ol class="flow">
+      <li>
+        <figure><img src="img/03-investigation.jpg" alt="捜査画面。質問に対して『いいえ』のスタンプが押され、手がかりのカードが増えていく" loading="lazy" width="1280" height="800"><figcaption>捜査 — 自由に質問する</figcaption></figure>
+        <div class="step"><h3>自由に質問する（捜査）</h3><p>「毒は関係ありますか？」「部屋に窓はありましたか？」など、自由な文章で質問します。案内役のホルマが「はい／いいえ／関係ない」などで答え、重要な手がかりは「所見カード」として手元に残ります。手がかりが増えるほど、名前を失った女性（ジェーン・ドゥ）の姿が少しずつ見えてきます。</p></div>
+      </li>
+      <li>
+        <figure><img src="img/04-noise-break.jpg" alt="審問の議論パート。女性の発言の中の光る言葉を、所見カードで撃ち抜く" loading="lazy" width="1280" height="800"><figcaption>審問 — 間違った記憶を撃ち抜く</figcaption></figure>
+        <div class="step"><h3>間違った記憶を撃ち抜く（審問）</h3><p>ジェーン・ドゥは、自分の死について間違った記憶を信じています。発言の中の光る言葉を、集めた所見カードで撃ち抜いて正します。必要な手がかりが無くても、案内役に頼めば先へ進めるので、詰むことはありません。</p></div>
+      </li>
+      <li>
+        <figure><img src="img/05-verdict.jpg" alt="死因宣告の画面。自由記述の推理に対し、要素ごとの判定が表示される" loading="lazy" width="1280" height="800"><figcaption>死因宣告 — 自分の言葉で答える</figcaption></figure>
+        <div class="step"><h3>自分の言葉で死因を答える（死因宣告）</h3><p>「何が起きて、なぜ死んだのか」を自由に書きます。答えは「直接の死因」「きっかけの出来事」「科学的な仕組み」などの要素ごとに判定され、足りない要素だけが分かります（答えそのものは教えません）。</p></div>
+      </li>
+      <li>
+        <figure><img src="img/06-reconstruction.jpg" alt="真相再構成。5コマ漫画の空白のコマを、選択肢から埋める" loading="lazy" width="1280" height="800"><figcaption>真相再構成 — 5コマで組み直す</figcaption></figure>
+        <div class="step"><h3>事件を5コマで組み直す（真相再構成）</h3><p>事件の流れを漫画のコマで組み直します。すべて埋まると、案内役が事件の全貌を語ります。</p></div>
+      </li>
+      <li>
+        <figure><img src="img/07-identity.jpg" alt="身元回復の画面。ガラス片がつながり、女性の肖像と名前が戻る" loading="lazy" width="1280" height="800"><figcaption>身元回復 — 名前が戻る</figcaption></figure>
+        <div class="step"><h3>彼女の名前が戻る（身元回復）</h3><p>死因が明らかになると、ガラス片がつながって肖像と名前が戻り、本人が別れの言葉を告げます。物語としての締めくくりです。</p></div>
+      </li>
+      <li>
+        <figure><img src="img/08-science.jpg" alt="科学解剖の画面。酸素濃度ごとの体への影響を示す図解" loading="lazy" width="1280" height="800"><figcaption>科学解剖 — 図解で学ぶ</figcaption></figure>
+        <div class="step"><h3>その死の科学を学ぶ（科学解剖・確認テスト）</h3><p>原因 → 科学現象 → 体に起きたこと → 結果、の順に図解で解説します。よくある誤解、身近な場面での注意、身を守る方法、参考資料まで載せ、最後に短い確認テストで知識を定着させます。</p></div>
+      </li>
+    </ol>
+    <div class="phones" aria-label="スマートフォンでの表示">
+      <figure><img src="img/10-sp-title.jpg" alt="スマートフォンのタイトル画面" loading="lazy" width="540" height="1169"><figcaption>スマホ — タイトル</figcaption></figure>
+      <figure><img src="img/11-sp-investigation.jpg" alt="スマートフォンの捜査画面" loading="lazy" width="540" height="1169"><figcaption>スマホ — 捜査</figcaption></figure>
+      <figure><img src="img/12-sp-inquest.jpg" alt="スマートフォンの審問画面" loading="lazy" width="540" height="1169"><figcaption>スマホ — 審問</figcaption></figure>
+      <figure><img src="img/13-sp-science.jpg" alt="スマートフォンの科学解説画面" loading="lazy" width="540" height="1169"><figcaption>スマホ — 科学解剖</figcaption></figure>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-ai">
+    <p class="eyebrow">AIの使い方</p>
+    <h2 id="s-ai">真相は人が作ったデータに固定。AIは「判定」だけ。</h2>
+    <p>AIに真相を考えさせたり、自由に文章を書かせたりはしていません。事件の真相・手がかり・正解の条件はすべて事前に人が作ったデータに固定し、AIはプレイヤーの質問が「はい」か「いいえ」かを判定するだけです。返事の台詞も書き溜めたものから選ぶため、AIが答えを漏らしたり、無い事実を作ったりしない仕組みです。</p>
+    <div class="labels">
+      <div class="label"><span class="v">91.1%</span><span class="k">判定の正答率（人が正解を付けた823問で測定）</span></div>
+      <div class="label"><span class="v">約0.045円</span><span class="k">1問あたりのAI費用（判定専用AI「Jev」を使用）</span></div>
+      <div class="label"><span class="v">約0.3秒</span><span class="k">質問してから答えが返るまで（中央値）</span></div>
+    </div>
+    <ul class="points">
+      <li><strong>安全への配慮：</strong>自傷や「人を傷つける方法」を尋ねる質問は、AIに渡す前に止め、相談窓口（厚生労働省「まもろうよ こころ」）を案内します。致死量や手順は、解説にも一切載せていません。</li>
+      <li><strong>事件の追加：</strong>事件はデータとして独立しているため、プログラムを直さずに新しい事件を追加できます。</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="s-cases">
+    <p class="eyebrow">収録している事件（すべて架空）</p>
+    <h2 id="s-cases">3つの事件と、その裏にある科学</h2>
+    <div class="cases">
+      <article class="case">
+        <span class="no">CASE 01 · 難易度 ★</span>
+        <h3>息のない部屋</h3>
+        <span class="en">THE ROOM WITHOUT BREATH</span>
+        <p>窓のない地下の試料保管室で、若い研究者が眠るように亡くなっていた。</p>
+        <dl><dt>科学</dt><dd>液体窒素の気化による酸素欠乏（化学・生理学）</dd><dt>出典</dt><dd>16件</dd></dl>
+      </article>
+      <article class="case">
+        <span class="no">CASE 02 · 難易度 ★★</span>
+        <h3>夕暮れの白球</h3>
+        <span class="en">THE BALL AT DUSK</span>
+        <p>夏の夕方、弟とキャッチボールをしていた少女が突然倒れた。</p>
+        <dl><dt>科学</dt><dd>心臓震盪と、AEDが救える命（物理・生理学）</dd><dt>出典</dt><dd>23件</dd></dl>
+      </article>
+      <article class="case">
+        <span class="no">CASE 03 · 難易度 ★★★</span>
+        <h3>雪に残されたもの</h3>
+        <span class="en">WHAT WAS LEFT IN THE SNOW</span>
+        <p>冬山の岩陰で、薄着の女性が見つかった。周りの雪には防寒具が点々と落ちていた。</p>
+        <dl><dt>科学</dt><dd>低体温症と「矛盾脱衣」（生理学・法医学）</dd><dt>出典</dt><dd>16件</dd></dl>
+      </article>
+    </div>
+    <p class="note" style="margin-top:14px">1事件あたり、手がかり40件以上・想定質問210〜360問を用意し、AIの判定精度を自動で測れるようにしています。</p>
+  </section>
+
+  <section aria-labelledby="s-own">
+    <p class="eyebrow">番組とのちがい</p>
+    <h2 id="s-own">お借りしたいのは、名称と遊び方の基本だけです。</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">新しく作ったもの</th><th scope="col">番組から使っていないもの</th></tr></thead>
+        <tbody>
+          <tr><td>事件（問題）と真相・手がかり</td><td>番組の問題・出題文・真相</td></tr>
+          <tr><td>案内役「ホルマ」（白ウサギの剥製標本）と世界観</td><td>出演者・キャラクター・イラスト</td></tr>
+          <tr><td>イラスト・背景・漫画のコマ</td><td>ロゴ・サムネイル・動画の映像</td></tr>
+          <tr><td>BGM・効果音（すべて自作の合成音）</td><td>音声・楽曲</td></tr>
+          <tr><td>科学解説・確認テスト（公的機関や論文で裏付け）</td><td>番組内の解説</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-science">
+    <p class="eyebrow">科学の裏付け</p>
+    <h2 id="s-science">「本当に起こりうるか」を、専門家の目で確かめていただきたいです。</h2>
+    <p>各事件の解説は、厚生労働省・消防庁・学会・大学・学術論文などの資料で裏付けを取り、出典を画面に載せています。そのうえで、事件の設定が「実際に起こりうるか」を改めて資料と照らし合わせて検証しました。ただ、専門家による確認はまだです。</p>
+    <p>ゲームの画面には、確認が済むまで「専門家による確認前の下書き」と表示しています。</p>
+  </section>
+
+  <section aria-labelledby="s-options">
+    <p class="eyebrow">公開のかたち（ご提案）</p>
+    <h2 id="s-options">薬理凶室さんの方針に合わせます。</h2>
+    <div class="options">
+      <div class="option"><h3>無料で公開</h3><p>画面とページに原案として薬理凶室さん・番組へのリンクと表記を入れます。</p></div>
+      <div class="option"><h3>有料版にして収益を分配</h3><p>配分や価格は、ご相談のうえで決めさせてください。</p></div>
+      <div class="option"><h3>公式の企画として使う</h3><p>動画・配信・イベントなどで、自由に使っていただけます。</p></div>
+    </div>
+    <p class="note" style="margin-top:14px">名称の使用が難しい場合は、名称と題材を変えて別の作品として公開します。ご遠慮なくお知らせください。</p>
+  </section>
+
+  <section aria-labelledby="s-merit">
+    <p class="eyebrow">お役に立てそうなこと</p>
+    <h2 id="s-merit">番組の外でも「ジェーンドゥ」で遊べる場所に。</h2>
+    <ul class="points">
+      <li><strong>話題づくり：</strong>動画や配信で「視聴者が実際に遊べるジェーンドゥ」として紹介していただけます。出演者の方に遊んでいただく企画にも使えます。</li>
+      <li><strong>番組の問題のゲーム化：</strong>事件データを差し替えるだけで新しい事件を追加できるため、過去の出題をゲームとして遊べる形にすることもできます。</li>
+      <li><strong>ファンクラブ・イベント：</strong>会員限定の事件や、イベント会場での展示・体験にも使えます。</li>
+      <li><strong>チャンネルへの入り口：</strong>遊び終わった人が科学を学んで帰る構成なので、解説の最後からチャンネルへ案内できます。</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="s-ask">
+    <p class="eyebrow">ご相談したいこと</p>
+    <h2 id="s-ask">3つのご相談</h2>
+    <div class="ask">
+      <h3>ご相談内容</h3>
+      <ol>
+        <li><strong>科学解説の監修</strong> — 3つの事件の設定が実際に起こりうるか、解説の内容が正しいかのご確認（業務としてのご依頼）。</li>
+        <li><strong>名称「ジェーンドゥの死因」の使用</strong> — この名称で公開してよいか。</li>
+        <li><strong>公開のかたち</strong> — 無料公開・収益分配・公式企画など、方針のご確認。</li>
+      </ol>
+      <p class="note" style="margin-top:12px">公開の目標: 2026年10月ごろ（ご確認いただけ次第。急ぎません）<br>監修の予算の目安: 3事件で10万円（税別）程度を想定しています。ご提示の料金に合わせます。</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-contact" class="contact">
+    <p class="eyebrow">試遊・連絡先</p>
+    <h2 id="s-contact">実際に遊んでいただけます</h2>
+    <p>確認用URL（検索エンジンに載らない設定です）：<br><span class="url">準備中</span></p>
+    <p>一般社団法人フォースプレイス　代表　四ヶ所伸一（ヨンサン）<br>
+      HP：<a class="url" href="https://fourthplace43.com/">https://fourthplace43.com/</a><br>
+      X：<a class="url" href="https://x.com/yonsan434343">https://x.com/yonsan434343</a></p>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">本資料と試作ゲームに登場する事件・人物はすべて架空です。ゲーム内の解説は医療上の助言ではありません。</div>
+</footer>

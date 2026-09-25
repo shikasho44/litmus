@@ -1,0 +1,13 @@
+# Keep uploads small: Vercel builds from source (npm ci && npm run build).
+qa/
+art-src/
+logs/
+dist/
+dist-*/
+bench/reports/
+promo/
+docs/img/
+.env
+.env.*
+!.env.example
+*.log

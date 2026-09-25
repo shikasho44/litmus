@@ -30,3 +30,4 @@ Thumbs.db
 
 # playtest transcripts (scripts/playtest.ts): full Q&A logs with case spoilers, local only
 bench/reports/playtest/
+.env*

@@ -10,12 +10,12 @@
  * unlocked, and the solution after the verdict is accepted, ever leave the server.
  */
 import { z } from 'zod';
-import { ANSWER_CLASSES, FACT_CATEGORIES, PROBE_KINDS } from './constants';
+import { ANSWER_CLASSES, FACT_CATEGORIES, PROBE_KINDS } from './constants.js';
 
 // The enum constants live in the zod-free ./constants (the browser imports them from there);
 // re-exported here so server code and scripts can keep a single import site.
 export { ANSWER_CLASSES, FACT_CATEGORIES, PROBE_KINDS };
-export type { AnswerClass, FactCategory, ProbeKind } from './constants';
+export type { AnswerClass, FactCategory, ProbeKind } from './constants.js';
 
 const id = z.string().regex(/^[A-Za-z0-9_-]+$/);
 

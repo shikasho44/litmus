@@ -129,7 +129,16 @@ export function reconstructionView(c: Case, full = false): ReconstructionView {
 
 /** Display order of the choice options (`order[i]` = authored index shown at position i). */
 export function verdictChoiceOrder(c: Case, vm: VerdictModes): number[] {
-  return optionOrder(c.id, 'verdict:choice', vm.choice.options.length);
+  const order = optionOrder(c.id, 'verdict:choice', vm.choice.options.length);
+  // Everyone sees the same order, so never let the correct option sit first or last:
+  // rotate until it lands in the middle positions.
+  const n = order.length;
+  for (let k = 0; k < n; k++) {
+    const pos = order.findIndex((i) => vm.choice.options[i]?.correct);
+    if (pos > 0 && pos < n - 1) break;
+    order.push(order.shift()!);
+  }
+  return order;
 }
 
 /** Display order of one cloze blank's options (`order[i]` = authored index shown at position i). */

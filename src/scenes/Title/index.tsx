@@ -44,7 +44,7 @@ interface MenuItem {
 function splitTitle(t: string): { a: string; particle?: string; b?: string } {
   const i = t.lastIndexOf('の');
   if (i > 0 && i < t.length - 1) return { a: t.slice(0, i), particle: 'の', b: t.slice(i + 1) };
-  // 「リトマス審問」: kana head on the glitch row, the trailing kanji word as the big row
+  // 「リトマス審問」: kana head on the top row, the trailing kanji word as the big row
   const m = /^(.+?)(\p{Script=Han}{2,})$/u.exec(t);
   if (m) return { a: m[1], b: m[2] };
   return { a: t };
@@ -52,8 +52,12 @@ function splitTitle(t: string): { a: string; particle?: string; b?: string } {
 
 function Logo() {
   const parts = splitTitle(APP_CONFIG.GAME_TITLE);
+  // Without a 「の」 tag between the rows the logo loses its beat, so the head word is printed on a
+  // litmus strip instead (red | blue, develops on entry) and the big word overlaps it.
+  const strip = !!parts.b && !parts.particle;
+  const head = <GlitchText text={parts.a} period={7} />;
   return (
-    <div class="logo">
+    <div class={`logo ${strip ? 'logo--strip' : ''}`}>
       <p class="logo__kicker" aria-hidden="true">
         <span>CASE No.000</span>
         <span class="logo__kicker-sep" />
@@ -63,7 +67,7 @@ function Logo() {
       </p>
       <h1 class="logo__title" aria-label={APP_CONFIG.GAME_TITLE}>
         <span class="logo__row logo__row--a" aria-hidden="true">
-          <GlitchText text={parts.a} period={7} />
+          {strip ? <span class="logo__strip">{head}</span> : head}
         </span>
         {parts.b && (
           <span class="logo__row logo__row--b" aria-hidden="true">

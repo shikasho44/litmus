@@ -272,6 +272,62 @@
   text-shadow: 0.04em 0.04em 0 var(--ink), 0.08em 0.08em 0 var(--alarm);
   letter-spacing: -0.02em;
 }
+/* strip logo (「リトマス審問」): the head word on a litmus strip — bone paper that develops red | blue
+   on entry — tilted against the logo, with the big word landing over its lower edge */
+.logo--strip .logo__row--a {
+  font-size: clamp(50px, min(8.2vw, 11vh), 144px);
+  text-shadow: none;
+}
+.logo__strip {
+  position: relative;
+  isolation: isolate;
+  display: inline-block;
+  padding: 0.06em 0.26em 0.12em 0.18em;
+  color: var(--ink);
+  letter-spacing: -0.04em;
+  background: var(--bone);
+  transform: rotate(-3deg) skewX(-10deg);
+  transform-origin: 100% 100%;
+  box-shadow: 0.06em 0.06em 0 var(--ink), 0.1em 0.1em 0 var(--bone);
+}
+.logo__strip::before,
+.logo__strip::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+.logo__strip::before {
+  background: var(--alarm);
+  clip-path: inset(0 49.5% 0 0);
+  animation: strip-acid 0.8s var(--ease-out) 0.45s both;
+}
+.logo__strip::after {
+  background: var(--cyan);
+  clip-path: inset(0 0 0 50.5%);
+  animation: strip-base 0.8s var(--ease-out) 0.45s both;
+}
+@keyframes strip-acid {
+  from { clip-path: inset(0 100% 0 0); }
+}
+@keyframes strip-base {
+  from { clip-path: inset(0 0 0 100%); }
+}
+.logo--strip .logo__row--b {
+  position: relative;
+  z-index: 1;
+  margin-top: -0.14em;
+  margin-left: 1.05em;
+  font-size: clamp(70px, min(11.6vw, 15.4vh), 204px);
+}
+.logo--strip .logo__big {
+  display: inline-block;
+  animation: logo-slam 0.32s cubic-bezier(0.2, 1.5, 0.4, 1) 0.95s both;
+}
+@keyframes logo-slam {
+  from { opacity: 0; transform: scale(1.4) rotate(3deg); }
+}
+
 .logo__sub {
   display: inline-block;
   margin-top: clamp(12px, 2.4vh, 22px);
@@ -796,6 +852,14 @@
   font-size: clamp(56px, 18vw, 96px);
   margin-left: 0.6em;
 }
+[data-layout='narrow'] .logo--strip .logo__row--a {
+  font-size: clamp(38px, 14vw, 72px);
+}
+[data-layout='narrow'] .logo--strip .logo__row--b {
+  font-size: clamp(58px, 21vw, 108px);
+  margin-top: -0.06em;
+  margin-left: 1em;
+}
 [data-layout='narrow'] .logo__kicker {
   font-size: var(--fs-2xs);
   gap: 6px;
@@ -897,6 +961,9 @@
 [data-reduce-motion='true'] .title__enter,
 [data-reduce-motion='true'] .title__art img,
 [data-reduce-motion='true'] .logo,
+[data-reduce-motion='true'] .logo__strip::before,
+[data-reduce-motion='true'] .logo__strip::after,
+[data-reduce-motion='true'] .logo--strip .logo__big,
 [data-reduce-motion='true'] .title__hero {
   animation: none;
 }

@@ -263,13 +263,22 @@ JetBrains Mono 400) and `fonts-extra.css` (Zen Kaku 700, Shippori Mincho B1 500)
 from `@fontsource` (woff2 only, no greek/cyrillic/vietnamese). The boot splash in `index.html`
 waits for the critical faces, at most until 2.5 s after navigation start (plus a 0.7 s grace
 once the JS runs; `src/main.tsx`). `fonts-extra` loads once the key art is in (or 1.2 s after
-the first render). The faces the first paint needs (Dela logo subsets 119/102/99, Zen Kaku 500
+the first render). The faces the first paint needs (Dela logo subsets 119/92/117 — kana, 審, 問 — Zen Kaku 500
 kana subset 119, Anton Latin) are also declared inline in `index.html`, copied verbatim from
 `fonts.css` — update that block when regenerating.
 Regenerate after upgrading @fontsource by re-running the generator snippet used to create them
 (read the `@fontsource/<pkg>/<weight>.css` files, drop the `.woff` fallbacks and non-JP/Latin
 subsets, point `url()` at `../../node_modules/@fontsource/<pkg>/files/…`).
 `index.html` preloads the three Dela Gothic One subsets that contain the default logo glyphs.
+When the title changes, find the subsets holding its glyphs (unicode-range in
+`@fontsource/dela-gothic-one/400.css`) and swap both the preloads and the inline faces.
+
+Title logo (`src/scenes/Title/index.tsx` Logo): a title with 「の」 is set as
+head row / tilted 「の」 tag / big word (the original 「ジェーンドゥの死因」). A title without it
+(「リトマス審問」 = kana head + kanji tail) gets `.logo--strip`: the head word is printed in ink on a
+litmus strip that develops red | blue on entry, tilted against the logo, and the big word slams
+in over its lower edge. The tag or the strip is what gives the logo its beat; two plain stacked
+rows read flat (docs/decisions.md 2026-09-26).
 
 ## 9. index.html env
 

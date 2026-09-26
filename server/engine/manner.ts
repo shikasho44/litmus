@@ -14,6 +14,9 @@
  * murder case names the culprit). The safety filter (safety.ts) runs earlier, so 「人を殺す方法」
  * still gets the support card. Pure TS, also used by the static build.
  *
+ * CASE 04 (2026-09-27, the first murder case: a poison mixed into one dish) added the named-person
+ * tampering, 「採り違え／誤食」 as the accident in other words, 「〜がやったの？」 and grudges.
+ *
  * Patterns run on the normalized text (NFKC, lowercase, katakana → hiragana, no punctuation).
  */
 import { normalize } from './normalize.js';
@@ -54,6 +57,21 @@ const RULES: { id: string; re: RegExp }[] = [
   { id: 'culprit', re: P('(?:犯人|はんにん|犯行|はんこう|犯罪|はんざい|加害者|かがいしゃ|容疑者|ようぎしゃ|下手人|黒幕|くろまく|共犯|きょうはん|仕業|しわざ|強盗|ごうとう|通り魔|とおりま|暴漢|ぼうかん|変質者|へんしつしゃ|すとーかー)') },
   // done to her by someone (「毒を飲まされた？」「薬を盛られた？」) — 「毒を飲んだ？」 stays a cause question
   { id: 'done-to', re: P('(?:飲まされ|のまされ|食べさせられ|たべさせられ|盛られ|もられ|嗅がされ|かがされ)') },
+  // mixed in by someone (「小鉢に毒が混ぜられていた？」「毒を盛ったの？」) — 「小鉢に何か混ざっていた？」 is evidence
+  // (2026-09-27, CASE 04: the first murder case, a poison mixed into food)
+  { id: 'done-to-mix', re: P('(?:混ぜられ|まぜられ|混入され|こんにゅうされ|仕込まれ|しこまれ|(?:毒|どく|何か|なにか|異物)(?:を|が)?(?:入れられ|いれられ)|(?:毒|どく)を(?:盛|も)(?:っ|ら|り(?!付|つ)))') },
+  // a named person (not the victim) mixing something in (「編集者が小鉢に混ぜた？」「老人が毒を入れたの？」) —
+  // the sabotage rule only knows generic someones; 「彼女は鍋にニリンソウを入れた？」「編集者が盛り付けた？」 stay evidence
+  {
+    id: 'tamper-named',
+    re: P('(?<!彼女|かのじょ|本人|ほんにん|自分|じぶん|被害者|ひがいしゃ|じぇーん)(?:が|は)(?:[^がは]{0,14})(?:混ぜ|まぜ|混入|こんにゅう|仕込|しこん|しこみ|盛っ|盛り(?!付|つけ)|入れ(?!替|換|かわ|かえ)|いれ(?:た|て|まし|ら))'),
+  },
+  // 「編集者がやったの？」 — who did it, with a name
+  { id: 'did-it', re: P('(?:が|は)(?:やった|やりました|やったん|やったの)') },
+  // a death staged to look like something else (「事故に見せかけたの？」「偽装？」)
+  { id: 'staged', re: P('(?:見せかけ|みせかけ|偽装|ぎそう|かもふらーじゅ|装った|よそおった|装って|よそおって)') },
+  // the accident in other words (「採り違えですか？」「間違えて摘んだ？」「誤食？」) — 「間違えやすい？」 is science
+  { id: 'mistake', re: P('(?:採り違え|採りちがえ|取り違え|取りちがえ|とりちがえ|摘み違え|つみちがえ|誤食|ごしょく|誤って|あやまって|間違って|まちがって|(?:見|み)?(?:間違|まちが)え(?:て|た|まし)|勘違いして|かんちがいして|うっかり)') },
   { id: 'blame', re: P('(?:誰|だれ|何者|なにもの)(?:か)?(?:の|が)(?:せい|所為|やった|やりました|しわざ|仕業)') },
   // a person's fault (「弟のせい？」「救急隊のせい？」) — things stay causes (「暑さのせい」「ボールのせい」)
   {
@@ -61,7 +79,7 @@ const RULES: { id: string; re: RegExp }[] = [
     re: P('(?:人|ひと|者|家族|親|父|母|兄|姉|弟|妹|夫|妻|恋人|彼氏|友人|友達|ともだち|同僚|上司|部下|先輩|後輩|警備員|大人|おとな|子ども|子供|こども|隊|隊員|指令員|医者|医師|仲間|本人|自分|彼女|かのじょ)(?:さん|くん|ちゃん|たち|達)?(?:の(?:せい|所為)|(?:は|が|も)(?:悪|わる)(?:い|く|かっ))'),
   },
   // motive (kanji only: hiragana どうき is also 動悸)
-  { id: 'motive', re: P('(?:動機|殺意|さつい|悪意|狙われ|ねらわれ)') },
+  { id: 'motive', re: P('(?:動機|殺意|さつい|悪意|狙われ|ねらわれ|恨|うらん|うらみ|憎|にくん|にくし)') },
   // intent behind the fatal act (「わざとこぼした」「故意にぶつけた」) — 「わざと服を脱いだ」 stays answerable
   { id: 'intent', re: P('(?:故意|意図的|いとてき|意図して|計画的|けいかくてき|わざと(?:じゃ|では|です|でした|だった|なの|なん|か$|$))') },
   {

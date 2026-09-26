@@ -167,6 +167,17 @@ export const DiagramSchema = z.discriminatedUnion('kind', [
     detail: z.string(),
     source: z.string(),
   }),
+  z.object({
+    kind: z.literal('compare'),              // two look-alikes side by side (added 2026-09-27, CASE 04)
+    title: z.string(),
+    left: z.object({ name: z.string(), note: z.string().optional(), tone: z.enum(['safe', 'warn', 'danger', 'fatal', 'note']) }),
+    right: z.object({ name: z.string(), note: z.string().optional(), tone: z.enum(['safe', 'warn', 'danger', 'fatal', 'note']) }),
+    /** One aspect per row; `key` marks the decisive difference (highlighted). */
+    rows: z.array(z.object({ aspect: z.string(), left: z.string(), right: z.string(), key: z.boolean().optional() })).min(2).max(8),
+    /** The rule of thumb under the table (e.g. 「迷ったら、採らない」). */
+    verdict: z.string().optional(),
+    source: z.string(),
+  }),
 ]);
 
 export const ScienceSchema = z.object({

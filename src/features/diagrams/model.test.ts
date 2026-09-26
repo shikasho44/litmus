@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { placeDiagrams, pullQuote } from '../../scenes/Science/text';
 import { beatY, cloudPoints, ecgModel, formatValue, levelsModel, niceStep, parseQuantity, ratioMode, T_PEAK, WINDOW, windowTag, type LevelsData, type RatioData } from './model';
 
-const CASES = ['c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow'];
+const CASES = ['c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper'];
 const load = (id: string) => JSON.parse(readFileSync(resolve(__dirname, '../../../content/cases', id, 'case.json'), 'utf8'));
 
 describe('levels', () => {

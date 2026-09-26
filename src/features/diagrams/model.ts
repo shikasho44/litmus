@@ -7,6 +7,7 @@ export type DiagramData = Case['science']['diagrams'][number];
 export type LevelsData = Extract<DiagramData, { kind: 'levels' }>;
 export type EcgData = Extract<DiagramData, { kind: 'ecg' }>;
 export type RatioData = Extract<DiagramData, { kind: 'ratio' }>;
+export type CompareData = Extract<DiagramData, { kind: 'compare' }>;
 export type Tone = LevelsData['levels'][number]['tone'];
 
 /** Tone → label (meaning is never carried by colour alone) and colour. */

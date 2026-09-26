@@ -1,6 +1,6 @@
 import type { ComponentChildren, Ref } from 'preact';
 
-const KIND_EN: Record<string, string> = { levels: 'FIG', ecg: 'FIG', ratio: 'FIG' };
+const KIND_EN: Record<string, string> = { levels: 'FIG', ecg: 'FIG', ratio: 'FIG', compare: 'FIG' };
 
 /** Shared figure chrome: specimen-label header, body, source line. */
 export function DiagramFrame({
@@ -15,7 +15,7 @@ export function DiagramFrame({
   children,
 }: {
   frameRef?: Ref<HTMLElement>;
-  kind: 'levels' | 'ecg' | 'ratio';
+  kind: 'levels' | 'ecg' | 'ratio' | 'compare';
   title: string;
   en: string;
   source: string;

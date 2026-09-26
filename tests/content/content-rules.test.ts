@@ -36,8 +36,8 @@ const HOLMA_VOICE = /ですねェ|ですとも|ございま|クックック|ク�
 const KEIGO = /(?:です|ます|でした|ました|ません|でしょう)(?=[。、…！？」』]|$)/u;
 
 describe('content rules', () => {
-  it('loads all three cases', () => {
-    expect(cases.map((c) => c.id).sort()).toEqual(['c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow']);
+  it('loads all four cases', () => {
+    expect(cases.map((c) => c.id).sort()).toEqual(['c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper']);
   });
 
   describe.each(cases.map((c) => [c.id, c] as const))('%s', (_id, c) => {

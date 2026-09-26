@@ -2,8 +2,9 @@
  * Science diagrams (design bible §3-4): rendered from `science.diagrams` in code. All text
  * is DOM or SVG text — never baked into images.
  *
- *   <Diagram d={diagram} index={i} />      kind: 'levels' | 'ecg' | 'ratio'
+ *   <Diagram d={diagram} index={i} />      kind: 'levels' | 'ecg' | 'ratio' | 'compare'
  */
+import { CompareDiagram } from './CompareDiagram';
 import { EcgDiagram } from './EcgDiagram';
 import { LevelsDiagram } from './LevelsDiagram';
 import type { DiagramData } from './model';
@@ -21,6 +22,8 @@ export function Diagram({ d, index }: { d: DiagramData; index?: number }) {
       return <EcgDiagram d={d} index={index} />;
     case 'ratio':
       return <RatioDiagram d={d} index={index} />;
+    case 'compare':
+      return <CompareDiagram d={d} index={index} />;
     default:
       return null;
   }

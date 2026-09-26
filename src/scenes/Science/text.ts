@@ -25,6 +25,8 @@ function diagramText(d: Diagram): string {
       return `${d.title} ${d.windowLabel} ${d.windowDetail}`;
     case 'ratio':
       return `${d.title} ${d.from.value} ${d.from.label} ${d.to.value} ${d.to.label} ${d.detail}`;
+    case 'compare':
+      return `${d.title} ${d.left.name} ${d.right.name} ${d.rows.map((r) => `${r.aspect} ${r.left} ${r.right}`).join(' ')} ${d.verdict ?? ''}`;
   }
 }
 

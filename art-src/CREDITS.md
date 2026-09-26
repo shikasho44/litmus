@@ -88,3 +88,27 @@ stripe pattern on a running shoe and lost the AED box). Total 29 of the approved
 Retouches (removal only, `scripts/art/retouch.py`, unretouched copies in `art-src/rejected/`):
 c01 p4 blurred background wall plaque with a pictogram, c01 p5 emblem-like shoulder patch on the
 guard, c03 p1 tiny logo-like mark under the camera screen.
+
+## CASE 04 (batch 3, 2026-09-27)
+
+Seven images for CASE 04「白い花の夕餉」, generated in **one** Codex launch with the
+codex-imagegen skill's `batch_imagegen.py` (codex-cli 0.155.0-alpha.16.4, session
+`01a0de55-f022-7b41-9388-423196922c7b`, 21 round trips, weekly quota 2.0% → 2.0%). Prompts:
+`scripts/art/jobs_batch3.py` (shared `STYLE` / `NEGATIVE` / `panel_style()` / `PANEL_NEGATIVE` from
+`style.py`); jobs file `art-src/jobs/batch3-c04.json`; full prompts and validation in
+`art-src/manifest.json`. Spot colour for the case: violet #9B6BFF. No existing works or artists are
+named; no reference images were used. All seven were accepted on the first take (checked by eye:
+no text, letters, numerals, logos, gore or dead body; the victim only from behind; the culprit only
+as hands).
+
+| File | Prompt summary |
+|---|---|
+| `cases/c04/bg.webp` | Night in an old Japanese farmhouse after a spring supper: low table with small bowls (one blue-and-white flower-painted porcelain bowl), vase of white wildflowers, a bamboo basket of flowering wild greens on the step to the earthen kitchen, shoji open onto a moonlit stream; warm paper lamp, violet moonlight. No person. (Returned at 1672x941, cover-resized to 1920x1080.) |
+| `cases/c04/portrait.webp` | Chest-up portrait, 38-year-old Japanese botanical illustrator: black hair knotted at the nape with a pencil through it, linen shirt, indigo work apron, gentle observant smile; dark navy ground, violet rim light. **Shifted down 150 px** locally so the head sits inside the shard-bust silhouette (unshifted original: `art-src/rejected/c04-portrait.unshifted.png`). |
+| c04 p1 | Morning stream: she (from behind, pencil in her hair) pinches one white-flowered anemone stem into a bamboo basket; flowerless look-alike leaves outlined in violet beside her hand; sketchbook on a mossy rock. |
+| c04 p2 | Upstream in the afternoon: gloved hands from dark cardigan cuffs snip violet look-alike leaves with small garden scissors, the other hand holding a bouquet of white wildflowers. No face. |
+| c04 p3 | Evening kitchen: a hand sprinkles chopped leaves into the one violet flower-patterned bowl of four on a tray; through the window, an old man in a flat cap and a short-haired woman by a charcoal brazier. |
+| c04 p4 | Tatami room, high angle: she (from behind) lifts chopsticks to her violet-patterned bowl; the old man's bowl untouched with chopsticks on the rest; two empty bowls; tempura sprouts; vase of white flowers. |
+| c04 p5 | Next day, public-health lab bench: sealed bags of food remains, a container of leftover greens, garden scissors in a bag, the violet-patterned bowl in a bag; microscope and test tubes. No people, no labels. |
+
+Generation count (whole project): batch 1 = 12, batch 2 = 17, batch 3 = 7 (no retakes). Total 36.

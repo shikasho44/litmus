@@ -39,7 +39,7 @@ export function softNormalize(s: string): string {
 const POLITE_TAIL = /(?:ん)?(?:です|ます|ました|でした|だった|だ|でしょう|でしょ|だろう|だろ)?(?:か|かな|かね|かしら|の|よね|よな|ね|よ)?$/u;
 // Leading subject that almost every question shares ("彼女は…") — removed so it does not
 // inflate similarity between unrelated questions.
-const COMMON_SUBJECT = /^(?:その|この)?(?:彼女|かのじょ|じぇーんどぅ|じぇーん|被害者|ひがいしゃ|死者|ししゃ|この人|このひと|その人|そのひと|あの人|あのひと)(?:は|が|の|って|も|を|に)?/u;
+const COMMON_SUBJECT = /^(?:その|この)?(?:彼女|かのじょ|じぇーんどぅ|じぇーん|被害者|ひがいしゃ|死者|ししゃ|この人|このひと)(?:は|が|の|って|も|を|に)?/u;
 
 /** Matching core: normalised, common subject and polite tail stripped. */
 export function coreForm(norm: string): string {

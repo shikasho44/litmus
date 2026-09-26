@@ -87,6 +87,7 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
 1c. **死の種類の封印**（`manner.ts`、2026-09-26）: 殺人・他殺・自殺・事故・事件・犯人・犯行・故意・わざと〜した（害のある動詞）・人のせい／人が悪い・誰かが〜を開けた／抜いた（第三者の細工）・毒を盛られた／飲まされた、などの質問 → `cannot`（`meta: 'manner'`、`guard: 'manner'`、モデルは呼ばない）。
    殺人か事故かを捜査中に答えない（監修者の方針）。事故の事件でも殺人の事件でも同じ返答なので、断ること自体は何も匂わせない。
    証拠の質問は答える: 「争った跡は？」「部屋に他の人はいた？」「誰かが部屋に入ってきた？」「熊に襲われた？」「暑さのせい？」「わざと服を脱いだ？」。「事故の前」「事件当日」のように出来事を指す名詞も答える。
+   2026-09-27 追加: 名指しの人（役割語・〜さん）のせい／悪い、名指しの暴力（「男に殴られた？」）、責任・責める・悪気・関与・逮捕、人が主語の「関係ある？」「怪しい？」、「脱がされた」「押し込まれた」、CASE 04 の混入・「〜がやったの？」・見せかけ・採り違え。「その人／あの人」は被害者の主語として取り除かない（事件に2人目の人物がいるため。normalize.ts COMMON_SUBJECT）。
    2（想定質問）より先に走るので、各事件の想定質問のうち該当するものは `cannot`・`kind: "meta"`・`note: "MANNER: …"` にしてある（`tests/engine/manner.test.ts` が全事件の全想定質問で、MANNER の印と封印の判定が一致することを確かめる）。答えを聞く質問（askAnswer）と暴言（rude）はそちらが優先。安全フィルター（0）はさらに前。
 1b. **被害者の本名**（漢字・かなの姓名、漢字の姓、姓名＋さん/ちゃん/くん/氏…）を含む質問 → `cannot`（askAnswer の台詞）。モデルも呼ばない（`guard: 'secretName'`、trace は `skipped:secretName`）。
    Jev は真相の要約で名前を知っているので「白石さんですか？」に「はい」と答えていた（ベンチで確認）。かなだけの名（しいな・はるか）は普通の語に紛れるので敬称つきだけ見る
@@ -286,6 +287,8 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 | POST | `/api/admin/ask-debug` | `{caseId, question, token?, mode?}` → trace 付き（mode を一時上書き） |
 | POST | `/api/admin/mint-token` | `{caseId, stage}` → `{token, progress}`。QA・画面作りの近道。stage: `fresh`（初期）/ `investigated`（spoilerLevel ≤3 の所見とメモを全部・質問数20）/ `debated`（＋全ラウンド突破）/ `solved`（＋宣告正解）/ `reconstructed`（＋再構成完了）。不明な stage は `investigated`。管理 API と同じく dev か `x-admin-token` のときだけ（本番の通常利用者には 404） |
 | GET | `/api/admin/bench` | `bench/reports/*.json` の一覧（無ければ `[]`） |
+| GET / POST | `/api/versus/config` ・ `/api/versus/{create,join,start,state,run,progress,leave}` | オンライン対戦（2026-09-27）。部屋・席・部屋に結びついたトークン・勝敗。詳細は **`docs/versus.md` §3**。`/api/inquest/verdict` の応答は対戦の部屋にも記録される（`observeVerdict`） |
+| POST | `/api/admin/versus-bind` | `{seat, token}` → 部屋に結びつけたトークン。**dev サーバーだけ**（QA 用。本番は管理トークンがあっても 404） |
 
 - エラーは `{ "error": { "code", "message", "retryable" } }`。code は `ApiError` と同じ:
   400/404/405/413/403 → `bad_request`、401 → `bad_token`、429 → `rate_limited`（`Retry-After` 付き）、5xx → `server`。
@@ -321,6 +324,8 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 - 形式 `j1.<payload base64url>.<HMAC-SHA256 base64url>`。payload は
   `{v, c: 事件id, u: 開示所見, m: 科学メモ, n: [質問数, ヒント, 論破ミス, 泣きつき, 宣告回数], rm: ラウンド別ミス, r: 突破ラウンド, f: 解決1|再構成2|nearCore4, k?: 確認済みの spoilerLevel 4 所見, t: 発行秒}`。
   `k` は空なら省く（旧トークンは `[]` として読む）。
+  `vs`（省略可能、2026-09-27）: オンライン対戦の部屋の結びつけ `<部屋コード>.<nonce>.<プレイヤーid>.<e|n|h>`（`server/engine/room-binding.ts`）。
+  対戦の開始時にだけサーバーが付け、以後の操作は状態を引き継ぐので残る。付いたトークンは部屋の難易度の宣告形式でしか宣告できない（`game.ts` `checkRoomMode`）。無いトークンは従来どおり。`docs/versus.md` §6。
 - 毎回の呼び出しで検証（改ざん・別事件・形式違い・未来/期限切れ 120日 → 401 `bad_token`）し、毎回新しいトークンを返す（使っている限り期限は延びる）。
 - 事件データが後から変わっても、存在しない id はトークン読込時に捨てる（エラーにしない）。
 - 署名は WebCrypto（Node 20+ / ブラウザ）。安全でない http の LAN などで `crypto.subtle` が無いブラウザでは純 JS の HMAC（テストで一致を確認）。
@@ -353,6 +358,9 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 | `CONTENT_ROOT` | 自動 | content/ の場所 |
 | `TRACE_FILE` | — | `0` で dev の JSONL ログを止める |
 | `VITE_API_MODE` / `VITE_API_BASE` | — / `/api` | ブラウザ側（ビルド時） |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | — | オンライン対戦の部屋の置き場所（Upstash Redis REST）。Vercel の連携が入れる `KV_REST_API_URL` / `KV_REST_API_TOKEN` でも可。本番で無ければ対戦は無効 |
+| `VERSUS_STORE` | — | `memory` で1プロセスのメモリに部屋を置く（`vite preview` 用。Vercel では無視）。dev は常にメモリ |
+| `VERSUS_ENABLED` | — | `false` で対戦を止める |
 
 `.env` / `.env.local` / `.env.[mode]` は Vite プラグインが `loadEnv(mode, root, '')` で読む（process.env が優先）。
 

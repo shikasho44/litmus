@@ -46,7 +46,7 @@ npx vercel --prod               # 本番配備
 | `ADMIN_TOKEN` | 32文字以上の乱数（上と同じ作り方で別の値） | 本番の `admin.html` のパスワード。**ビルド時にも見える設定にする**（Vercel の既定どおりなら見える）。無いと管理画面はビルドに入らず、管理 API も 404 |
 | `VITE_SITE_URL` | 公開URL（例 `https://janedoe.example.com/`） | SNS で共有したときの画像（OG）を絶対URLにする。正式公開では必須 |
 | `VITE_OFFICIAL_RELEASE_ENABLED` | **`false`**（権利者の確認が取れるまで） | `true` で PREVIEW 表示と検索よけ（noindex）が外れる |
-| `VITE_APP_TITLE` / `VITE_GAME_TITLE` / `VITE_SUBTITLE` / `VITE_COPYRIGHT_NOTICE` / `VITE_SITE_DESCRIPTION` | 画面と共有カードの題名・説明 | 名前を差し替えるときに使う。未設定なら「ジェーンドゥの死因」 |
+| `VITE_APP_TITLE` / `VITE_GAME_TITLE` / `VITE_SUBTITLE` / `VITE_COPYRIGHT_NOTICE` / `VITE_SITE_DESCRIPTION` | 画面と共有カードの題名・説明 | 名前を差し替えるときに使う。未設定なら「リトマス審問」 |
 | `VITE_CONTACT_URL` | お問い合わせ先 | 変えたら `public/contact.html` のリンクも直す |
 | `VITE_INCLUDE_ADMIN` | 通常は未設定 | `false` で管理画面をビルドから外す |
 
@@ -93,7 +93,8 @@ npm run build:static
 ## 3. 公開前チェックリスト
 
 **権利・表示**
-- [ ] 題名「ジェーンドゥの死因」について**権利者の確認**を取る（既存の動画シリーズの名前と基本ルールを使っているため）。取れなければ `VITE_APP_TITLE` などで題名を変える。
+- [x] 題名を「ジェーンドゥの死因」から『リトマス審問』に変更（2026-09-26。元の名前は薬理凶室さんの企画と重なるため）。
+- [ ] 作中の呼び名「ジェーン・ドゥ」を変えるか、くられ先生に確認する。
 - [ ] 確認が取れたら `VITE_OFFICIAL_RELEASE_ENABLED=true` と `VITE_SITE_URL` を入れて再デプロイ（`true` なのに URL が無いとビルドが止まる＝仕様）。
 - [ ] 画像の出どころ（`art-src/CREDITS.md`）と、他作品に似すぎていないかを人の目で最終確認。
 

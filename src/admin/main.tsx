@@ -9,7 +9,7 @@ import './admin.css';
 import { AdminApp } from './App';
 import { connect } from './store';
 
-document.title = `管理コンソール — ${(import.meta.env.VITE_APP_TITLE as string) || 'ジェーンドゥの死因'}`;
+document.title = `管理コンソール — ${(import.meta.env.VITE_APP_TITLE as string) || 'リトマス審問'}`;
 const root = document.getElementById('admin');
 if (root) {
   render(<AdminApp />, root);

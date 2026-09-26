@@ -1,6 +1,6 @@
 # AI の説明書（判定 Jev・言い換え LLM・Codex・ベンチマーク）
 
-「ジェーンドゥの死因」の AI 部分（`server/engine/ai/**`, `server/engine/providers/**`, `server/engine/factory.ts`,
+「リトマス審問」の AI 部分（`server/engine/ai/**`, `server/engine/providers/**`, `server/engine/factory.ts`,
 `scripts/bench.ts`, `scripts/bench/**`, `scripts/playtest.ts`）の説明と、2026-09-24〜25 に実際に測った結果。
 AI にケースを遊ばせた記録は `docs/playtest-report.md`。
 体験の正本は `docs/design-bible.md`、エンジン全体は `docs/engine.md`、約束（型）は `server/engine/judge-types.ts`。

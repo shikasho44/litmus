@@ -44,6 +44,9 @@ interface MenuItem {
 function splitTitle(t: string): { a: string; particle?: string; b?: string } {
   const i = t.lastIndexOf('の');
   if (i > 0 && i < t.length - 1) return { a: t.slice(0, i), particle: 'の', b: t.slice(i + 1) };
+  // 「リトマス審問」: kana head on the glitch row, the trailing kanji word as the big row
+  const m = /^(.+?)(\p{Script=Han}{2,})$/u.exec(t);
+  if (m) return { a: m[1], b: m[2] };
   return { a: t };
 }
 
@@ -64,7 +67,7 @@ function Logo() {
         </span>
         {parts.b && (
           <span class="logo__row logo__row--b" aria-hidden="true">
-            <span class="logo__particle">{parts.particle}</span>
+            {parts.particle && <span class="logo__particle">{parts.particle}</span>}
             <span class="logo__big">{parts.b}</span>
           </span>
         )}
@@ -237,7 +240,7 @@ export function TitleScene(_: SceneProps) {
       </div>
       <div class="title__shade" aria-hidden="true" />
       <div class="title__deco" aria-hidden="true">
-        <span class="title__outline">JANE DOE</span>
+        <span class="title__outline">LITMUS</span>
         <span class="title__stripe" />
         <span class="title__reg title__reg--tl" />
         <span class="title__reg title__reg--br" />

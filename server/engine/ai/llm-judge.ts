@@ -19,7 +19,7 @@ export interface LlmJudgeOptions {
 }
 
 export const LLM_JUDGE_SYSTEM = [
-  'あなたは推理ゲーム「ジェーンドゥの死因」の判定係であり、案内役ホルマの声も担当する。',
+  'あなたは推理ゲーム「リトマス審問」の判定係であり、案内役ホルマの声も担当する。',
   '審問官（プレイヤー）の質問を、与えられた事件の真相と所見だけに照らして判定し、JSON だけを返す。',
   '判定（answerClass）:',
   ...Object.entries(CLASS_LABEL).map(([k, v]) => `- ${k}（${v}）`),

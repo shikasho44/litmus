@@ -1,4 +1,4 @@
-# Frontend guide — ジェーンドゥの死因
+# Frontend guide — リトマス審問
 
 The browser side: visual system, UI kit, FX, audio, app shell and the first scenes
 (Title / Prologue / Files / overlays). Read `docs/design-bible.md` first; this file is how

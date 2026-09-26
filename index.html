@@ -31,10 +31,10 @@
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
-    <!-- Logo glyph subsets of Dela Gothic One (kana / 死 / 因) so the title renders crisply on first paint -->
+    <!-- Logo glyph subsets of Dela Gothic One (kana / 審 / 問) so the title renders crisply on first paint -->
     <link rel="preload" as="font" type="font/woff2" crossorigin href="./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-119-400-normal.woff2" />
-    <link rel="preload" as="font" type="font/woff2" crossorigin href="./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-102-400-normal.woff2" />
-    <link rel="preload" as="font" type="font/woff2" crossorigin href="./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-99-400-normal.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-92-400-normal.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-117-400-normal.woff2" />
     <!-- The title's largest paint: fetched next to the JS instead of after it (src/main.tsx warms the rest later) -->
     <link rel="preload" as="image" href="/art/key-art.webp" fetchpriority="high" />
     <!--
@@ -46,8 +46,8 @@
     -->
     <style>
       @font-face { font-family: 'Dela Gothic One'; font-weight: 400; font-display: swap; src: url(./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-119-400-normal.woff2) format('woff2'); unicode-range: U+20,U+2027,U+3001-3002,U+3041-307f,U+3081-308f,U+3091-3093,U+3099-309a,U+309d-309e,U+30a1-30e1,U+30e3-30ed,U+30ef-30f0,U+30f2-30f4,U+30fb-30fe,U+ff0c,U+ff0e; }
-      @font-face { font-family: 'Dela Gothic One'; font-weight: 400; font-display: swap; src: url(./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-102-400-normal.woff2) format('woff2'); unicode-range: U+3d,U+5e,U+25cf,U+4e0e,U+4e5d,U+4e73,U+4e94,U+4f3c,U+5009,U+5145,U+51ac,U+5238,U+524a,U+53f3,U+547c,U+5802,U+5922,U+5a66,U+5c0e,U+5de6,U+5fd8,U+5feb,U+6797,U+685c,U+6b7b,U+6c5f-6c60,U+6cc9,U+6ce2,U+6d17,U+6e21,U+7167,U+7642,U+76db,U+8001,U+821e,U+8857,U+89d2,U+8b1b,U+8b70,U+8cb4,U+8cde,U+8f03,U+8f2a,U+968e,U+9b54,U+9e7f,U+9ebb,U+ff05,U+ff33; }
-      @font-face { font-family: 'Dela Gothic One'; font-weight: 400; font-display: swap; src: url(./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-99-400-normal.woff2) format('woff2'); unicode-range: U+2191,U+505c,U+52e4,U+5305,U+535a,U+56e0,U+59bb,U+5acc,U+5b09,U+5b87,U+5c90,U+5df1,U+5e2d,U+5e33,U+5f3e,U+6298,U+6383,U+653b,U+6697,U+6804,U+6a39,U+6cca,U+6e90,U+6f2b,U+702c,U+7206,U+7236,U+7559,U+7565,U+7591,U+75c7,U+75db,U+7b4b,U+7bb1,U+7d99,U+7fbd,U+8131,U+885b,U+8b1d,U+8ff7,U+9003,U+9045,U+96a0,U+9732,U+990a,U+99d0,U+9e97,U+9f62,U+ff25,U+ff2d; }
+      @font-face { font-family: 'Dela Gothic One'; font-weight: 400; font-display: swap; src: url(./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-92-400-normal.woff2) format('woff2'); unicode-range: U+2460,U+4e5f,U+4e7e,U+4ed9,U+501f,U+502b,U+5968,U+5974,U+5ac1,U+5b99,U+5ba3,U+5be7,U+5be9,U+5c64,U+5cb8,U+5ec3,U+5f1f,U+616e,U+6297,U+62e0,U+62ec,U+6368,U+642d,U+65e6,U+6717,U+676f,U+6b04,U+732e,U+7652,U+76ca,U+76d7,U+7802,U+7e70,U+7f6a,U+8133,U+81e8,U+866b,U+878d,U+88f8,U+8a5e,U+8cdb,U+8d08,U+907a,U+90e1,U+96f2,U+9f8d,U+ff35,U+ff37,U+ff40,U+ff9d; }
+      @font-face { font-family: 'Dela Gothic One'; font-weight: 400; font-display: swap; src: url(./node_modules/@fontsource/dela-gothic-one/files/dela-gothic-one-117-400-normal.woff2) format('woff2'); unicode-range: U+4e,U+a0,U+3000,U+300c-300d,U+4e00,U+4e0a,U+4e2d,U+4e8b,U+4eba,U+4f1a,U+5165,U+5168,U+5185,U+51fa,U+5206,U+5229,U+524d,U+52d5,U+5408,U+554f,U+5831,U+5834,U+5927,U+5b9a,U+5e74,U+5f0f,U+60c5,U+65b0,U+65b9,U+6642,U+6700,U+672c,U+682a,U+6b63,U+6c17,U+7121,U+751f,U+7528,U+753b,U+76ee,U+793e,U+884c,U+898b,U+8a18,U+9593,U+95a2,U+ff01,U+ff08-ff09; }
       @font-face { font-family: 'Zen Kaku Gothic New'; font-weight: 500; font-display: swap; src: url(./node_modules/@fontsource/zen-kaku-gothic-new/files/zen-kaku-gothic-new-119-500-normal.woff2) format('woff2'); unicode-range: U+20,U+2027,U+3001-3002,U+3041-307f,U+3081-308f,U+3091-3093,U+3099-309a,U+309d-309e,U+30a1-30e1,U+30e3-30ed,U+30ef-30f0,U+30f2-30f4,U+30fb-30fe,U+ff0c,U+ff0e; }
       @font-face { font-family: 'Anton'; font-weight: 400; font-display: swap; src: url(./node_modules/@fontsource/anton/files/anton-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
     </style>

@@ -19,7 +19,7 @@
 // Smoke (other cases): files → difficulty → intro (skip) → 3 questions, then a dev-minted
 // 'investigated' token (POST /api/admin/mint-token) → inquest → endings → files rank.
 // Difficulty per case (every verdict format runs in the default `npm run qa`):
-//   c01 審問官 (cloze) · c02 見習い (choice, noise break skipped after round 1) · c03 教授 (free).
+//   c01 審問官 (cloze) · c02 見習い (choice, noise break skipped after round 1) · c03 教授 (free) · c04 審問官 (cloze).
 // Game over: 審問官 on the last light → the case restarts (new token, other cases untouched);
 // 見習い on the last light → back to the start of the inquest with the lights refilled.
 //
@@ -68,7 +68,7 @@ if (!SMOKE_ONLY && !FULL.length) {
 const SMOKES = SMOKE ? CASES.filter((c) => !FULL.includes(c)) : [];
 
 /** Difficulty per case (VERDICT_MODE_BY_DIFFICULTY: easy choice · normal cloze · hard free). */
-const LEVEL = { c01: 'normal', c02: 'easy', c03: 'hard' };
+const LEVEL = { c01: 'normal', c02: 'easy', c03: 'hard', c04: 'normal' };
 const MODE = { easy: 'choice', normal: 'cloze', hard: 'free' };
 const LIVES = { easy: 10, normal: 3, hard: 3 };
 /** Smoke runs that skip the rest of the noise break after this many rounds. */
@@ -80,6 +80,7 @@ const INCOMPLETE = {
   c01: '酸欠で亡くなったのだと思う。夜なので部屋の換気が止まっていた。',
   c02: 'ボールが胸に当たって、心室細動が起きた。',
   c03: '寒さで体が冷えて亡くなった。',
+  c04: 'トリカブトの毒で亡くなった。',
 };
 
 /** Case probes (exact bank questions → deterministic rules answers) that unlock the findings the debate needs, then the weightiest others. */
@@ -272,8 +273,17 @@ async function boot(page, { url = `${BASE}?mute=1`, reload = false } = {}) {
     await tick(page, 100);
     await sleep(20);
   }
-  // Freeze page time: from here on it only moves when the script ticks it.
-  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 100);
+  // Freeze page time: from here on it only moves when the script ticks it. On a loaded machine
+  // more than the margin can pass before pauseAt lands ("Cannot fast-forward to the past"):
+  // retry with a wider margin.
+  for (let margin = 100; ; margin *= 4) {
+    try {
+      await page.clock.pauseAt((await page.evaluate(() => Date.now())) + margin);
+      break;
+    } catch (e) {
+      if (margin > 10000 || !/past/i.test(String(e))) throw e;
+    }
+  }
   await waitFor(page, () => !window.__JD.getState().transitioning, null, { label: 'boot transition' });
 }
 
@@ -946,6 +956,14 @@ async function result(page, c, name, { full }) {
   await tick(page, 2800);
   await shot(page, name('result'));
   const s = await saveOf(page, c.id);
+  // 名探偵度数: the run's points are stored, the case best is at least that, the block shows the total
+  const pts = s.lastResult?.stats?.points;
+  check(typeof pts === 'number' && pts >= 0 && (s.bestPoints ?? -1) >= pts, `${c.id}: the run earned +${pts} (case best ${s.bestPoints})`);
+  const degree = await page.evaluate(() => {
+    const cases = window.__JD.getState().save.cases;
+    return { total: Object.values(cases).reduce((a, x) => a + (x.bestPoints ?? 0), 0), shown: Number(document.querySelector('.rs-deg')?.getAttribute('data-degree')) };
+  });
+  check(degree.shown === degree.total, `${c.id}: the result shows 名探偵度数 ${degree.shown} (save ${degree.total})`);
   if (full) {
     await boot(page, { reload: true });
     await waitScene(page, 'result');
@@ -961,6 +979,8 @@ async function result(page, c, name, { full }) {
   await waitSel(page, `article.tag:has(#case-${c.id}-title) .tag__rank-value`, { label: 'best rank on the case tag' });
   const shown = await page.locator(`article.tag:has(#case-${c.id}-title) .tag__rank-value`).textContent();
   check(shown === s.bestRank, `${c.id}: files show best rank ${shown} (save ${s.bestRank}, run ${s.lastResult?.rank} ${s.lastResult?.title ?? ''})`);
+  const meter = await page.locator('.dmeter__total').textContent();
+  check(Number(meter) >= (s.bestPoints ?? 0), `${c.id}: the files header shows 名探偵度数 ${meter}`);
   const tag = page.locator(`article.tag:has(#case-${c.id}-title)`);
   await tag.scrollIntoViewIfNeeded();
   await tick(page, 1600);

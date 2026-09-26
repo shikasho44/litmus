@@ -12,6 +12,7 @@ import { layout } from '../../lib/viewport';
 import { caseList, loadCases } from '../../lib/cases';
 import { pickLine } from '../../lib/lines';
 import { resumableCaseId, saveData, settings, updateSettings } from '../../state/save';
+import { caseRunMode } from '../../state/runMode';
 import { IconButton } from '../../ui/Button';
 import { GlitchText } from '../../ui/GlitchText';
 import { HolmaSprite } from '../../ui/HolmaSprite';
@@ -21,6 +22,32 @@ import './title.css';
 
 /** The press-to-enter gate is shown once per page load (it also unlocks audio). */
 let entered = false;
+
+declare const __JANEDOE_EMBEDDED__: boolean | undefined;
+/** Online versus needs the server: the menu item exists only in the http build (and only when /api/versus/config says so). */
+const VERSUS_BUILD = typeof __JANEDOE_EMBEDDED__ !== 'undefined' ? !__JANEDOE_EMBEDDED__ : true;
+type VersusMenu = { enabled: boolean; inRoom: boolean };
+/** Last answer, so a return to the title shows the item without waiting for the check again. */
+let versusMenuCache: VersusMenu = { enabled: false, inRoom: false };
+
+function useVersusMenu(): VersusMenu {
+  const [vs, setVs] = useState(versusMenuCache);
+  useEffect(() => {
+    if (!VERSUS_BUILD) return;
+    let alive = true;
+    void import('../../features/versus/boot')
+      .then((m) => m.versusMenu())
+      .then((v) => {
+        versusMenuCache = v;
+        if (alive) setVs(v);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return vs;
+}
 
 /** Touch-first device (phones / tablets): the gate says "tap", not "click / press any key". */
 function isCoarsePointer(): boolean {
@@ -160,6 +187,10 @@ function HolmaBadge({ anchor }: { anchor?: { x: number; y: number; s: number } |
 }
 
 export function TitleScene(_: SceneProps) {
+  // A race kept in memory (online versus) is put away before the first paint — in a layout
+  // effect, i.e. after the case scene we came from has unmounted (its last play-time write must
+  // land in the race copy, not in the player's own run).
+  useLayoutEffect(() => caseRunMode.peek()?.release?.(), []);
   const keyArt = useImage(ART.keyArt);
   // Holma stands in only when the key art is really missing — not while it is still loading
   // (on a slow link that stand-in would pull 1 MB of sprites and swap the picture twice).
@@ -173,6 +204,7 @@ export function TitleScene(_: SceneProps) {
   const anchor = useKeyArtAnchor(sectionEl, !!keyArt && wide);
   const resumeId = resumableCaseId.value;
   const s = settings.value;
+  const vs = useVersusMenu();
 
   useEffect(() => {
     void loadCases();
@@ -216,7 +248,14 @@ export function TitleScene(_: SceneProps) {
 
   const resumeTitle = resumeId ? caseList.value?.find((c) => c.id === resumeId)?.title : undefined;
   // A returning player with a case in progress: 続きから is the primary (and first-focused) action.
+  // A tab that is in a versus room: 対戦に戻る comes first.
+  const versusItem: MenuItem | null = VERSUS_BUILD && vs.enabled
+    ? vs.inRoom
+      ? { id: 'versus', jp: '対戦に戻る', en: 'VERSUS', sub: '部屋に参加中', icon: 'users', primary: true, action: () => goto('versus') }
+      : { id: 'versus', jp: '対戦', en: 'ONLINE VERSUS', sub: '早解き勝負', icon: 'users', action: () => goto('versus') }
+    : null;
   const items: MenuItem[] = [
+    ...(versusItem?.primary ? [versusItem] : []),
     ...(resumeId
       ? [
           {
@@ -225,13 +264,14 @@ export function TitleScene(_: SceneProps) {
             en: 'CONTINUE',
             sub: resumeTitle ? `「${resumeTitle}」` : undefined,
             icon: 'play' as IconName,
-            primary: true,
+            primary: !versusItem?.primary,
             action: () => openCase(resumeId),
           },
         ]
       : []),
-    { id: 'start', jp: '審問を始める', en: 'START INQUEST', icon: 'gavel', primary: !resumeId, action: start },
+    { id: 'start', jp: '審問を始める', en: 'START INQUEST', icon: 'gavel', primary: !resumeId && !versusItem?.primary, action: start },
     { id: 'files', jp: '事件ファイル', en: 'CASE FILES', icon: 'tag', action: () => goto('files') },
+    ...(versusItem && !versusItem.primary ? [versusItem] : []),
     { id: 'howto', jp: '遊び方', en: 'HOW TO PLAY', icon: 'help', action: () => openOverlay('howto') },
     { id: 'settings', jp: '設定', en: 'SETTINGS', icon: 'settings', action: () => openOverlay('settings') },
     { id: 'credits', jp: 'クレジット', en: 'CREDITS', icon: 'credits', action: () => openOverlay('credits') },

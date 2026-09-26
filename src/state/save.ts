@@ -10,6 +10,7 @@
  */
 import { batch, computed, effect, signal } from '@preact/signals';
 import { APP_CONFIG } from '../config/app';
+import { resultPoints } from '../features/rank/points';
 import type { Difficulty, ProgressSnapshot, ProgressToken, PublicFact, ScienceMemoView } from '../../shared/api';
 import { prefersReducedMotion, START_MUTED } from '../lib/env';
 import {
@@ -113,13 +114,18 @@ export const DEFAULT_DIFFICULTY: Difficulty = 'normal';
 function sanitizeCase(id: string, c: unknown): CaseProgress | null {
   if (!isObj(c)) return null;
   const base = freshCase(id);
+  const completed = bool(c.completed, false);
+  const gameOvers = num(c.gameOvers, 0, 0);
+  const lastResult = isObj(c.lastResult) ? (c.lastResult as CaseResult) : undefined;
   return {
     ...base,
     ...c,
     caseId: id,
     stage: oneOf(c.stage, STAGES, 'new'),
     difficulty: DIFFICULTIES.includes(c.difficulty) ? c.difficulty : undefined,
-    gameOvers: num(c.gameOvers, 0, 0),
+    gameOvers,
+    // A save from before 2026-09-27 has no mark: a completed case's game overs all predate its clear.
+    gameOversAtClear: typeof c.gameOversAtClear === 'number' || completed ? num(c.gameOversAtClear, gameOvers, 0, gameOvers) : undefined,
     startedAt: num(c.startedAt, base.startedAt),
     updatedAt: num(c.updatedAt, base.updatedAt),
     elapsedMs: num(c.elapsedMs, 0, 0),
@@ -133,10 +139,11 @@ function sanitizeCase(id: string, c: unknown): CaseProgress | null {
     hints: Array.isArray(c.hints) ? c.hints.filter((h: unknown) => isObj(h) && typeof h.text === 'string') : [],
     notes: str(c.notes),
     inquest: isObj(c.inquest) ? (c.inquest as InquestState) : undefined,
-    completed: bool(c.completed, false),
+    completed,
     clears: num(c.clears, 0, 0),
     bestRank: RANKS.includes(c.bestRank) ? c.bestRank : undefined,
-    lastResult: isObj(c.lastResult) ? (c.lastResult as CaseResult) : undefined,
+    bestPoints: sanitizeBestPoints(c.bestPoints, completed ? lastResult : undefined),
+    lastResult,
     restored:
       isObj(c.restored) && typeof c.restored.name === 'string' && c.restored.name
         ? { name: c.restored.name.slice(0, 40), kana: str(c.restored.kana).slice(0, 60) }
@@ -144,7 +151,18 @@ function sanitizeCase(id: string, c: unknown): CaseProgress | null {
   };
 }
 
-function sanitize(raw: unknown): SaveData {
+/**
+ * A number ≥ 0 (rounded). A completed case saved before 2026-09-27 has none: its last run's
+ * 獲得度数 stands in (the best run itself was not kept).
+ */
+function sanitizeBestPoints(v: unknown, legacy: CaseResult | undefined): number | undefined {
+  if (typeof v === 'number' && Number.isFinite(v)) return Math.max(0, Math.round(v));
+  if (legacy && RANKS.includes(legacy.rank)) return resultPoints(legacy).total;
+  return undefined;
+}
+
+/** Exported for tests. */
+export function sanitize(raw: unknown): SaveData {
   const fresh = freshSave();
   if (!isObj(raw)) return fresh;
   const m = migrate(raw);
@@ -197,6 +215,18 @@ export const settings = computed(() => saveData.value.settings);
 let dirty = false;
 let timer: ReturnType<typeof setTimeout> | undefined;
 let initialised = false;
+/** What is written to storage instead of the in-memory save (see setPersistFilter). */
+let persistFilter: ((d: SaveData) => SaveData) | null = null;
+
+/**
+ * While a run that must not touch the stored save is in memory (online versus keeps its race
+ * in `cases[caseId]`: src/features/versus/slot.ts), storage gets `filter(save)` instead — the
+ * player's own progress for that case, untouched. null restores normal saving.
+ */
+export function setPersistFilter(filter: ((d: SaveData) => SaveData) | null) {
+  persistFilter = filter;
+  scheduleSave();
+}
 
 export function flushSave() {
   if (timer) {
@@ -206,7 +236,8 @@ export function flushSave() {
   if (!dirty) return;
   dirty = false;
   try {
-    localStorage.setItem(APP_CONFIG.SAVE_KEY, JSON.stringify(saveData.peek()));
+    const d = saveData.peek();
+    localStorage.setItem(APP_CONFIG.SAVE_KEY, JSON.stringify(persistFilter ? persistFilter(d) : d));
     if (!storageOk.peek()) storageOk.value = true;
   } catch {
     storageOk.value = false;
@@ -350,14 +381,21 @@ const RANK_ORDER: Rank[] = ['S+', 'S', 'A', 'B', 'C'];
 export const betterRank = (a: Rank | undefined, b: Rank | undefined): Rank | undefined =>
   !a ? b : !b ? a : RANK_ORDER.indexOf(a) <= RANK_ORDER.indexOf(b) ? a : b;
 
+/**
+ * Seal a run: best rank, best 獲得度数 (a replay only ever raises it, so the 名探偵度数 total
+ * cannot be farmed), and the game-over mark (the next run's game overs are counted from here).
+ */
 export function completeCase(caseId: string, result: CaseResult) {
+  const points = resultPoints(result).total;
   updateCase(caseId, (c) => ({
     ...c,
     stage: 'complete',
     completed: true,
     clears: c.clears + 1,
     bestRank: betterRank(c.bestRank, result.rank),
-    lastResult: { ...result, prevBest: c.bestRank },
+    bestPoints: Math.max(c.bestPoints ?? 0, points),
+    gameOversAtClear: c.gameOvers ?? 0,
+    lastResult: { ...result, stats: { ...result.stats, points }, prevBest: c.bestRank, prevBestPoints: c.bestPoints },
   }));
 }
 
@@ -368,7 +406,7 @@ export function setRestored(caseId: string, name: string, kana: string) {
   updateCase(caseId, (c) => ({ ...c, restored: { name, kana } }));
 }
 
-/** Start the case over (keeps best rank, clear count, the restored name and the chosen difficulty). */
+/** Start the case over (keeps best rank / points, clear count, the restored name, the chosen difficulty and the game-over counters). */
 export function resetCase(caseId: string) {
   updateCase(caseId, (c) => ({
     ...freshCase(caseId),
@@ -377,8 +415,10 @@ export function resetCase(caseId: string) {
     completed: c.completed,
     lastResult: c.lastResult,
     restored: c.restored,
+    ...(c.bestPoints !== undefined ? { bestPoints: c.bestPoints } : {}),
     ...(c.difficulty ? { difficulty: c.difficulty } : {}),
     ...(c.gameOvers ? { gameOvers: c.gameOvers } : {}),
+    ...(c.gameOversAtClear ? { gameOversAtClear: c.gameOversAtClear } : {}),
   }));
 }
 
@@ -398,7 +438,7 @@ export function addElapsed(caseId: string, ms: number) {
   updateCase(caseId, { elapsedMs: c.elapsedMs + ms });
 }
 
-/** Wipe everything except settings. */
+/** Wipe everything except settings (the 名探偵度数 lives in the cases, so it goes too). */
 export function resetAll() {
   const s = saveData.value.settings;
   saveData.value = { ...freshSave(), settings: s };

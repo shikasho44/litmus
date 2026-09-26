@@ -1,0 +1,740 @@
+/* ==========================================================================
+   対戦 (ONLINE VERSUS) screen — entry / lobby / countdown / race & result
+   ========================================================================== */
+.vsx {
+  padding: 0;
+}
+.vsx__bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 55% at 85% 10%, rgba(255, 46, 99, 0.18), transparent 70%),
+    radial-gradient(ellipse 60% 50% at 0% 100%, rgba(61, 224, 255, 0.1), transparent 70%),
+    linear-gradient(180deg, #120d13, var(--ink) 55%);
+}
+.vsx__stripes {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  top: 38%;
+  height: 120px;
+  background: repeating-linear-gradient(90deg, rgba(255, 46, 99, 0.09) 0 26px, transparent 26px 52px);
+  transform: rotate(var(--tilt));
+}
+.vsx__outline {
+  position: absolute;
+  right: -2vw;
+  bottom: -3vw;
+  font-size: clamp(90px, 17vw, 260px);
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(242, 239, 230, 0.07);
+  transform: rotate(var(--tilt));
+  white-space: nowrap;
+}
+.vsx__page {
+  z-index: 1;
+}
+
+/* ---------------- header ---------------- */
+.vsx__head {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.vsx__nav {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.vsx__title {
+  display: grid;
+  justify-items: start;
+  transform: rotate(-4deg);
+  transform-origin: 0 100%;
+  margin: 4px 0 6px;
+}
+.vsx__title-jp {
+  font-family: var(--font-display);
+  font-size: clamp(38px, 5vw, 70px);
+  line-height: 1;
+  color: var(--bone);
+  text-shadow: 0.05em 0.05em 0 var(--alarm);
+}
+.vsx__title-en {
+  margin-top: 10px;
+  padding: 2px 14px 3px 16px;
+  font-family: var(--font-en);
+  font-size: clamp(13px, 1.3vw, 19px);
+  letter-spacing: 0.45em;
+  color: var(--ink);
+  background: var(--alarm);
+  transform: skewX(var(--skew));
+}
+[data-layout='narrow'] .vsx__title-jp {
+  font-size: clamp(30px, 9vw, 42px);
+}
+[data-layout='narrow'] .vsx__title-en {
+  font-size: 12px;
+  letter-spacing: 0.35em;
+}
+.vsx__lead {
+  margin: 0 0 16px;
+  color: var(--bone-2);
+  max-width: 44em;
+}
+.vsx__lead b {
+  color: var(--bone);
+  background: linear-gradient(transparent 62%, rgba(255, 46, 99, 0.45) 62%);
+}
+.vsx-muted {
+  color: var(--mute);
+  font-size: var(--fs-sm);
+  margin: 0;
+}
+.vsx-note {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 22px 0 0;
+  color: var(--mute);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+}
+.vsx-note .icon {
+  flex: none;
+  margin-top: 2px;
+}
+.vsx-error {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  color: var(--bone);
+  background: color-mix(in srgb, var(--alarm) 22%, var(--ink-2));
+  border-left: 4px solid var(--alarm);
+  font-size: var(--fs-sm);
+}
+.vsx-error .icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--alarm);
+}
+.vsx-connecting {
+  padding: 40px 0;
+  text-align: center;
+}
+
+/* ---------------- fields ---------------- */
+.vsx-field {
+  display: grid;
+  gap: 6px;
+  max-width: 460px;
+}
+.vsx-field__label {
+  font-size: var(--fs-sm);
+  color: var(--bone);
+}
+.vsx-field__hint {
+  font-size: var(--fs-xs);
+  color: var(--mute);
+}
+.vsx-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  font-size: max(16px, var(--fs-md)); /* ≥16px: no iOS zoom on focus */
+  color: var(--bone);
+  background: var(--ink-2);
+  border: 2px solid var(--bone-a24);
+  border-radius: 0;
+  outline: none;
+  transition: border-color var(--dur-1);
+}
+.vsx-input:focus-visible,
+.vsx-input:focus {
+  border-color: var(--formalin);
+  box-shadow: 4px 4px 0 var(--alarm);
+}
+.vsx-input::placeholder {
+  color: var(--bone-3);
+  opacity: 0.6;
+}
+.vsx-input--code {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+}
+
+/* ---------------- entry ---------------- */
+.vsx-entry__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 22px;
+  margin-top: 22px;
+  align-items: start;
+}
+[data-layout='narrow'] .vsx-entry__cols {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+}
+.vsx-entry__cols.is-join-first .vsx-card--join {
+  order: -1;
+}
+.vsx-card {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  padding: 18px 20px 20px;
+  background: linear-gradient(160deg, var(--ink-3), var(--ink-2) 60%);
+  border-top: 4px solid var(--card-accent, var(--formalin));
+  box-shadow: 6px 6px 0 var(--ink), 0 18px 40px -18px rgba(0, 0, 0, 0.8);
+}
+.vsx-card--join {
+  --card-accent: var(--cyan);
+}
+[data-layout='narrow'] .vsx-card {
+  padding: 16px 14px 16px;
+}
+.vsx-card__head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.vsx-card__en {
+  font-size: var(--fs-sm);
+  letter-spacing: 0.3em;
+  color: var(--card-accent, var(--formalin));
+}
+.vsx-card__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  line-height: 1.2;
+}
+.vsx-cases,
+.vsx-diffs {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.vsx-cases legend,
+.vsx-diffs legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: var(--fs-sm);
+}
+.vsx-case {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bone-a08);
+  border-left: 4px solid transparent;
+  cursor: pointer;
+  transition: background var(--dur-1), border-color var(--dur-1);
+}
+.vsx-case input,
+.vsx-diff input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.vsx-case:hover {
+  background: var(--bone-a14);
+}
+.vsx-case.is-on {
+  background: color-mix(in srgb, var(--case-accent, var(--formalin)) 16%, var(--ink-3));
+  border-left-color: var(--case-accent, var(--formalin));
+}
+.vsx-case:has(input:focus-visible),
+.vsx-diff:has(input:focus-visible) {
+  outline: 2px solid var(--formalin);
+  outline-offset: 2px;
+}
+.vsx-case__no {
+  font-size: var(--fs-sm);
+  letter-spacing: 0.12em;
+  color: var(--case-accent, var(--formalin));
+}
+.vsx-case__title {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vsx-case__min {
+  font-size: var(--fs-2xs);
+  color: var(--mute);
+}
+.vsx-diffs__row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.vsx-diff {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  background: var(--bone-a08);
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  text-align: center;
+  transform: skewX(-8deg);
+}
+.vsx-diff > * {
+  transform: skewX(8deg);
+}
+.vsx-diff b {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--fs-lg);
+  line-height: 1.2;
+}
+.vsx-diff small {
+  font-size: var(--fs-2xs);
+  color: var(--bone-2);
+}
+.vsx-diff.is-on {
+  color: var(--ink);
+  background: var(--formalin);
+  border-bottom-color: var(--alarm);
+}
+.vsx-diff.is-on small {
+  color: var(--paper-ink-2);
+}
+
+/* ---------------- lobby ---------------- */
+.vsx-lobby {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+[data-layout='narrow'] .vsx-lobby {
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+.vsx-lobby__side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.vsx-lobby__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  justify-items: stretch;
+}
+[data-layout='narrow'] .vsx-lobby {
+  grid-template-columns: minmax(0, 1fr);
+}
+.vsx-lobby__actions > .btn--quiet {
+  justify-self: center;
+}
+.vsx-code {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 22px 22px 18px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(11, 13, 18, 0.18) 0 1.1px, transparent 1.5px) 0 0 / 7px 7px,
+    var(--bone);
+  color: var(--paper-ink);
+  box-shadow: 8px 8px 0 var(--alarm), 0 24px 50px -20px rgba(0, 0, 0, 0.9);
+  transform: rotate(-1.5deg);
+}
+[data-layout='narrow'] .vsx-code {
+  padding: 16px 14px 12px;
+  box-shadow: 6px 6px 0 var(--alarm);
+  transform: none;
+}
+.vsx-code__label {
+  justify-self: start;
+  padding: 2px 10px;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.35em;
+  color: var(--bone);
+  background: var(--ink);
+  transform: skewX(var(--skew));
+}
+.vsx-code__value {
+  display: flex;
+  justify-content: center;
+  gap: clamp(4px, 1.2vw, 12px);
+  margin: 0;
+  font-family: var(--font-en);
+  font-size: clamp(48px, 7.4vw, 104px);
+  line-height: 1.05;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+[data-layout='narrow'] .vsx-code__value {
+  font-size: clamp(40px, 13vw, 60px);
+  gap: 4px;
+}
+.vsx-code__ch {
+  display: inline-grid;
+  place-items: center;
+  min-width: 0.9em;
+  padding: 0.04em 0.06em;
+  border-bottom: 5px solid var(--alarm);
+}
+.vsx-code__value.is-hidden .vsx-code__ch {
+  color: var(--paper-ink-2);
+  border-bottom-color: var(--paper-ink-2);
+  font-size: 0.7em;
+}
+.vsx-code__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+/* a text button printed on the paper card */
+.vsx-code .btn--quiet {
+  --btn-fg: var(--paper-ink);
+}
+.vsx-code .btn--quiet .btn__jp {
+  text-decoration-color: rgba(26, 23, 18, 0.35);
+}
+.vsx-code .btn--quiet:hover:not(:disabled) {
+  --btn-fg: var(--alarm-deep);
+}
+.vsx-code__hide {
+  padding: 2px 12px;
+  background: var(--ink);
+  color: var(--bone);
+}
+.vsx-code__hide .ctl {
+  padding: 8px 0;
+}
+.vsx-casecard {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  background: linear-gradient(160deg, var(--ink-3), var(--ink-2));
+  border-left: 4px solid var(--formalin);
+}
+.vsx-casecard__no {
+  font-size: var(--fs-sm);
+  letter-spacing: 0.25em;
+  color: var(--formalin);
+}
+.vsx-casecard__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  line-height: 1.2;
+}
+.vsx-casecard__sum {
+  margin: 0;
+  color: var(--bone-2);
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+}
+.vsx-casecard__diff {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.vsx-players {
+  display: grid;
+  gap: 10px;
+}
+.vsx-players__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.3em;
+  color: var(--cyan);
+}
+.vsx-players__head b {
+  font-family: var(--font-en);
+  font-weight: 400;
+  font-size: var(--fs-xl);
+  letter-spacing: 0.05em;
+  color: var(--bone);
+}
+.vsx-players__head small {
+  font-size: var(--fs-sm);
+  color: var(--mute);
+}
+.vsx-players__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* phones: one player per row, so names are not cut */
+[data-layout='narrow'] .vsx-players__list {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+[data-layout='narrow'] .vsx-player {
+  min-height: 42px;
+}
+.vsx-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 6px 12px;
+  background: var(--ink-3);
+  border-left: 4px solid var(--cyan);
+  box-shadow: var(--shadow-hard);
+  animation: vsx-in 0.35s var(--ease-out) both;
+}
+.vsx-player.is-you {
+  border-left-color: var(--formalin);
+}
+.vsx-player.is-empty {
+  background: transparent;
+  border: 2px dashed var(--bone-a14);
+  box-shadow: none;
+  color: var(--mute);
+  animation: none;
+}
+.vsx-player__idx {
+  flex: none;
+  font-size: var(--fs-sm);
+  color: var(--mute);
+}
+.vsx-player__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+@keyframes vsx-in {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+.vsx-wait {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  padding: 16px;
+  font-weight: 700;
+  background: var(--bone-a08);
+}
+.vsx-wait__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--alarm);
+  animation: vs-blink 1.2s steps(2) infinite;
+}
+
+/* ---------------- countdown ---------------- */
+/* three rows: case (top) · the tilted band with the number (centre) · who races (bottom) */
+.vsx-count {
+  --band-h: clamp(150px, 30vh, 280px);
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) var(--band-h) minmax(0, 1fr);
+  justify-items: center;
+  padding: calc(var(--safe-t) + 20px) 16px calc(var(--safe-b) + 20px);
+  text-align: center;
+  overflow: hidden;
+}
+.vsx-count__mid {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+}
+.vsx-count__band {
+  position: absolute;
+  left: -30%;
+  right: -30%;
+  top: 0;
+  bottom: 0;
+  background: var(--alarm);
+  box-shadow: 0 0 0 6px var(--ink), 0 0 0 12px var(--formalin);
+  transform: rotate(var(--tilt));
+}
+.vsx-count__case {
+  position: relative;
+  align-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  /* clear of the tilted band's upper edge */
+  margin: 0 0 calc(40px + 7vw) 0;
+  font-weight: 700;
+  font-size: var(--fs-lg);
+}
+.vsx-count__case .t-en {
+  color: var(--formalin);
+  letter-spacing: 0.2em;
+}
+.vsx-count__num {
+  position: relative;
+  display: block;
+  font-size: calc(var(--band-h) * 0.86);
+  line-height: 1;
+  color: var(--ink);
+  text-shadow: 0.05em 0.05em 0 var(--bone);
+  transform: rotate(-6deg);
+}
+.vsx-count__num.is-ready {
+  font-size: calc(var(--band-h) * 0.5);
+  letter-spacing: 0.08em;
+}
+.vsx-count__vs {
+  position: relative;
+  align-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 0;
+  margin: calc(40px + 7vw) 0 0;
+  font-size: var(--fs-lg);
+  max-width: 900px;
+}
+.vsx-count__vs b {
+  padding: 0 6px;
+}
+[data-layout='wide'] .vsx-count__case,
+[data-layout='wide'] .vsx-count__vs {
+  font-size: var(--fs-xl);
+}
+.vsx-count__vs b.is-you {
+  color: var(--formalin);
+}
+.vsx-count__vs i {
+  font-style: normal;
+  color: var(--alarm);
+  letter-spacing: 0.1em;
+}
+
+/* ---------------- race / result ---------------- */
+.vsx-race {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  max-width: 960px;
+}
+.vsx-race__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.vsx-race__case {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 700;
+}
+.vsx-race__case .t-en {
+  color: var(--formalin);
+  letter-spacing: 0.2em;
+}
+.vsx-race__clock {
+  margin: 0;
+  font-size: var(--fs-xl);
+  color: var(--bone);
+}
+.vsx-winner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  color: var(--bone);
+  background: var(--alarm);
+  box-shadow: 6px 6px 0 var(--ink), 0 0 0 2px var(--ink);
+  transform: skewX(-6deg);
+}
+.vsx-winner > * {
+  transform: skewX(6deg);
+}
+.vsx-winner.is-mine {
+  color: var(--ink);
+  background: var(--formalin);
+}
+.vsx-winner.is-pending {
+  color: var(--bone);
+  background: var(--ink-3);
+  grid-template-columns: auto minmax(0, 1fr);
+}
+.vsx-winner__crown {
+  width: 34px;
+  height: 34px;
+}
+.vsx-winner__body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.vsx-winner__en {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.35em;
+  opacity: 0.85;
+}
+.vsx-winner__line {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  line-height: 1.35;
+}
+.vsx-winner__time {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+}
+[data-layout='narrow'] .vsx-winner {
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 12px 14px;
+  transform: none;
+}
+[data-layout='narrow'] .vsx-winner > * {
+  transform: none;
+}
+[data-layout='narrow'] .vsx-winner__time {
+  grid-column: 2;
+  font-size: var(--fs-lg);
+}
+[data-layout='narrow'] .vsx-winner__line {
+  font-size: var(--fs-md);
+}
+.vsx-race__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  justify-items: stretch;
+  max-width: 520px;
+}
+.vsx-race__actions > .btn--quiet {
+  justify-self: start;
+}

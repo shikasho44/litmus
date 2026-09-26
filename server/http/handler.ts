@@ -23,6 +23,9 @@
  *   GET  /api/admin/status | /api/admin/cases | /api/admin/traces | /api/admin/bench
  *   POST /api/admin/ask-debug           {caseId, question, token?, mode?}
  *   POST /api/admin/mint-token          {caseId, stage: fresh|investigated|debated|solved|reconstructed}  (QA shortcut)
+ *   POST /api/admin/versus-bind         {seat, token} dev server only: binds a minted token to a versus run (QA)
+ *   Online versus: GET /api/versus/config · POST /api/versus/{create,join,start,state,run,progress,leave}
+ *   (server/http/versus-routes.ts; every verdict is also shown to the versus service — observeVerdict)
  *
  * Errors: { error: { code, message, retryable } } with code ∈ ApiError codes.
  *
@@ -41,6 +44,7 @@ import { hmacSha256 } from '../engine/sha256.js';
 import type { ContentRegistry } from '../engine/registry.js';
 import { validateParsedCase, type CaseValidation } from '../engine/validate.js';
 import type { ApiRuntime } from './runtime.js';
+import { observeVerdict, versusRoutes } from './versus-routes.js';
 
 export const MAX_BODY_BYTES = 8 * 1024;
 export const API_VERSION = '1';
@@ -224,10 +228,14 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
       if (mode === 'free') {
         if (typeof b.text !== 'string') throw new EngineError('bad_request', 'text is required', 400);
         if ([...b.text].length > MAX_VERDICT_CHARS && detectSafety(b.text)?.kind !== 'selfHarm') throw new EngineError('bad_request', `text is too long (max ${MAX_VERDICT_CHARS})`, 400);
-        return json(200, await svc.verdict({ caseId: b.caseId as string, token: b.token as string, mode, text: b.text }, { admin, withTrace: dev || admin }));
+        const res = await svc.verdict({ caseId: b.caseId as string, token: b.token as string, mode, text: b.text }, { admin, withTrace: dev || admin });
+        await observeVerdict(rt, b.caseId, b.token, res.token);
+        return json(200, res);
       }
       const req: VerdictRequest = { caseId: b.caseId as string, token: b.token as string, mode, choice: b.choice as string | undefined, blanks: b.blanks as Record<string, number> | undefined };
-      return json(200, await svc.verdict(req, { admin, withTrace: dev || admin }));
+      const res = await svc.verdict(req, { admin, withTrace: dev || admin });
+      await observeVerdict(rt, b.caseId, b.token, res.token);
+      return json(200, res);
     },
     reconstruction: async ({ body, admin, ip }) => {
       limit('write', ip);
@@ -246,6 +254,11 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
     },
   };
 
+  // Online versus (/api/versus/*): GET config is keyed by the first segment like cases/:id.
+  const versus = versusRoutes(rt, json, limit);
+  get.versus = versus.get;
+  Object.assign(post, versus.post);
+
   const adminGet: Record<string, Route> = {
     status: async () =>
       json(200, {
@@ -261,6 +274,7 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
         budget: rt.budget.status(),
         warnings: rt.warnings,
         rateLimiterKeys: rt.limiter.size(),
+        versus: rt.versusInfo,
         dev,
       }),
     cases: async () => {
@@ -285,6 +299,7 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
       const stage = (['fresh', 'investigated', 'debated', 'solved', 'reconstructed'] as const).find((x) => x === b.stage) ?? 'investigated';
       return json(200, await svc.mintToken(b.caseId as string, stage, { admin: true }));
     },
+    'versus-bind': (ctx) => versus.devBind(ctx),
     'ask-debug': async ({ body }) => {
       const b = await body();
       const mode = typeof b.mode === 'string' && (PIPELINE_MODES as readonly string[]).includes(b.mode) ? (b.mode as PipelineMode) : undefined;

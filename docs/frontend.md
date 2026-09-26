@@ -37,6 +37,14 @@ Placeholders exist for **Intro, Investigation, Inquest, Resolution, Science, Qui
 | science | `ScienceScene` | science | cyan |
 | quiz | `QuizScene` | science | cyan |
 | result | `ResultScene` | truth | formalin |
+| versus | `VersusScene` (online versus lobby / countdown / standings; http build only — `docs/versus.md`) | inquest | alarm |
+
+Special runs: a case scene never needs to know it is inside an online versus race. The race swaps
+its own `CaseProgress` into `saveData.cases[caseId]` in memory while storage keeps the player's
+own entry (`setPersistFilter`, `src/features/versus/slot.ts`), and the few mode differences go
+through `caseRunMode` (`src/state/runMode.ts`: token source, locked difficulty, game over = out,
+release on the title). Use `freshToken(caseId)` (caseData.ts), not `api.newToken`, when a scene
+needs a new token.
 
 ```tsx
 import type { SceneProps } from '../../app/router';
@@ -132,6 +140,7 @@ addFacts(id, PublicFact[]) · addMemos(id, memos) · addHint(id, level, text)
 setToken(id, token, snapshot) · markFactsSeen(id, ids) · setStage(id, stage)
 setInquest(id, { phase, roundIndex, composure, … })   // merges, defaults composure 5
 completeCase(id, { rank, title, at, elapsedMs, stats }) · resetCase(id) · resetAll()
+  // completeCase also raises bestPoints (never lowers it) and marks gameOversAtClear
 caseStatus(c) → 'new' | 'active' | 'solved' | 'complete'   (labels: CASE_STATUS_LABEL)
 resumableCaseId (computed) · getDevPipelineMode()      // dev-only override for the API client
 hooks: useCaseProgress(id), useCaseStatus(id), useCaseTimer(id), formatElapsed(ms)
@@ -140,8 +149,23 @@ hooks: useCaseProgress(id), useCaseStatus(id), useCaseTimer(id), formatElapsed(m
 `CaseProgress` keeps: `stage, token, snapshot, log (≤600), facts (PublicFact by id) + factOrder,
 seenFacts (NEW badge), memos, hints, notes, inquest {phase, roundIndex, composure, cleared,
 misses, grants, verdictAttempts, lastVerdict, verdictDraft, reconstructionPicks,
-reconstructionDone, suspensions}, quiz, elapsedMs, completed, clears, bestRank, lastResult`.
-See `src/state/types.ts`.
+reconstructionDone, suspensions}, quiz, elapsedMs, completed, clears, bestRank, lastResult`,
+and for the 名探偵度数 (2026-09-27, all optional — no SAVE_VERSION bump):
+
+- `bestPoints` — the case's best 獲得度数; the cumulative 名探偵度数 is the sum over all cases
+  (`detectiveTotal`, src/features/rank/points.ts). `completeCase` raises it, `resetCase` keeps it,
+  `resetAll` wipes it. A completed case saved before the feature gets its `lastResult` points in
+  `sanitize` (the best run itself was not kept).
+- `gameOversAtClear` — `gameOvers` at the last clear. `gameOvers − gameOversAtClear` = the game
+  overs of the run being played (charged by the rank; normal/hard game overs wipe the run's other
+  counters, this is what remembers them). `sanitize` sets it to `gameOvers` for old completed cases.
+- `lastResult.stats.points` (the run's 獲得度数), `stats.gameOvers`, `stats.quizMisses` (now
+  scored), and `lastResult.prevBestPoints` (the case best before the run, for 「更新ならず」).
+
+See `src/state/types.ts`. The rank and points are pure and unit-tested: `src/features/rank/`
+(`rank.ts` — computeRank, PENALTY_RULES, penaltyStep for the in-play 「減点 −n」; `points.ts` —
+runPoints, DETECTIVE_LEVELS, detectiveLevel; `Badge.tsx` — DetectiveBadge / DegreeMeter /
+PenaltyTag; the result block is `src/scenes/Result/Degree.tsx`).
 
 Settings: `bgmVolume, sfxVolume, voiceBlips, muted, textSpeed (slow|normal|fast|instant),
 fontScale (100|115|130), reduceMotion (defaults to prefers-reduced-motion), pipelineMode (dev)`.
@@ -195,6 +219,8 @@ fx.speedLines(ms, { kind: 'radial' | 'horizontal', color })
 fx.glitch(element)                           // one-shot RGB-split glitch
 fx.pulse('alarm' | 'cyan' | 'formalin')      // heartbeat vignette + sound
 fx.setBackdrop('formalin' | 'alarm' | 'cyan' | 'amber' | 'violet' | 'dim' | 'truth')
+fx.penalty(points, anchor, place = 'below')  // 「減点 −n」 tag beside an element or selector, ~1 s;
+                                             // follows the anchor while up; points ≤ 0 shows nothing
 fx.reset()                                   // SceneHost calls this on scene change
 ```
 
@@ -254,6 +280,10 @@ is suspended while the tab is hidden. Tracks are 16-bar loops with a variation e
   with reload / 「続きから」 resume checks at every stage, plus a mint-token smoke of the other cases.
   `--case c02|all`, `--no-smoke`, `--smoke-only`. Screenshots in `qa/flow/`; exit 1 on page/console
   errors, failed checks, wrong scene order, broken images or horizontal overflow.
+- `node scripts/shots-score.mjs` → 名探偵度数 / 減点 visual QA on its own rules-mode dev server
+  (:5194): the result block (rank-up mid-count, at rest, a replay that did not beat the best,
+  reduced motion), the Files meter and tag points, the 遊び方 page, and every 「減点」 float in real
+  play plus the game-over tag, at 1280×800 and 390×844, into `qa/score/`. `--size pc|sp`, `--only`.
 - `?mute=1` starts muted, `?nofx=1` disables the backdrop shader.
 
 ## 8. Fonts

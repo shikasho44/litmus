@@ -3,9 +3,11 @@ import type { ComponentChildren } from 'preact';
 import type { PublicFact } from '../../shared/api';
 import { ANSWER_CLASSES } from '../../shared/constants';
 import { audio } from '../audio';
-import { route } from '../app/router';
+import { overlay, route } from '../app/router';
 import { LightsRow } from '../features/difficulty/Lights';
 import { DIFFICULTY_META } from '../features/difficulty/meta';
+import { DetectiveBadge, PenaltyTag } from '../features/rank/Badge';
+import { DETECTIVE_LEVELS, DIFFICULTY_MULTIPLIER, SPLUS_BONUS } from '../features/rank/points';
 import { replayTutorial } from '../features/tutorial/tutorial';
 import { toast } from '../ui/Toast';
 import { Button } from '../ui/Button';
@@ -164,6 +166,29 @@ function ScienceArt() {
   );
 }
 
+function DegreeArt() {
+  return (
+    <div class="howto-art howto-degree">
+      <ol class="howto-degree__list">
+        {DETECTIVE_LEVELS.map((l) => (
+          <li key={l.level} class="howto-degree__row">
+            <DetectiveBadge level={l.level} size="xs" />
+            <span class="howto-degree__name">
+              <span class="howto-degree__lv t-mono">LV.{l.level}</span>
+              {l.name}
+            </span>
+            <span class="howto-degree__min t-mono">{l.min}〜</span>
+          </li>
+        ))}
+      </ol>
+      <p class="howto-degree__pen">
+        <PenaltyTag points={3.5} />
+        <span>ミスをすると、その場で減点が見えます</span>
+      </p>
+    </div>
+  );
+}
+
 const STEPS: Step[] = [
   {
     en: 'ASK',
@@ -176,6 +201,10 @@ const STEPS: Step[] = [
           <strong>訊かれたことにしか答えません</strong>。
         </p>
         <p class="t-sm t-bone2">質問の例のチップを押すと入力欄に入ります。一度に3つまで、まとめて訊くこともできます。</p>
+        <p class="t-sm t-bone2">
+          <strong>「他殺ですか？」「事故ですか？」「犯人はいる？」のように、殺人か事故か（誰のせいか）を訊く質問には、捜査中は答えません。</strong>
+          それを決めるのは、審問の最後のあなたです。争った跡・出入りの記録・体の様子など、<strong>証拠</strong>を訊いて確かめましょう。
+        </p>
       </>
     ),
   },
@@ -199,7 +228,7 @@ const STEPS: Step[] = [
                     : c === 'irrelevant'
                       ? '死因とは関係ない。'
                       : c === 'cannot'
-                        ? '答えそのものになる問い。それは宣告で、あなたが言うこと。'
+                        ? '答えそのものになる問い（殺人か事故か・誰のせいか も含む）。それは宣告で、あなたが言うこと。'
                         : '質問があいまい。具体的に言い直そう。'}
             </span>
           </li>
@@ -277,12 +306,33 @@ const STEPS: Step[] = [
       </>
     ),
   },
+  {
+    en: 'DETECTIVE DEGREE',
+    title: '名探偵度数と称号',
+    art: () => <DegreeArt />,
+    body: (
+      <>
+        <p>
+          事件を解くと、<strong>事件スコア</strong>（100点から、囁き・撃ち損じ・泣きつき・宣告やテストのやり直し・ゲームオーバーの分を引いた点）に難易度の倍率——
+          <strong>
+            {DIFFICULTY_META.easy.jp}×{DIFFICULTY_MULTIPLIER.easy}・{DIFFICULTY_META.normal.jp}×{DIFFICULTY_MULTIPLIER.normal.toFixed(1)}・{DIFFICULTY_META.hard.jp}×{DIFFICULTY_MULTIPLIER.hard}
+          </strong>
+          ——を掛けた<strong>度数</strong>がもらえます。S+なら<strong>＋{SPLUS_BONUS}</strong>。
+        </p>
+        <p class="t-sm t-bone2">
+          事件ごとの最高記録を合計したものが<strong>名探偵度数</strong>。同じ事件を遊び直しても、最高記録を超えた分だけ増えます。度数が貯まると称号が上がります。
+        </p>
+      </>
+    ),
+  },
 ];
 
 export function HowToOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [i, setI] = useState(0);
   useEffect(() => {
-    if (open) setI(0);
+    // openOverlay('howto', { page: 'DETECTIVE DEGREE' }) opens on that step (the Files 名探偵度数 meter)
+    const page = open ? (overlay.peek()?.props as { page?: unknown } | undefined)?.page : undefined;
+    if (open) setI(Math.max(0, STEPS.findIndex((st) => st.en === page)));
   }, [open]);
   const step = STEPS[i];
   const go = (n: number) => {

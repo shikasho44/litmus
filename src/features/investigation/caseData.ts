@@ -7,6 +7,7 @@ import { useEffect, useState } from 'preact/hooks';
 import type { CasePublic } from '../../../shared/api';
 import { api } from '../../api';
 import { addFacts, getCaseProgress, resetCase, setStage, setToken, updateCase } from '../../state/save';
+import { runModeOf } from '../../state/runMode';
 import type { PreviousAttempt } from '../../state/types';
 
 const cache = new Map<string, CasePublic>();
@@ -63,6 +64,15 @@ export function useCasePublic(caseId: string | undefined) {
 const tokenInflight = new Map<string, Promise<boolean>>();
 
 /**
+ * A fresh progress token for the case: api.newToken, or — during a special run such as an
+ * online versus race (src/state/runMode.ts) — the token that run is played with.
+ */
+export function freshToken(caseId: string) {
+  const mode = runModeOf(caseId);
+  return mode?.newToken ? mode.newToken() : api.newToken(caseId);
+}
+
+/**
  * Makes sure the case has a progress token. New tokens come with the starting facts
  * (visible from the start), which are copied into the notebook. Never throws.
  */
@@ -72,7 +82,7 @@ export function ensureToken(caseId: string, pub?: CasePublic): Promise<boolean> 
   if (!p) {
     p = (async () => {
       try {
-        const [res, c] = await Promise.all([api.newToken(caseId), pub ? Promise.resolve(pub) : loadCasePublic(caseId).catch(() => undefined)]);
+        const [res, c] = await Promise.all([freshToken(caseId), pub ? Promise.resolve(pub) : loadCasePublic(caseId).catch(() => undefined)]);
         // Another tab/flow may have created one meanwhile; keep the first.
         if (getCaseProgress(caseId)?.token) return true;
         batch(() => {

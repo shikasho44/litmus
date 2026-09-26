@@ -13,6 +13,8 @@ import { Button } from '../../ui/Button';
 import { HolmaSprite } from '../../ui/HolmaSprite';
 import { ShardPortrait } from '../../ui/ShardPortrait';
 import { DIFFICULTY_META } from '../difficulty/meta';
+import { PenaltyTag } from '../rank/Badge';
+import { runModeOf } from '../../state/runMode';
 
 export const GAME_OVER_LINE = '……謎は、謎のまま。彼女は、名前を持たずに消えていきました。';
 
@@ -22,19 +24,26 @@ export function GameOverOverlay({
   revealed,
   difficulty,
   outcome,
+  penalty = 0,
   onTitle,
 }: {
   caseId: string;
   image?: string;
   revealed: number;
   difficulty: Difficulty;
-  /** null while the restart rule is being applied (a new token is fetched for normal/hard). */
-  outcome: 'inquest' | 'restart' | null;
+  /**
+   * null while the restart rule is being applied (a new token is fetched for normal/hard).
+   * 'end': a special run ends here (online versus: 脱落) — text and the way out come from its run mode.
+   */
+  outcome: 'inquest' | 'restart' | 'end' | null;
+  /** What this game over costs the case's 事件スコア when it is finally solved (0 = at the cap). */
+  penalty?: number;
   onTitle: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
   const d = DIFFICULTY_META[difficulty];
+  const ends = outcome === 'end' ? runModeOf(caseId)?.gameOver : undefined;
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -86,15 +95,29 @@ export function GameOverOverlay({
           <p class="gover__line">{GAME_OVER_LINE}</p>
           <p id="gover-desc" class="gover__desc">
             やり直しの灯が、すべて消えました。
-            {outcome === 'inquest'
-              ? `捜査の記録は残っています。次は審問の最初から——灯はまた${d.lives}つ灯ります。`
-              : outcome === 'restart'
-                ? 'この事件は、最初からやり直しになります。ほかの事件の記録は、そのまま残っています。'
-                : '記録を整えています……'}
+            {ends
+              ? ends.text
+              : outcome === 'inquest'
+                ? `捜査の記録は残っています。次は審問の最初から——灯はまた${d.lives}つ灯ります。`
+                : outcome === 'restart'
+                  ? 'この事件は、最初からやり直しになります。ほかの事件の記録は、そのまま残っています。'
+                  : '記録を整えています……'}
           </p>
-          <Button variant="primary" size={layout.value === 'narrow' ? 'md' : 'lg'} icon="back" en={layout.value === 'narrow' ? undefined : 'BACK TO TITLE'} onClick={onTitle} disabled={!outcome} data-gameover-title>
-            タイトルへ
-          </Button>
+          {penalty > 0 && !ends && (
+            <p class="gover__pen">
+              <PenaltyTag points={penalty} label="ゲームオーバー" />
+              <span>この事件を解いたときの事件スコアから引かれます。</span>
+            </p>
+          )}
+          {ends ? (
+            <Button variant="primary" size={layout.value === 'narrow' ? 'md' : 'lg'} icon="eye" en={layout.value === 'narrow' ? undefined : ends.en} onClick={ends.onExit} data-gameover-title>
+              {ends.action}
+            </Button>
+          ) : (
+            <Button variant="primary" size={layout.value === 'narrow' ? 'md' : 'lg'} icon="back" en={layout.value === 'narrow' ? undefined : 'BACK TO TITLE'} onClick={onTitle} disabled={!outcome} data-gameover-title>
+              タイトルへ
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -19,6 +19,8 @@ import { listBenchReports } from './bench-reports.js';
 const ENV_KEYS = [
   'APP_ENV', 'NODE_ENV', 'PIPELINE_MODE', 'DECISION_PROVIDER', 'LLM_PROVIDER', 'LLM_MODEL', 'JEV_MODEL',
   'DAILY_COST_LIMIT_USD', 'SESSION_SECRET', 'ADMIN_TOKEN', 'OPENROUTER_API_KEY', 'CONTENT_ROOT', 'QUESTION_CAP', 'PROJECT_ROOT',
+  // online versus room store (server/http/runtime.ts versusStoreFor)
+  'UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'KV_REST_API_URL', 'KV_REST_API_TOKEN', 'VERSUS_STORE', 'VERSUS_ENABLED', 'VERCEL',
 ];
 
 interface Cached {

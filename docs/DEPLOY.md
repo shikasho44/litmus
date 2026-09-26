@@ -49,6 +49,8 @@ npx vercel --prod               # 本番配備
 | `VITE_APP_TITLE` / `VITE_GAME_TITLE` / `VITE_SUBTITLE` / `VITE_COPYRIGHT_NOTICE` / `VITE_SITE_DESCRIPTION` | 画面と共有カードの題名・説明 | 名前を差し替えるときに使う。未設定なら「リトマス審問」 |
 | `VITE_CONTACT_URL` | お問い合わせ先 | 変えたら `public/contact.html` のリンクも直す |
 | `VITE_INCLUDE_ADMIN` | 通常は未設定 | `false` で管理画面をビルドから外す |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Upstash をつなぐと自動で入る（§1-6） | オンライン対戦の部屋の置き場所。手で入れるなら `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` でも可。無ければ対戦は出ない |
+| `VERSUS_ENABLED` | 通常は未設定 | `false` で対戦を止める |
 
 - `VITE_` で始まる変数は**ビルドのときに画面へ焼き込まれる**ので、変えたら再デプロイが要る。それ以外（キー・鍵・モード・上限）はサーバーが読むので、変えたら再デプロイ（Redeploy）で反映。
 - 秘密の値（キー・`SESSION_SECRET`・`ADMIN_TOKEN`）は `VITE_` を付けない。付けると画面に出てしまう。
@@ -71,6 +73,28 @@ npx vercel --prod               # 本番配備
 - プレビュー配備は Vercel の Deployment Protection（ログインが必要）が既定。人に試してもらうときは共有リンクを発行するか、本番に出す。
 - 判定の記録（どの質問にどう答えたか）は Vercel のログに1ターン1行で出る。個人を特定する情報は入れていない。安全フィルターに当たった質問の本文は記録しない。
 
+### 1-6. オンライン対戦を使えるようにする（Upstash Redis をつなぐ）
+
+対戦（`docs/versus.md`）は、部屋の情報を置く場所として **Upstash Redis** が要ります。つなぐまでは本番のタイトルに「対戦」は出ません（ほかの遊び方には影響なし）。
+Vercel の関数はサーバーが何台にも分かれて動き、メモリを共有しないため、メモリだけで部屋を持つことはできません。
+
+手順（Vercel の画面、5分ほど・無料）:
+1. vercel.com でプロジェクト **`janedoe`** を開く → 上のタブ **Storage**（または **Marketplace**）。
+2. **Create Database**（Marketplace では検索欄に「Upstash」）→ **Upstash for Redis** を選ぶ → **Continue**。
+3. プランは **Free**（月 50万コマンド・256MB・カード不要）。リージョンは Vercel の関数と同じ地域（例: 東京 `ap-northeast-1`）。名前は `janedoe-versus` など。→ **Create**。
+4. 「Connect Project」でプロジェクト **`janedoe`** を選び、環境は **Production と Preview** にチェック → **Connect**。
+5. **Settings → Environment Variables** に次が自動で入ったことを確かめる（値は見ない・貼らない。秘密の値です）:
+   `KV_REST_API_URL`・`KV_REST_API_TOKEN`（ほかに `KV_REST_API_READ_ONLY_TOKEN`・`KV_URL`・`REDIS_URL` が入ることもある。使うのは最初の2つだけ）。
+   Upstash の画面で作った DB を手で入れる場合は、代わりに `UPSTASH_REDIS_REST_URL`・`UPSTASH_REDIS_REST_TOKEN` でも動きます。
+6. **Deployments → 最新の配備の「…」→ Redeploy**（環境変数は再デプロイで反映）。
+7. 確かめる: `https://<URL>/api/versus/config` が `{"enabled":true,...}`。タイトルに「対戦」が出る。PC とスマホで部屋を作って入れる。
+   `{"enabled":false}` のままなら、5 の変数が Production に入っているか、`SESSION_SECRET` が設定済みか（未設定だと対戦も止まる）を見る。
+
+- 止めたいときは `VERSUS_ENABLED=false` を入れて再デプロイ（Upstash はつないだままでよい）。
+- 目安: 4人・30分の対戦1回で約5,000コマンド。無料枠で月100回ほど。超えそうなら Upstash の従量課金（10万コマンドあたり約 $0.2）に上げるか、Upstash の管理画面で上限を決める。部屋は最後の操作から3時間で自動で消える。
+- 対戦の API にもインスタンスごとのレート制限がある（作成 6回/分・IP）。本気の乱用対策は Firewall で `/api/versus/*` を絞る。
+- `SESSION_SECRET` を変えると、進行中の対戦の席とトークンも無効になる（部屋から入り直し）。
+
 ---
 
 ## 2. 静的版（fourthplace43.com/games/janedoe/ など）
@@ -84,6 +108,7 @@ npm run build:static
 - **判定は rules だけ**（外部 AI を使わない・費用 0・キー不要）。正答率は Jev 版より低い（約73%、Jev 版 約91%）。
 - **答えは守られない**: 事件データ（真相・想定質問・被害者の名前・正解の条件…）を JavaScript に同梱している。調べれば誰でも読める。オフラインのお試し版・展示用と割り切る。
 - 管理画面は入らない。進行トークンの鍵もブラウザ内の固定値。
+- **オンライン対戦は入らない**（サーバーが要るため。ビルド時に対戦のコードごと外れ、タイトルにも出ない）。
 - `dist/index.html` をダブルクリックしても動かない（ブラウザの制限）。サーバーに置くか `npm run preview` で見る。
 - 通常ビルド（`npm run build`）と同じ `dist/` を使うので、**最後にどちらのビルドをしたか**に注意（静的版を上げたいなら直前に `build:static`）。
 - どちらを「公式の公開版」にするかは未決定（`docs/decisions.md` 2026-09-25）。答えを守る必要があるので、提案は **Vercel 版を公式、静的版は体験版**。

@@ -19,6 +19,13 @@ export const DEFAULT_RATE_RULES: Record<string, RateRule[]> = {
   admin: [{ limit: 120, windowMs: MIN }],
   /** Wrong x-admin-token guesses per IP. Over the limit, even a correct token is refused (429). */
   adminFail: [{ limit: 10, windowMs: MIN }, { limit: 50, windowMs: DAY }],
+  /** Online versus (per IP — players of a collab stream may share one). */
+  vsCreate: [{ limit: 6, windowMs: MIN }, { limit: 60, windowMs: DAY }],
+  /** Joins also bound code guessing: 20 tries a minute against ~8.9e8 codes. */
+  vsJoin: [{ limit: 20, windowMs: MIN }, { limit: 300, windowMs: DAY }],
+  /** state polls: 4 tabs × 1 s in the lobby fits; the client backs off when hidden. */
+  vsPoll: [{ limit: 240, windowMs: MIN }],
+  vsWrite: [{ limit: 120, windowMs: MIN }, { limit: 5000, windowMs: DAY }],
 };
 
 export type RateResult = { ok: true } | { ok: false; retryAfterMs: number; limit: number; windowMs: number };

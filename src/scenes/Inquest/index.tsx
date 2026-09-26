@@ -67,7 +67,7 @@ export function InquestScene({ params }: SceneProps) {
   const [evSheet, setEvSheet] = useState(false);
   const [begAsk, setBegAsk] = useState(false);
   const [skipAsk, setSkipAsk] = useState(false);
-  const [gameOver, setGameOver] = useState<{ outcome: 'inquest' | 'restart' | null } | null>(null);
+  const [gameOver, setGameOver] = useState<{ outcome: 'inquest' | 'restart' | 'end' | null; penalty: number } | null>(null);
   const [filter, setFilter] = useState<FactCategory | 'all'>('all');
   const [stampKey, setStampKey] = useState(0);
   const [choosing, setChoosing] = useState<string | null>(null);
@@ -75,7 +75,7 @@ export function InquestScene({ params }: SceneProps) {
   const [reconShake, setReconShake] = useState(0);
   /** Statements stay off stage until the round card has announced the round. */
   const [bandsOn, setBandsOn] = useState(false);
-  const [susp, setSusp] = useState<{ text: string; mood: 'normal' | 'laugh' | 'surprised' | 'serious' } | null>(null);
+  const [susp, setSusp] = useState<{ text: string; mood: 'normal' | 'laugh' | 'surprised' | 'serious'; penalty: number } | null>(null);
   const cardSeq = useRef(0);
   const touchUiRef = useRef(touchUi);
   const bg = useImage(ART.inquest);
@@ -279,7 +279,7 @@ export function InquestScene({ params }: SceneProps) {
     fx.shake(1.3);
     audio.bgm('none', 1.2);
     const l = pickLine('inquest.suspended', 'serious');
-    setSusp({ text: l.text, mood: l.mood });
+    setSusp({ text: l.text, mood: l.mood, penalty: s.suspensionPenalty() });
     s.suspend();
   };
 
@@ -352,6 +352,8 @@ export function InquestScene({ params }: SceneProps) {
     cam({ scale: 1, rot: 0.6 }, 0.25, 'power2.out');
     setTimeout(() => cam({ scale: 1.02 }, 0.6), 260);
     s.quip(res.lines[0] ?? pickLine('inquest.wrongShot').text, 'holma', 'laugh');
+    // 「減点」 under the composure meter (a pip was just lost there) — clear of the bands and the quip
+    fx.penalty(res.penalty, '.iq__top .cmp', 'below');
     const c = s.composure.peek();
     if (c <= 0) {
       s.step.value = 'play';
@@ -378,6 +380,7 @@ export function InquestScene({ params }: SceneProps) {
       audio.sfx('finding');
       fx.flash('#C6FF3D', { opacity: 0.25 });
       s.quip(res.line, 'holma', 'laugh');
+      fx.penalty(res.penalty, '.iq__top [data-beg]', 'below');
       requestAnimationFrame(() => {
         const dest = narrowRef.current ? document.querySelector('[data-loaded-slot]') : document.querySelector(`.iq-mag [data-fact-id="${res.fact.id}"]`);
         void flyCard(document.querySelector('.iq__holma'), dest, factTitle(res.fact));
@@ -413,9 +416,10 @@ export function InquestScene({ params }: SceneProps) {
     audio.bgm('none', 2.4);
     audio.sfx('heartbeat');
     fx.pulse('alarm', false);
-    setGameOver({ outcome: null });
+    const penalty = s.gameOverPenalty();
+    setGameOver({ outcome: null, penalty });
     const outcome = await s.applyGameOver();
-    setGameOver({ outcome });
+    setGameOver({ outcome, penalty });
   };
 
   /*
@@ -887,6 +891,8 @@ export function InquestScene({ params }: SceneProps) {
                 audio.sfx('stamp', { answerClass: v?.result === 'correct' ? 'yes' : v?.result === 'wrong' ? 'no' : 'partial' });
                 fx.shake(v?.result === 'correct' ? 1.3 : 0.9, 0.35);
                 if (v?.result === 'correct') fx.flash('#C6FF3D', { opacity: 0.3 });
+                // the miss's cost, tucked under the stamp while it still covers the sheet
+                else if (v?.penalty) fx.penalty(v.penalty, '.iq__verdict .vsheet__stamp .vstamp', 'below');
               }}
             />
           </div>
@@ -976,6 +982,7 @@ export function InquestScene({ params }: SceneProps) {
         <SuspendedOverlay
           line={susp.text}
           mood={susp.mood}
+          penalty={susp.penalty}
           onBack={() => {
             s.leaveToInvestigation();
             audio.bgm('investigation');
@@ -991,6 +998,7 @@ export function InquestScene({ params }: SceneProps) {
           revealed={revealed}
           difficulty={s.difficulty.value}
           outcome={gameOver.outcome}
+          penalty={gameOver.penalty}
           onTitle={() => {
             audio.sfx('cancel');
             goto('title', {}, { replace: true });

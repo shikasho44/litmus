@@ -11,6 +11,9 @@ import type { PipelineComponents } from '../engine/judge-types.js';
 import type { ContentRegistry } from '../engine/registry.js';
 import { consoleJsonSink, TraceHub, TraceRing, type TraceSink } from '../engine/trace.js';
 import { RateLimiter, DEFAULT_RATE_RULES, type RateRule } from './rate-limit.js';
+import { VersusService } from '../versus/service.js';
+import { sharedMemoryStore, type RoomStore } from '../versus/store.js';
+import { UpstashRoomStore, upstashConfig } from '../versus/upstash.js';
 
 export interface BenchReportInfo {
   file: string;
@@ -30,6 +33,25 @@ export interface ApiRuntime {
   assetExists?: (publicPath: string) => boolean;
   startedAt: number;
   warnings: string[];
+  /** Online versus (docs/versus.md); undefined = disabled (see `versusInfo.reason`). */
+  versus?: VersusService;
+  versusInfo: { enabled: boolean; store?: RoomStore['kind']; reason?: string };
+}
+
+/**
+ * The room store for online versus:
+ *   Upstash Redis REST (UPSTASH_REDIS_REST_URL/_TOKEN or Vercel's KV_REST_API_URL/_TOKEN) wherever set;
+ *   else the in-process memory store on the dev server (or with VERSUS_STORE=memory on a
+ *   single long-lived process such as `vite preview`); else disabled — serverless instances do
+ *   not share memory, so production never falls back to it. VERSUS_ENABLED=false switches it off.
+ */
+export function versusStoreFor(env: EnvLike, dev: boolean): { store?: RoomStore; reason?: string } {
+  if (/^(0|false|off|no)$/i.test((env.VERSUS_ENABLED ?? '').trim())) return { reason: 'VERSUS_ENABLED is off' };
+  const up = upstashConfig(env);
+  if (up) return { store: new UpstashRoomStore(up) };
+  const wantMemory = (env.VERSUS_STORE ?? '').trim().toLowerCase() === 'memory';
+  if (dev || (wantMemory && !env.VERCEL)) return { store: sharedMemoryStore() };
+  return { reason: 'no room store configured (set UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN)' };
 }
 
 export interface RuntimeOptions {
@@ -44,6 +66,8 @@ export interface RuntimeOptions {
   /** Test hook: pre-built components instead of the env factory. */
   components?: PipelineComponents;
   componentsFor?: (mode: PipelineMode) => PipelineComponents;
+  /** Test hook: the versus room store (null = versus disabled). Default: versusStoreFor(env). */
+  roomStore?: RoomStore | null;
 }
 
 const warnedOnce = new Set<string>();
@@ -90,10 +114,18 @@ export function createRuntime(o: RuntimeOptions): ApiRuntime {
     questionCap: config.questionCap,
     clock: o.clock,
   });
+  const vs = o.roomStore !== undefined ? { store: o.roomStore ?? undefined, reason: o.roomStore ? undefined : 'disabled' } : versusStoreFor(o.env, config.dev);
+  const versus =
+    vs.store && !config.misconfigured
+      ? new VersusService({ store: vs.store, secret: config.sessionSecret, content: o.content, dev: config.dev, clock: o.clock })
+      : undefined;
+  if (!versus && config.dev && vs.reason) console.warn(`[janedoe] versus disabled: ${vs.reason}`);
   return {
     config,
     service,
     components,
+    versus,
+    versusInfo: { enabled: !!versus, store: versus?.store.kind, reason: versus ? undefined : (vs.reason ?? 'server misconfigured') },
     limiter: new RateLimiter(o.rateRules ?? DEFAULT_RATE_RULES, o.clock),
     traces,
     budget,

@@ -9,6 +9,13 @@ import type { BackdropTone } from '../fx/backdrop';
 import type { SceneName, SceneProps } from './router';
 import { TitleScene } from '../scenes/Title';
 
+declare const __JANEDOE_EMBEDDED__: boolean | undefined;
+/**
+ * Online versus needs the server (room store): compiled out of the static build, where the
+ * scene name falls back to the title (a stale #/versus link lands there).
+ */
+const VERSUS_BUILD = typeof __JANEDOE_EMBEDDED__ !== 'undefined' ? !__JANEDOE_EMBEDDED__ : true;
+
 export interface SceneDef {
   label: string;
   load: () => Promise<ComponentType<SceneProps>>;
@@ -28,4 +35,7 @@ export const SCENES: Record<SceneName, SceneDef> = {
   science: { label: '科学解剖', load: () => import('../scenes/Science').then((m) => m.ScienceScene), bgm: 'science', backdrop: 'cyan' },
   quiz: { label: '記憶の定着', load: () => import('../scenes/Quiz').then((m) => m.QuizScene), bgm: 'science', backdrop: 'cyan' },
   result: { label: 'CASE COMPLETE', load: () => import('../scenes/Result').then((m) => m.ResultScene), bgm: 'truth', backdrop: 'formalin' },
+  versus: VERSUS_BUILD
+    ? { label: '対戦', load: () => import('../scenes/Versus').then((m) => m.VersusScene), bgm: 'inquest', backdrop: 'alarm' }
+    : { label: 'タイトル', load: async () => TitleScene, bgm: 'title', backdrop: 'formalin' },
 };

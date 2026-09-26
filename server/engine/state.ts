@@ -28,6 +28,11 @@ export interface GameState {
    * confirmation is not a new nearCore moment, so Holma does not react to it again.
    */
   coreSeen: string[];
+  /**
+   * Online versus: the room this run is bound to (server/engine/room-binding.ts). Set only on
+   * run tokens the versus service issues; every state update keeps it. Absent = ordinary run.
+   */
+  room?: string;
   /** Epoch ms when the token was issued. */
   issuedAt: number;
 }

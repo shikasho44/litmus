@@ -11,6 +11,7 @@
 import type { Difficulty, VerdictMode } from '../../../shared/api';
 import { LIVES_BY_DIFFICULTY, VERDICT_MODE_BY_DIFFICULTY } from '../../../shared/api';
 import type { CaseProgress } from '../../state/types';
+import { runModeOf } from '../../state/runMode';
 
 export interface DifficultyMeta {
   id: Difficulty;
@@ -78,6 +79,8 @@ export const ASSIST_TEXT: Record<VerdictMode, string> = {
 /** The difficulty can change only until the inquest has opened (and never after the solve). */
 export function canChangeDifficulty(p: CaseProgress | undefined): boolean {
   if (!p) return true;
+  // a versus race plays on the room's difficulty (src/state/runMode.ts)
+  if (runModeOf(p.caseId)?.lockDifficulty) return false;
   if (p.inquest || p.snapshot?.solved) return false;
   return p.stage === 'new' || p.stage === 'intro' || p.stage === 'investigation' || p.stage === 'complete';
 }

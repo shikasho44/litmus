@@ -63,6 +63,25 @@ async function waitFonts() {
   }
 }
 
+declare const __JANEDOE_EMBEDDED__: boolean | undefined;
+
+/**
+ * Online versus (http build only — compiled out of the static build): a tab that is in a
+ * versus room loads that module before the first render, so a reload in the middle of a race
+ * puts the race back in its save slot before any case scene reads the save.
+ */
+function versusBoot(): Promise<unknown> {
+  if (typeof __JANEDOE_EMBEDDED__ !== 'undefined' && __JANEDOE_EMBEDDED__) return Promise.resolve();
+  let inRoom = false;
+  try {
+    inRoom = !!sessionStorage.getItem('janedoe:vs:session');
+  } catch {
+    /* no sessionStorage: no room to resume */
+  }
+  if (!inRoom) return Promise.resolve();
+  return import('./features/versus/boot').then((m) => m.bootVersus()).catch(() => undefined);
+}
+
 const idle = (fn: () => void) =>
   typeof window.requestIdleCallback === 'function' ? void window.requestIdleCallback(() => fn(), { timeout: 1500 }) : void setTimeout(fn, 300);
 
@@ -94,7 +113,7 @@ function boot() {
   applyDocumentMeta();
   if (DEBUG) installDebug();
   const root = document.getElementById('app')!;
-  const rendered = waitFonts().then(() => {
+  const rendered = Promise.all([waitFonts(), versusBoot()]).then(() => {
     render(<App />, root);
     requestAnimationFrame(() => document.documentElement.classList.add('app-ready'));
   });

@@ -9,11 +9,12 @@
  *                                              hardware/browser back button closes them
  *
  * URL form: #/<scene>/<caseId>?k=v  (hash routing works from any sub-folder).
+ * 'versus' is the online versus lobby (http build only; the static build maps it to the title).
  */
 import { signal } from '@preact/signals';
 import type { ComponentChildren } from 'preact';
 
-export const SCENE_NAMES = ['title', 'prologue', 'files', 'intro', 'investigation', 'inquest', 'resolution', 'science', 'quiz', 'result'] as const;
+export const SCENE_NAMES = ['title', 'prologue', 'files', 'intro', 'investigation', 'inquest', 'resolution', 'science', 'quiz', 'result', 'versus'] as const;
 export type SceneName = (typeof SCENE_NAMES)[number];
 
 export type SceneParams = { caseId?: string } & Record<string, string | undefined>;

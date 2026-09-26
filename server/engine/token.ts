@@ -12,10 +12,13 @@
  *   rm misses per debate round      r  cleared debate rounds
  *   f  flags bitmask: 1 solved · 2 reconstructed · 4 nearCore
  *   k  spoilerLevel-4 fact ids already confirmed (optional; omitted when empty)
+ *   vs online versus room binding (optional; only on run tokens the versus service issues —
+ *      server/engine/room-binding.ts). Tokens without it are ordinary runs, as before.
  *   t  issuedAt (epoch seconds)
  */
 import { ApiError } from '../../shared/api.js';
 import type { GameState } from './state.js';
+import { isRoomBinding } from './room-binding.js';
 import { hmacSha256 } from './sha256.js';
 
 export const TOKEN_VERSION = 1;
@@ -35,6 +38,7 @@ interface Payload {
   r: string[];
   f: number;
   k?: string[];
+  vs?: string;
   t: number;
 }
 
@@ -100,6 +104,7 @@ function toPayload(s: GameState): Payload {
     t: Math.floor(s.issuedAt / 1000),
   };
   if (s.coreSeen && s.coreSeen.length > 0) p.k = s.coreSeen;
+  if (s.room) p.vs = s.room;
   return p;
 }
 
@@ -114,6 +119,7 @@ function fromPayload(p: unknown): GameState {
   if (!Array.isArray(o.n) || o.n.length !== 5 || !o.n.every(isCount)) throw new Error('counters');
   if (!isCount(o.f)) throw new Error('flags');
   if (typeof o.t !== 'number' || !Number.isInteger(o.t) || o.t < 0 || o.t > 1e11) throw new Error('time');
+  if (o.vs !== undefined && !isRoomBinding(o.vs)) throw new Error('room');
   const rm: Record<string, number> = {};
   if (o.rm && typeof o.rm === 'object') {
     for (const [k, v] of Object.entries(o.rm)) if (isCount(v) && k.length <= 64) rm[k] = v;
@@ -133,6 +139,7 @@ function fromPayload(p: unknown): GameState {
     reconstructed: (o.f & 2) !== 0,
     nearCore: (o.f & 4) !== 0,
     coreSeen: isStrArr(o.k) ? o.k : [],
+    ...(o.vs !== undefined ? { room: o.vs } : {}),
     issuedAt: o.t * 1000,
   };
 }

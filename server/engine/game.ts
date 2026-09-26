@@ -21,7 +21,9 @@ import { MAX_QUESTION_CHARS, normalize, softNormalize } from './normalize.js';
 import { callModel, REDACTED, runAsk, STAGE_TIMEOUT_MS, TURN_DEADLINE_MS } from './pipeline.js';
 import { detectSafety, safetyLine } from './safety.js';
 import { memoIdForFact, initialState, sanitizeState, snapshot, type GameState } from './state.js';
+import { roomDifficulty } from './room-binding.js';
 import { signToken, verifyToken } from './token.js';
+import { VERDICT_MODE_BY_DIFFICULTY } from '../../shared/api.js';
 import { optionOrder, parseSegments, publicFact, reconstructionView, roundViews, solutionView, toPublic, toSummary, verdictSetupView } from './public-view.js';
 import { evaluateVerdict } from './verdict.js';
 import { judgeChoice, judgeCloze, parseVerdictMode, type PickVerdict } from './verdict-modes.js';
@@ -101,6 +103,17 @@ export class GameService {
 
   private async issue(c: LoadedCase, s: GameState): Promise<{ token: ProgressToken; progress: ProgressSnapshot }> {
     return { token: await signToken(s, this.opts.secret, this.clock()), progress: snapshot(c.data, s) };
+  }
+
+  /**
+   * Online versus: a run bound to a room declares its verdict in the room difficulty's format
+   * (a case without verdictModes falls back to free text for everyone, as the UI does).
+   */
+  private checkRoomMode(c: LoadedCase, s: GameState, mode: VerdictMode): void {
+    const d = roomDifficulty(s.room);
+    if (!d) return;
+    const want: VerdictMode = c.data.verdictModes ? VERDICT_MODE_BY_DIFFICULTY[d] : 'free';
+    if (mode !== want) throw badRequest(`this room-bound run declares its verdict as ${want}`);
   }
 
   /* ---------------------------------------------------------------- */
@@ -189,7 +202,9 @@ export class GameService {
       result: outcome.answers.map((a) => a.answerClass),
       trace: outcome.trace,
     });
-    const issued = await this.issue(c, outcome.state);
+    // A versus run stays bound to its room whatever the pipeline returns.
+    const next = outcome.state.room === state.room ? outcome.state : { ...outcome.state, room: state.room };
+    const issued = await this.issue(c, next);
     const res: AskResponse = { answers: outcome.answers, ...issued };
     if (o?.withTrace) res.trace = outcome.trace;
     return res;
@@ -284,6 +299,7 @@ export class GameService {
     const c = await this.loaded(req?.caseId, o);
     const s = await this.state(c, req.token);
     const mode = parseVerdictMode(req.mode);
+    this.checkRoomMode(c, s, c.data.verdictModes ? mode : 'free');
     return verdictSetupView(c.data, s.cleared, mode);
   }
 
@@ -291,6 +307,7 @@ export class GameService {
     const c = await this.loaded(req?.caseId, o);
     const s = await this.state(c, req.token);
     const mode = parseVerdictMode(req.mode, 'free');
+    this.checkRoomMode(c, s, mode);
     if (mode !== 'free') return this.pickVerdict(c, s, mode, req, o);
     if (typeof req.text !== 'string' || req.text.trim().length === 0) throw badRequest('text is required');
     const text = req.text.trim();

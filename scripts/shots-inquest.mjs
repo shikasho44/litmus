@@ -43,6 +43,7 @@ const INCOMPLETE = {
   c01: '酸欠で亡くなったのだと思う。夜なので部屋の換気が止まっていた。',
   c02: 'ボールが胸に当たって、心室細動が起きた。',
   c03: '寒さで体が冷えて亡くなった。',
+  c04: 'トリカブトの毒で亡くなった。',
 };
 const SIZES = {
   pc: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },

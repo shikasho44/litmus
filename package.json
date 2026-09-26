@@ -15,7 +15,8 @@
     "validate": "tsx scripts/validate-cases.ts",
     "bench": "tsx scripts/bench.ts",
     "qa": "node scripts/qa.mjs",
-    "qa:mobile": "node scripts/qa.mjs --mobile"
+    "qa:mobile": "node scripts/qa.mjs --mobile",
+    "qa:versus": "node scripts/qa-versus.mjs"
   },
   "dependencies": {
     "@fontsource/anton": "^5.3.0",

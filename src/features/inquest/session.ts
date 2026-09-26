@@ -16,6 +16,9 @@
  * Lives (Jane's lights, LIVES_BY_DIFFICULTY) drop by one per non-correct verdict; at 0 the
  * difficulty's game-over rule is written to the save (applyGameOver).
  *
+ * Every costly event reports what it adds to the 事件スコア (`penalty`, rank.ts penaltyStep for
+ * this case's difficulty) so the scene can flash 「減点 −n」 beside the control.
+ *
  * Components read the signals; the scene drives the timed sequences (cut-ins, lines).
  */
 import { batch, computed, signal } from '@preact/signals';
@@ -35,8 +38,12 @@ import type {
 import { ApiError, LIVES_BY_DIFFICULTY, VERDICT_MODE_BY_DIFFICULTY } from '../../../shared/api';
 import { api } from '../../api';
 import type { Speaker } from '../../audio';
-import { ensureToken, restartCaseAfterBadToken } from '../investigation/caseData';
+import { ensureToken, freshToken, restartCaseAfterBadToken } from '../investigation/caseData';
+import { runModeOf } from '../../state/runMode';
+import { caseList } from '../../lib/cases';
 import { pickLine } from '../../lib/lines';
+import { penaltyStep } from '../rank/rank';
+import { runGameOvers } from '../rank/stats';
 import { addFacts, caseDifficulty, getCaseProgress, resetCase, setInquest, setStage, setToken, updateCase } from '../../state/save';
 import type { InquestPhase, InquestState } from '../../state/types';
 import { parseCloze } from './cloze';
@@ -86,6 +93,8 @@ export interface VerdictView {
   mode?: VerdictMode;
   /** This miss put out Jane's last light. */
   gameOver?: boolean;
+  /** What this miss costs the 事件スコア (0 for a correct verdict or at a cap). */
+  penalty?: number;
 }
 
 export { parseCloze, type ClozePart } from './cloze';
@@ -262,6 +271,21 @@ export class InquestSession {
     return getCaseProgress(this.caseId)?.token;
   }
 
+  /** The case's own difficulty 1..3 (the rank's penalty sizes follow it). */
+  private caseLevel(): number {
+    return this.info.peek()?.difficulty ?? caseList.peek()?.find((c) => c.id === this.caseId)?.difficulty ?? 2;
+  }
+
+  /** What the game over about to be written costs (the run's counters restart on 審問官 / 教授, the game over stays). */
+  gameOverPenalty(): number {
+    return penaltyStep('gameOvers', runGameOvers(getCaseProgress(this.caseId)), this.caseLevel());
+  }
+
+  /** What one more suspension costs. */
+  suspensionPenalty(): number {
+    return penaltyStep('suspensions', this.suspensions.peek(), this.caseLevel());
+  }
+
   private apply(res: { token: string; progress: ProgressSnapshot }) {
     if (this.retired) return;
     setToken(this.caseId, res.token, res.progress);
@@ -326,7 +350,7 @@ export class InquestSession {
     try {
       const [info, token] = await Promise.all([
         api.getCase(this.caseId).catch(() => null),
-        this.token() ? Promise.resolve(this.token()!) : api.newToken(this.caseId).then((r) => (this.apply(r), r.token)),
+        this.token() ? Promise.resolve(this.token()!) : freshToken(this.caseId).then((r) => (this.apply(r), r.token)),
       ]);
       if (this.disposed) return;
       this.info.value = info;
@@ -463,12 +487,14 @@ export class InquestSession {
   }
 
   /** Fire the loaded evidence at the locked noise. Returns null on transport failure. */
-  async shoot(): Promise<{ correct: boolean; lines: string[]; speaker?: 'jane' | 'holma'; hint?: string } | null> {
+  async shoot(): Promise<{ correct: boolean; lines: string[]; speaker?: 'jane' | 'holma'; hint?: string; penalty: number } | null> {
     const round = this.round.peek();
     const t = this.target.peek();
     const f = this.selected.peek();
     const token = this.token();
     if (!round || !t || !f || !token) return null;
+    // the rank reads the server's miss count (ProgressSnapshot.debateMisses)
+    const missesBefore = this.progress.peek()?.debateMisses ?? this.misses.peek();
     try {
       const res = await api.shot({ caseId: this.caseId, token, roundId: round.id, statementId: t.statementId, span: t.text, factId: f });
       if (this.disposed) return null;
@@ -483,7 +509,8 @@ export class InquestSession {
         });
       }
       this.persist();
-      return { correct: res.correct, lines: res.lines, speaker: res.speaker, hint: res.hint };
+      const penalty = res.correct ? 0 : penaltyStep('misses', missesBefore, this.caseLevel());
+      return { correct: res.correct, lines: res.lines, speaker: res.speaker, hint: res.hint, penalty };
     } catch (e) {
       const { msg } = this.fail(e, '反証');
       this.quip(msg, 'warn');
@@ -491,12 +518,13 @@ export class InquestSession {
     }
   }
 
-  /** 「ホルマに泣きつく」. Returns the granted fact and whether it was new. */
-  async beg(): Promise<{ fact: PublicFact; isNew: boolean; line: string } | null> {
+  /** 「ホルマに泣きつく」. Returns the granted fact, whether it was new (only a new one is charged) and its cost. */
+  async beg(): Promise<{ fact: PublicFact; isNew: boolean; line: string; penalty: number } | null> {
     const round = this.round.peek();
     const token = this.token();
     if (!round || !token || this.busy.peek()) return null;
     this.busy.value = true;
+    const grantsBefore = this.grants.peek();
     try {
       const res = await api.grant({ caseId: this.caseId, token, roundId: round.id });
       if (this.disposed) return null;
@@ -515,7 +543,7 @@ export class InquestSession {
       });
       if (isNew) addFacts(this.caseId, [fact]);
       this.persist();
-      return { fact, isNew, line: res.lines[0] ?? '' };
+      return { fact, isNew, line: res.lines[0] ?? '', penalty: isNew ? penaltyStep('grants', grantsBefore, this.caseLevel()) : 0 };
     } catch (e) {
       this.quip(this.fail(e, '所見の受け取り').msg, 'warn');
       return null;
@@ -720,6 +748,12 @@ export class InquestSession {
       const required = strList((res as { required?: unknown }).required);
       const miss = res.result !== 'correct';
       const lives = miss ? Math.max(0, this.lives.peek() - 1) : this.lives.peek();
+      const gameOver = miss && lives <= 0;
+      // A miss is one more retry (attempts before it were all misses). The miss that ends the run
+      // costs a game over; on 審問官 / 教授 the run's retries are wiped with it, so only that stays.
+      const level = this.caseLevel();
+      const retry = miss ? penaltyStep('verdict', before, level) : 0;
+      const penalty = !gameOver ? retry : this.gameOverPenalty() + (this.difficulty.peek() === 'easy' ? retry : 0);
       const view: VerdictView = {
         result: res.result,
         matched: res.matched ?? [],
@@ -729,7 +763,8 @@ export class InquestSession {
         text,
         mode,
         ...(required.length ? { required } : {}),
-        ...(miss && lives <= 0 ? { gameOver: true } : {}),
+        ...(gameOver ? { gameOver: true } : {}),
+        ...(penalty > 0 ? { penalty } : {}),
       };
       batch(() => {
         this.verdictAttempts.value = Math.max(this.verdictAttempts.peek() + 1, res.progress.verdictAttempts);
@@ -760,8 +795,10 @@ export class InquestSession {
    *   normal/hard  → this case starts over from the beginning (resetCase keeps best rank, clears,
    *                  the restored name and the difficulty) with a new token. Other cases are
    *                  never touched.
+   *   a special run whose game over ends it (online versus: 脱落, src/state/runMode.ts) → 'end':
+   *                  nothing restarts, the run stays where it fell.
    */
-  async applyGameOver(): Promise<'inquest' | 'restart'> {
+  async applyGameOver(): Promise<'inquest' | 'restart' | 'end'> {
     const d = this.difficulty.peek();
     batch(() => {
       this.phase.value = 'gameover';
@@ -773,6 +810,10 @@ export class InquestSession {
     clearTimeout(this.draftTimer);
     this.draftTimer = undefined;
     const gameOvers = (getCaseProgress(this.caseId)?.gameOvers ?? 0) + 1;
+    if (runModeOf(this.caseId)?.gameOver) {
+      updateCase(this.caseId, (c) => ({ ...c, stage: 'inquest', gameOvers, inquest: c.inquest ? { ...c.inquest, lives: 0 } : c.inquest }));
+      return 'end';
+    }
     if (d === 'easy') {
       const cur = getCaseProgress(this.caseId)?.inquest;
       updateCase(this.caseId, (c) => ({

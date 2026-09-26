@@ -31,7 +31,7 @@ const BASE = `http://127.0.0.1:${PORT}/`;
 const out = resolve(root, 'qa', 'ending');
 mkdirSync(out, { recursive: true });
 
-const CASES = ['c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow'].filter((c) => !CASE || c.startsWith(CASE));
+const CASES = ['c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper'].filter((c) => !CASE || c.startsWith(CASE));
 const SIZES = [
   { tag: 'pc', viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },
   { tag: 'sp', viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },

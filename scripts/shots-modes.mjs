@@ -545,6 +545,7 @@ async function runSize(browser, size) {
         clears: 1,
         difficulty: 'hard',
         bestRank: 'S+',
+        bestPoints: 150,
         lastResult: {
           rank: 'S+',
           title: '完全無欠の審問官',

@@ -60,3 +60,41 @@
   mix-blend-mode: multiply;
   opacity: 0.55;
 }
+
+/* 「減点 −n」 (fx.penalty): a small torn tag in alarm ink beside its control (placed and kept on
+   screen by fx._penaltyPos every frame). Above the stamps, under the flash. Sized in rem so it
+   follows the font-size setting. */
+.fx-pens {
+  position: absolute;
+  inset: 0;
+}
+.fx-pen {
+  position: absolute;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 1px 9px 2px 7px;
+  white-space: nowrap;
+  background: var(--ink);
+  border: 1.5px solid var(--alarm);
+  border-left-width: 4px;
+  box-shadow: 3px 3px 0 var(--alarm-deep), 0 0 18px var(--alarm-glow);
+  left: 0;
+  top: 0;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+}
+.fx-pen__k {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.12em;
+  color: var(--bone);
+}
+.fx-pen__n {
+  font-family: var(--font-en);
+  font-size: 1.15rem;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  color: var(--alarm);
+}

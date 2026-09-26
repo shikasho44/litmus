@@ -5,7 +5,8 @@
  *
  * Under the seal Holma names what cost the rank (rankAdvice: the 1–2 penalties whose removal
  * would have given S, or the next rank up) and how S is earned; on a replay the change against
- * the previous best rank is shown.
+ * the previous best rank is shown. Below it, the 名探偵度数 block (Degree.tsx): what the run
+ * earned, the cumulative degree counting up, its badge and the way to the next one.
  *
  * Buttons: 次の事件へ (big CTA under the stats) / 事件ファイルへ / 同じ事件をもう一度 (confirm → fresh
  * run) / 共有 (Web Share, clipboard fallback; spoiler-free text).
@@ -17,7 +18,7 @@ import { openCase } from '../../app/flow';
 import { goto, type SceneProps } from '../../app/router';
 import { audio } from '../../audio';
 import { APP_CONFIG } from '../../config/app';
-import { buildCaseResult, computeRank, questionPar, rankAdvice, RANK_LABEL, RANK_TITLES, S_CONDITION, S_PLUS_CONDITION, type RankInput } from '../../features/rank';
+import { buildCaseResult, computeRank, detectiveLevel, detectiveTotal, questionPar, rankAdvice, RANK_LABEL, RANK_TITLES, resultPoints, S_CONDITION, S_PLUS_CONDITION, type RankInput } from '../../features/rank';
 import { DifficultyBadge } from '../../features/difficulty/Badge';
 import { DIFFICULTY_META } from '../../features/difficulty/meta';
 import { fx } from '../../fx';
@@ -34,6 +35,7 @@ import type { IconName } from '../../ui/icons';
 import { Modal } from '../../ui/Modal';
 import { toast } from '../../ui/Toast';
 import { caseNumber, pad2 } from '../Resolution/solution';
+import { DegreeBlock } from './Degree';
 import './result.css';
 
 const RANK_COLOR: Record<Rank, string> = { 'S+': 'var(--formalin)', S: 'var(--formalin)', A: 'var(--cyan)', B: 'var(--amber)', C: 'var(--bone-2)' };
@@ -98,6 +100,8 @@ function rankInputFrom(r: CaseResult, estimatedMinutes?: number): RankInput {
     grants: s.grants ?? 0,
     verdictAttempts: s.verdictAttempts ?? 1,
     suspensions: s.suspensions ?? 0,
+    gameOvers: s.gameOvers ?? 0,
+    quizMisses: s.quizMisses ?? 0,
     elapsedMs: r.elapsedMs ?? 0,
     debateRounds: s.debateRounds ?? 0,
     debateCleared: s.debateCleared ?? 0,
@@ -125,6 +129,8 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
   const canShare = typeof navigator !== 'undefined' && (typeof navigator.share === 'function' || !!navigator.clipboard);
   const keyRate = s.answered ? Math.round(((s.keyQuestions ?? 0) / s.answered) * 100) : null;
   const par = questionPar(input.difficulty);
+  const degree = detectiveTotal(saveData.value.cases);
+  const bestPoints = saveData.value.cases[caseId]?.bestPoints;
 
   // rank reveal
   useLayoutEffect(() => {
@@ -145,7 +151,8 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
 
   const share = async () => {
     const hashtag = `#${APP_CONFIG.GAME_TITLE.replace(/[\s・]/g, '')}`;
-    const text = `CASE ${pad2(num)}${summary?.title ? `『${summary.title}』` : ''}を難易度「${DIFFICULTY_META[level].jp}」・ランク${rank}で解決。${hashtag}`;
+    const dl = detectiveLevel(degree);
+    const text = `CASE ${pad2(num)}${summary?.title ? `『${summary.title}』` : ''}を難易度「${DIFFICULTY_META[level].jp}」・ランク${rank}で解決。名探偵度数 ${degree}${dl.level > 0 ? `（${dl.name}）` : ''}。${hashtag}`;
     const url = location.href.split('#')[0].replace(/[?&]debug=1/, '');
     try {
       if (typeof navigator.share === 'function') {
@@ -163,6 +170,7 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
   // value = number in the display face (+ a small unit in the body face only where it reads well: 問 / %).
   // Counts stay bare: 回 set next to a big number, at any weight, reads as a missing-glyph box.
   const verdicts = s.verdictAttempts ?? 1;
+  const gameOvers = s.gameOvers ?? 0;
   const quizMiss = s.quizMisses ?? 0;
   const rounds = s.debateRounds ?? 0;
   const roundsCleared = s.debateCleared ?? 0;
@@ -174,7 +182,14 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
       ? { icon: 'shard', label: 'ノイズ・ブレイク', num: `${roundsCleared}/${rounds}`, sub: `撃ち損じ ${s.debateMisses ?? 0}${roundsCleared < rounds ? '・飛ばしたラウンドあり' : ''}`, tone: roundsCleared >= rounds && (s.debateMisses ?? 0) === 0 ? 'good' : undefined }
       : { icon: 'shard', label: '撃ち損じ', num: `${s.debateMisses ?? 0}`, sub: 'ノイズ・ブレイク', tone: (s.debateMisses ?? 0) === 0 ? 'good' : undefined },
     { icon: 'help', label: '泣きつき', num: `${s.grants ?? 0}`, sub: '所見を借りた回数', tone: (s.grants ?? 0) === 0 ? 'good' : 'warn' },
-    { icon: 'gavel', label: '死因宣告', num: `${verdicts}`, sub: verdicts <= 1 ? '一度で通った' : `${verdicts}度目で通った`, tone: verdicts <= 1 ? 'good' : undefined },
+    {
+      icon: 'gavel',
+      label: '死因宣告',
+      num: `${verdicts}`,
+      // a game over of this run rides on the verdict tile (a ninth tile would leave the grid ragged)
+      sub: `${verdicts <= 1 ? '一度で通った' : `${verdicts}度目で通った`}${gameOvers > 0 ? `・ゲームオーバー${gameOvers}回` : ''}`,
+      tone: gameOvers > 0 ? 'warn' : verdicts <= 1 ? 'good' : undefined,
+    },
     { icon: 'time', label: '所要時間', num: formatElapsed(result.elapsedMs ?? 0) },
     { icon: 'check', label: '記憶の定着', num: `${quizMiss}`, sub: quizMiss === 0 ? '一度で全問正解' : 'やり直した回数', tone: quizMiss === 0 ? 'good' : undefined },
   ];
@@ -219,62 +234,65 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
           </header>
 
           <div class="rs-main">
-            <div class="rs-rank">
-              <div class={`rs-rank__seal ${revealed ? 'is-in' : ''}`} ref={rankRef} style={fresh && !motionReduced() ? { opacity: 0 } : undefined} role="img" aria-label={`審問官ランク ${rank}`}>
-                <span class="rs-rank__ring" aria-hidden="true" />
-                <span class={`rs-rank__letter ${rank === 'S+' ? 'is-plus' : ''}`} aria-hidden="true">
-                  {rank === 'S+' ? (
-                    <>
-                      S<sup>+</sup>
-                    </>
-                  ) : (
-                    rank
-                  )}
-                </span>
-                <span class="rs-rank__en t-mono" aria-hidden="true">
-                  RANK · {RANK_LABEL[rank].en}
-                </span>
-              </div>
-              <div class="rs-rank__text">
-                <p class="rs-rank__label">
-                  審問官ランク <strong>{rank}</strong> ／ {RANK_LABEL[rank].jp}
-                </p>
-                <p class="rs-rank__title">「{result.title}」</p>
-                <div class="rs-rank__holma">
-                  <div class="rs-rank__face" aria-hidden="true">
-                    <HolmaSprite mood={isTop(rank) || rank === 'A' ? 'laugh' : 'normal'} framing="bust" />
-                  </div>
-                  <p>
-                    <span class="rs-rank__name">ホルマ</span>
-                    {title?.comment ?? detail.comment}
-                    {advice && <span class="rs-rank__advice">{advice.line}</span>}
-                  </p>
-                </div>
-                <p class="rs-rank__cond">
-                  <span class="rs-rank__cond-k t-mono">RANK S</span>
-                  {S_CONDITION}
-                </p>
-                <p class="rs-rank__cond">
-                  <span class="rs-rank__cond-k t-mono">RANK S+</span>
-                  {S_PLUS_CONDITION}
-                </p>
-                {best && (
-                  <p class={`rs-rank__best t-mono ${improved ? 'is-up' : ''}`}>
-                    BEST RANK
-                    {improved && prev ? (
+            <div class="rs-left">
+              <div class="rs-rank">
+                <div class={`rs-rank__seal ${revealed ? 'is-in' : ''}`} ref={rankRef} style={fresh && !motionReduced() ? { opacity: 0 } : undefined} role="img" aria-label={`審問官ランク ${rank}`}>
+                  <span class="rs-rank__ring" aria-hidden="true" />
+                  <span class={`rs-rank__letter ${rank === 'S+' ? 'is-plus' : ''}`} aria-hidden="true">
+                    {rank === 'S+' ? (
                       <>
-                        <s class="rs-rank__prev">{prev}</s>
-                        <span aria-hidden="true">→</span>
-                        <strong>{rank}</strong>
-                        <em>記録更新</em>
+                        S<sup>+</sup>
                       </>
                     ) : (
-                      <strong>{best}</strong>
+                      rank
                     )}
-                    {bestNote}
+                  </span>
+                  <span class="rs-rank__en t-mono" aria-hidden="true">
+                    RANK · {RANK_LABEL[rank].en}
+                  </span>
+                </div>
+                <div class="rs-rank__text">
+                  <p class="rs-rank__label">
+                    審問官ランク <strong>{rank}</strong> ／ {RANK_LABEL[rank].jp}
                   </p>
-                )}
+                  <p class="rs-rank__title">「{result.title}」</p>
+                  <div class="rs-rank__holma">
+                    <div class="rs-rank__face" aria-hidden="true">
+                      <HolmaSprite mood={isTop(rank) || rank === 'A' ? 'laugh' : 'normal'} framing="bust" />
+                    </div>
+                    <p>
+                      <span class="rs-rank__name">ホルマ</span>
+                      {title?.comment ?? detail.comment}
+                      {advice && <span class="rs-rank__advice">{advice.line}</span>}
+                    </p>
+                  </div>
+                  <p class="rs-rank__cond">
+                    <span class="rs-rank__cond-k t-mono">RANK S</span>
+                    {S_CONDITION}
+                  </p>
+                  <p class="rs-rank__cond">
+                    <span class="rs-rank__cond-k t-mono">RANK S+</span>
+                    {S_PLUS_CONDITION}
+                  </p>
+                  {best && (
+                    <p class={`rs-rank__best t-mono ${improved ? 'is-up' : ''}`}>
+                      BEST RANK
+                      {improved && prev ? (
+                        <>
+                          <s class="rs-rank__prev">{prev}</s>
+                          <span aria-hidden="true">→</span>
+                          <strong>{rank}</strong>
+                          <em>記録更新</em>
+                        </>
+                      ) : (
+                        <strong>{best}</strong>
+                      )}
+                      {bestNote}
+                    </p>
+                  )}
+                </div>
               </div>
+              <DegreeBlock result={result} total={degree} fresh={fresh} revealed={revealed} />
             </div>
 
             <div class="rs-side">
@@ -356,7 +374,7 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
         <p class="rs-confirm">
           この事件の進行（質問の記録・所見・審問）をリセットして、最初から捜査します。難易度は、このあと選び直せます。
           <br />
-          最高ランク（{best ?? rank}）と解決回数は残ります。
+          最高ランク（{best ?? rank}）・この事件の最高度数（+{bestPoints ?? resultPoints(result).total}）と解決回数は残ります。
         </p>
       </Modal>
     </section>

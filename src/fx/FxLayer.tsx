@@ -5,7 +5,7 @@ import { CutIn } from '../ui/CutIn';
 import { SpeedLines } from '../ui/GlitchText';
 import { Stamp } from '../ui/Stamp';
 import { Backdrop } from './backdrop';
-import { cutInQueue, fx, fxAnnounce, fxRefs, speedLinesOn, stampQueue, type StampRequest } from './index';
+import { cutInQueue, fx, fxAnnounce, fxRefs, penaltyAnnounce, penaltyQueue, speedLinesOn, stampQueue, type PenaltyRequest, type StampRequest } from './index';
 import { motionReduced, reduceMotion } from './motion';
 import { ShatterCanvas } from './shatter';
 import './fx.css';
@@ -44,7 +44,46 @@ function StampFx({ req }: { req: StampRequest }) {
   );
 }
 
-/** Overlay for flashes, stamps, cut-ins, speed lines and the shatter canvas. Mount once. */
+/**
+ * 「減点 −n」 — pops in beside its anchor, holds, drifts off (≈ 1 s; a fade with reduced motion).
+ * Its box follows the anchor every frame (left/top); GSAP only nudges it by a few px (transform).
+ */
+function PenaltyFx({ req }: { req: PenaltyRequest }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    let raf = 0;
+    const follow = () => {
+      const p = fx._penaltyPos(req, w, h);
+      el.style.left = `${p.left}px`;
+      el.style.top = `${p.top}px`;
+      raf = requestAnimationFrame(follow);
+    };
+    follow();
+    const tl = gsap.timeline({ onComplete: () => fx._penaltyDone(req.id) });
+    if (motionReduced()) {
+      tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.12 }).to(el, { opacity: 0, duration: 0.3 }, 0.95);
+    } else {
+      tl.fromTo(el, { y: 8, scale: 0.7, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.2, ease: 'back.out(2.4)' })
+        .to(el, { y: -16, opacity: 0, duration: 0.36, ease: 'power2.in' }, 0.78);
+    }
+    return () => {
+      cancelAnimationFrame(raf);
+      tl.kill();
+    };
+  }, []);
+  return (
+    <div ref={ref} class="fx-pen" data-place={req.place}>
+      <span class="fx-pen__k">減点</span>
+      <span class="fx-pen__n">{req.text}</span>
+    </div>
+  );
+}
+
+/** Overlay for flashes, stamps, cut-ins, speed lines, penalty tags and the shatter canvas. Mount once. */
 export function FxLayer() {
   const flash = useRef<HTMLDivElement>(null);
   const pulse = useRef<HTMLDivElement>(null);
@@ -78,9 +117,17 @@ export function FxLayer() {
           <CutIn key={cut.id} text={cut.text} lead={cut.lead} en={cut.en} tone={cut.tone} character={cut.character} mood={cut.mood} hold={cut.hold} onDone={() => fx._cutInDone()} />
         </div>
       )}
+      <div class="fx-pens" aria-hidden="true">
+        {penaltyQueue.value.map((p) => (
+          <PenaltyFx key={p.id} req={p} />
+        ))}
+      </div>
       <div ref={flash} class="fx-flash" aria-hidden="true" />
       <p class="sr-only" aria-live="assertive">
         {fxAnnounce.value}
+      </p>
+      <p class="sr-only" aria-live="polite">
+        {penaltyAnnounce.value}
       </p>
     </div>
   );

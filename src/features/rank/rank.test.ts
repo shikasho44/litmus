@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CaseProgress } from '../../state/types';
-import { allRoundsCleared, computeRank, keyRateTarget, questionPar, rankAdvice, RANK_TITLES, type RankInput } from './rank';
-import { buildCaseResult, collectRankInput, quizMisses } from './stats';
+import { allRoundsCleared, computeRank, formatPenalty, keyRateTarget, PENALTY_RULES, penaltyPoints, penaltyStep, questionPar, rankAdvice, RANK_TITLES, type CountPenaltyId, type RankInput } from './rank';
+import { buildCaseResult, collectRankInput, quizMisses, runGameOvers } from './stats';
 
 const base = (over: Partial<RankInput> = {}): RankInput => ({
   difficulty: 1,
@@ -265,5 +265,116 @@ describe('S+ (every noise-break round cleared, none skipped)', () => {
     expect(result.rank).toBe('S+');
     expect(result.playDifficulty).toBe('hard');
     expect(result.stats.debateCleared).toBe(2);
+  });
+});
+
+describe('game overs and recall-test retries (2026-09-27)', () => {
+  it('each game over of the run costs 12, capped at 36', () => {
+    const pts = (gameOvers: number) => computeRank(base({ gameOvers })).penalties.find((p) => p.id === 'gameOvers')?.points ?? 0;
+    expect(pts(0)).toBe(0);
+    expect(pts(1)).toBe(12);
+    expect(pts(2)).toBe(24);
+    expect(pts(3)).toBe(36);
+    expect(pts(5)).toBe(36);
+    expect(computeRank(base({ gameOvers: 1 })).score).toBe(88);
+    expect(computeRank(base({ gameOvers: 2 })).rank).toBe('A');
+  });
+
+  it('each quiz retry costs 2, capped at 8', () => {
+    const pts = (quizMisses: number) => computeRank(base({ quizMisses })).penalties.find((p) => p.id === 'quiz')?.points ?? 0;
+    expect(pts(1)).toBe(2);
+    expect(pts(3)).toBe(6);
+    expect(pts(4)).toBe(8);
+    expect(pts(9)).toBe(8);
+    expect(computeRank(base({ quizMisses: 1 })).score).toBe(98);
+  });
+
+  it('the new penalties do not depend on the case difficulty', () => {
+    for (const d of [1, 2, 3]) {
+      const r = computeRank(base({ difficulty: d, gameOvers: 1, quizMisses: 2 }));
+      expect(r.penalties.filter((p) => p.id === 'gameOvers' || p.id === 'quiz').map((p) => p.points)).toEqual([12, 4]);
+    }
+  });
+
+  it('Holma names a game over when it alone cost the S', () => {
+    const inp = base({ gameOvers: 2 });
+    const a = rankAdvice(inp);
+    expect(a.target).toBe('S');
+    expect(a.blockers.map((b) => b.id)).toEqual(['gameOvers']);
+    expect(a.line).toBe('ゲームオーバー2回がなければ、Sでしたねェ。');
+  });
+
+  it('quiz retries are named in the advice with the count', () => {
+    const inp = base({ quizMisses: 4, verdictAttempts: 3, debateMisses: 2 });
+    const r = computeRank(inp);
+    expect(r.penalties.find((p) => p.id === 'quiz')?.points).toBe(8);
+    const a = rankAdvice(inp, r);
+    expect(a.blockers.length).toBeGreaterThan(0);
+    if (a.blockers.some((b) => b.id === 'quiz')) expect(a.line).toContain('確認テストのやり直し4回');
+  });
+
+  it('collectRankInput counts only the game overs since the last clear, and the quiz retries', () => {
+    const p = { log: [], hints: [], elapsedMs: 0, gameOvers: 5, gameOversAtClear: 3, quiz: { answers: { '0': 2, '1': 1 }, correct: ['0', '1'] } } as unknown as CaseProgress;
+    expect(runGameOvers(p)).toBe(2);
+    expect(runGameOvers({ gameOvers: 2 })).toBe(2);
+    expect(runGameOvers({ gameOvers: 1, gameOversAtClear: 3 })).toBe(0);
+    expect(runGameOvers(undefined)).toBe(0);
+    const i = collectRankInput(p, { difficulty: 1 });
+    expect(i.gameOvers).toBe(2);
+    expect(i.quizMisses).toBe(3);
+    const { result, points } = buildCaseResult(p, { difficulty: 1 });
+    expect(result.stats.gameOvers).toBe(2);
+    expect(result.stats.quizMisses).toBe(3);
+    expect(result.stats.score).toBe(100 - 24 - 6);
+    expect(result.stats.points).toBe(points.total);
+    expect(points.total).toBe(70); // normal ×1.0
+  });
+});
+
+describe('penaltyStep (the in-play 「減点 −n」)', () => {
+  const ids = Object.keys(PENALTY_RULES) as CountPenaltyId[];
+
+  it('the steps add up to what computeRank charges', () => {
+    for (const d of [1, 2, 3])
+      for (const id of ids)
+        for (let count = 0; count <= 8; count++) {
+          let sum = 0;
+          for (let k = 0; k < count; k++) sum += penaltyStep(id, k, d);
+          expect(Math.round(sum * 10) / 10).toBe(penaltyPoints(id, count, d));
+        }
+  });
+
+  it('matches the per-event sizes by difficulty', () => {
+    expect([1, 2, 3].map((d) => penaltyStep('hints', 0, d))).toEqual([8, 7, 6]);
+    expect([1, 2, 3].map((d) => penaltyStep('misses', 0, d))).toEqual([4, 3.5, 3]);
+    expect([1, 2, 3].map((d) => penaltyStep('grants', 0, d))).toEqual([10, 9, 8]);
+    expect([1, 2, 3].map((d) => penaltyStep('verdict', 0, d))).toEqual([6, 5.5, 5]);
+    expect(penaltyStep('gameOvers', 0, 2)).toBe(12);
+    expect(penaltyStep('quiz', 0, 2)).toBe(2);
+    expect(penaltyStep('suspensions', 3, 2)).toBe(5);
+  });
+
+  it('shows the marginal amount at a cap, then nothing', () => {
+    // misses at difficulty 2: 3.5 each, cap 20 → the 6th miss adds 2.5, the 7th nothing
+    expect(penaltyStep('misses', 5, 2)).toBe(2.5);
+    expect(penaltyStep('misses', 6, 2)).toBe(0);
+    expect(penaltyStep('gameOvers', 2, 1)).toBe(12);
+    expect(penaltyStep('gameOvers', 3, 1)).toBe(0);
+    expect(penaltyStep('quiz', 3, 1)).toBe(2);
+    expect(penaltyStep('quiz', 4, 1)).toBe(0);
+    expect(penaltyStep('verdict', 4, 1)).toBe(0);
+  });
+
+  it('a wrong verdict costs one more retry, counted from the attempts before it', () => {
+    // two wrong verdicts, then the right one = verdictAttempts 3 = two retries
+    const d = 2;
+    const charged = computeRank(base({ difficulty: d, verdictAttempts: 3 })).penalties.find((p) => p.id === 'verdict')?.points;
+    expect(penaltyStep('verdict', 0, d) + penaltyStep('verdict', 1, d)).toBe(charged);
+  });
+
+  it('formats like the float shows it', () => {
+    expect(formatPenalty(3.5)).toBe('3.5');
+    expect(formatPenalty(6)).toBe('6');
+    expect(formatPenalty(2.5000001)).toBe('2.5');
   });
 });

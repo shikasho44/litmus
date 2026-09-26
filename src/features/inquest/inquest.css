@@ -2557,3 +2557,8 @@ button.cpanel:focus-visible {
 [data-layout='narrow'] .iqstat__actions {
   justify-content: center;
 }
+
+/* what the suspension costs the 事件スコア (名探偵度数, 2026-09-27) */
+.susp__pen {
+  margin: 0;
+}

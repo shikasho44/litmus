@@ -3,8 +3,11 @@
  *
  * The score is deliberately NOT the star of the result screen: it starts at 100 and loses
  * points for the things the bible lists (question count vs. par, key-question rate, hints,
- * noise-break misses, begging for evidence, verdict retries, suspensions, time). Pars and
- * penalty sizes scale with the case difficulty (1..3), so a hard case forgives more.
+ * noise-break misses, begging for evidence, verdict retries, suspensions, time) plus, since
+ * 2026-09-27, game overs during the run and recall-test retries (くられ先生: a mistake must be
+ * felt). Pars and most penalty sizes scale with the case difficulty (1..3), so a hard case
+ * forgives more. The count-based penalties are one table (PENALTY_RULES) so the in-play
+ * 「減点 −n」 feedback (penaltyStep) always matches what the result will charge.
  *
  *   S ≥ 88 (and no hints / no grants) · A ≥ 70 · B ≥ 50 · C otherwise
  *   S+ = S, and every noise-break round of the case cleared by the player's own shots (none
@@ -33,6 +36,10 @@ export interface RankInput {
   verdictAttempts: number;
   /** Inquest suspensions (composure hit 0). */
   suspensions?: number;
+  /** Game overs during this run (CaseProgress.gameOvers since the last clear). */
+  gameOvers?: number;
+  /** Recall-test (確認テスト) wrong picks. */
+  quizMisses?: number;
   elapsedMs: number;
   /** The case's estimated play time; defaults to 10 + 5 × difficulty minutes. */
   estimatedMinutes?: number;
@@ -42,7 +49,7 @@ export interface RankInput {
   debateCleared?: number;
 }
 
-export type PenaltyId = 'questions' | 'keyRate' | 'hints' | 'misses' | 'grants' | 'verdict' | 'suspensions' | 'time';
+export type PenaltyId = 'questions' | 'keyRate' | 'hints' | 'misses' | 'grants' | 'verdict' | 'suspensions' | 'gameOvers' | 'quiz' | 'time';
 
 export interface Penalty {
   id: PenaltyId;
@@ -114,6 +121,45 @@ export function keyRateTarget(difficulty: number): number {
   return 0.5 - 0.05 * (d - 1); // .50 / .45 / .40
 }
 
+/** The penalties that grow with a count of events (hint used, shot missed, …). */
+export type CountPenaltyId = 'hints' | 'misses' | 'grants' | 'verdict' | 'suspensions' | 'gameOvers' | 'quiz';
+
+/**
+ * Points per event and cap, by case difficulty d (1..3). `verdict` counts RETRIES (attempts − 1).
+ * One table for computeRank and the in-play feedback (penaltyStep).
+ */
+export const PENALTY_RULES: Record<CountPenaltyId, { label: string; per: (d: number) => number; cap?: number }> = {
+  hints: { label: 'ホルマの囁き', per: (d) => 9 - d }, // 8 / 7 / 6 per hint
+  misses: { label: 'ノイズ・ブレイクの失敗', per: (d) => 4.5 - 0.5 * d, cap: 20 }, // 4 / 3.5 / 3
+  grants: { label: '泣きつき', per: (d) => 11 - d }, // 10 / 9 / 8
+  verdict: { label: '死因宣告のやり直し', per: (d) => 7 - d * 0.5 - 0.5, cap: 24 }, // 6 / 5.5 / 5
+  suspensions: { label: '審問の中断', per: () => 5 },
+  gameOvers: { label: 'ゲームオーバー', per: () => 12, cap: 36 },
+  quiz: { label: '確認テストのやり直し', per: () => 2, cap: 8 },
+};
+
+const round1 = (v: number) => Math.round(v * 10) / 10;
+const caseDiff = (difficulty: number) => clamp(Math.round(n(difficulty)) || 1, 1, 3);
+
+/** The points a count-based penalty costs at `count` events (rounded to 0.1, as computeRank charges it). */
+export function penaltyPoints(id: CountPenaltyId, count: number, difficulty: number): number {
+  const rule = PENALTY_RULES[id];
+  const raw = n(count) * rule.per(caseDiff(difficulty));
+  return round1(rule.cap === undefined ? raw : Math.min(rule.cap, raw));
+}
+
+/**
+ * What ONE more event costs right now: the marginal penalty after `before` events (0 once the
+ * cap is reached). Drives the 「減点 −n」 float during play.
+ */
+export function penaltyStep(id: CountPenaltyId, before: number, difficulty: number, by = 1): number {
+  const b = Math.floor(n(before));
+  return round1(Math.max(0, penaltyPoints(id, b + by, difficulty) - penaltyPoints(id, b, difficulty)));
+}
+
+/** 3.5 → "3.5", 6 → "6" (for 「減点 −n」). */
+export const formatPenalty = (points: number) => (Number.isInteger(round1(points)) ? String(round1(points)) : round1(points).toFixed(1));
+
 export function computeRank(input: RankInput): RankResult {
   const d = clamp(Math.round(n(input.difficulty)) || 1, 1, 3);
   const asked = n(input.asked);
@@ -124,6 +170,8 @@ export function computeRank(input: RankInput): RankResult {
   const grants = n(input.grants);
   const verdicts = Math.max(1, n(input.verdictAttempts));
   const suspensions = n(input.suspensions);
+  const gameOvers = n(input.gameOvers);
+  const quizMisses = n(input.quizMisses);
   const minutes = n(input.elapsedMs) / 60000;
   const est = n(input.estimatedMinutes) || 10 + 5 * d;
   const par = questionPar(d);
@@ -136,13 +184,16 @@ export function computeRank(input: RankInput): RankResult {
     if (p > 0) penalties.push({ id, label, points: p });
   };
 
+  const counted = (id: CountPenaltyId, count: number) => add(id, PENALTY_RULES[id].label, penaltyPoints(id, count, d));
   add('questions', '質問の多さ', Math.min(24, Math.max(0, asked - par) * 0.6));
   if (keyRate !== null) add('keyRate', '空振りの質問', Math.min(20, Math.max(0, target - keyRate) * 50));
-  add('hints', 'ホルマの囁き', hints * (9 - d)); // 8 / 7 / 6 per hint
-  add('misses', 'ノイズ・ブレイクの失敗', Math.min(20, misses * (4.5 - 0.5 * d))); // 4 / 3.5 / 3
-  add('grants', '泣きつき', grants * (11 - d)); // 10 / 9 / 8
-  add('verdict', '死因宣告のやり直し', Math.min(24, (verdicts - 1) * (7 - d * 0.5 - 0.5))); // 6 / 5.5 / 5
-  add('suspensions', '審問の中断', suspensions * 5);
+  counted('hints', hints);
+  counted('misses', misses);
+  counted('grants', grants);
+  counted('verdict', verdicts - 1);
+  counted('suspensions', suspensions);
+  counted('gameOvers', gameOvers);
+  counted('quiz', quizMisses);
   add('time', '所要時間', Math.min(8, Math.max(0, minutes - est * 2) * 0.5));
 
   const total = penalties.reduce((s, p) => s + p.points, 0);
@@ -171,7 +222,7 @@ export function computeRank(input: RankInput): RankResult {
         return 'observer';
       case 'B':
         if (worst === 'hints' || (hints > 0 && pts('hints') >= pts('questions'))) return 'whisper';
-        if (worst === 'verdict' || verdicts >= 3) return 'tenacious';
+        if (worst === 'verdict' || worst === 'gameOvers' || verdicts >= 3) return 'tenacious';
         return 'detour';
       default:
         if (grants > 0) return 'regular';
@@ -226,6 +277,10 @@ function withoutPenalty(input: RankInput, id: PenaltyId): RankInput {
       return { ...input, verdictAttempts: 1 };
     case 'suspensions':
       return { ...input, suspensions: 0 };
+    case 'gameOvers':
+      return { ...input, gameOvers: 0 };
+    case 'quiz':
+      return { ...input, quizMisses: 0 };
     case 'time':
       return { ...input, elapsedMs: Math.min(n(input.elapsedMs), est * 2 * 60000) };
   }
@@ -249,6 +304,10 @@ export function penaltyText(id: PenaltyId, input: RankInput): string {
       return `宣告のやり直し${Math.max(1, n(input.verdictAttempts) - 1)}回`;
     case 'suspensions':
       return `審問の中断${n(input.suspensions)}回`;
+    case 'gameOvers':
+      return `ゲームオーバー${n(input.gameOvers)}回`;
+    case 'quiz':
+      return `確認テストのやり直し${n(input.quizMisses)}回`;
     case 'time':
       return `長い夜（${Math.round(n(input.elapsedMs) / 60000)}分）`;
   }

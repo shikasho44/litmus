@@ -74,9 +74,20 @@
 }
 .files__heading {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   align-items: end;
   gap: 16px 36px;
+}
+/* 名探偵度数: the compact meter sits between the lead and the counters (opens 遊び方 on its page);
+   z-index keeps it above the tags' hanging strings */
+.files__degree {
+  position: relative;
+  z-index: 3;
+  min-width: 0;
+  padding-bottom: 4px;
+}
+.files__degree .dmeter {
+  min-width: 232px;
 }
 .files__title {
   display: grid;
@@ -239,9 +250,39 @@
    the first case tag (and its CTA) starts much higher */
 [data-layout='narrow'] .files__heading {
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: 'title stats' 'lead lead';
+  grid-template-areas: 'title stats' 'lead lead' 'degree degree';
   align-items: end;
   gap: 10px 12px;
+}
+[data-layout='narrow'] .files__degree {
+  grid-area: degree;
+  padding: 0;
+}
+/* a first visit on a phone: nothing to show yet, and the first tag's button stays on screen */
+[data-layout='narrow'] .files__degree.is-empty {
+  display: none;
+}
+/* phone: one slim strip — 「名探偵度数 250 ｜ Lv.3 腕利き探偵」 over 「bar ｜ 次の称号まで」 */
+[data-layout='narrow'] .files__degree .dmeter {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 12px 4px 4px;
+}
+[data-layout='narrow'] .files__degree .detb {
+  --db-size: 40px;
+}
+[data-layout='narrow'] .files__degree .dmeter__text {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 3px 12px;
+}
+[data-layout='narrow'] .files__degree .dmeter__bar {
+  margin: 0;
+}
+[data-layout='narrow'] .files__degree .dmeter__next {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 [data-layout='narrow'] .files__title {
   grid-area: title;

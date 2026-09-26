@@ -4,8 +4,9 @@ import { useLayoutEffect, useRef } from 'preact/hooks';
 import { motionReduced } from '../../fx/motion';
 import { Button } from '../../ui/Button';
 import { HolmaSprite } from '../../ui/HolmaSprite';
+import { PenaltyTag } from '../rank/Badge';
 
-export function SuspendedOverlay({ line, mood, onBack }: { line: string; mood: 'normal' | 'laugh' | 'surprised' | 'serious'; onBack: () => void }) {
+export function SuspendedOverlay({ line, mood, penalty = 0, onBack }: { line: string; mood: 'normal' | 'laugh' | 'surprised' | 'serious'; penalty?: number; onBack: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const el = ref.current;
@@ -36,6 +37,11 @@ export function SuspendedOverlay({ line, mood, onBack }: { line: string; mood: '
           <p id="susp-desc" class="susp__desc">
             集中力が尽きました。集めた所見は失われません。捜査で質問を重ねてから、もう一度審問を開きましょう。
           </p>
+          {penalty > 0 && (
+            <p class="susp__pen">
+              <PenaltyTag points={penalty} label="審問の中断" />
+            </p>
+          )}
           <Button variant="primary" size="lg" icon="back" en="BACK TO INVESTIGATION" onClick={onBack} data-autofocus data-suspend-back>
             捜査に戻る
           </Button>

@@ -3,6 +3,8 @@ import { openCase } from '../../app/flow';
 import { back, goto, openOverlay, type SceneProps } from '../../app/router';
 import { ART, useImage } from '../../lib/asset';
 import { caseList, caseListError, caseListState, loadCases } from '../../lib/cases';
+import { DegreeMeter } from '../../features/rank/Badge';
+import { detectiveTotal } from '../../features/rank/points';
 import { caseStatus, saveData } from '../../state/save';
 import { Button, IconButton } from '../../ui/Button';
 import { CaseTag } from '../../ui/CaseTag';
@@ -69,6 +71,7 @@ export function FilesScene(_: SceneProps) {
   const completeCount = list ? list.filter((c) => caseStatus(save.cases[c.id]) === 'complete').length : 0;
   const anyStarted = Object.values(save.cases).some((c) => c.stage !== 'new');
   const focused = list?.find((c) => c.id === focus);
+  const degree = detectiveTotal(save.cases);
 
   return (
     <section class="scene files" style={focused ? { '--files-accent': focused.accent } : undefined}>
@@ -98,6 +101,9 @@ export function FilesScene(_: SceneProps) {
                 <br class="only-wide" />
                 ひとつ選んで、解剖を始めましょう。
               </p>
+              <div class={`files__degree ${degree === 0 && !anyStarted ? 'is-empty' : ''}`}>
+                <DegreeMeter total={degree} onClick={() => openOverlay('howto', { page: 'DETECTIVE DEGREE' })} />
+              </div>
               {list && (
                 <dl class="files__stats" aria-label="進み具合">
                   <div>
@@ -172,6 +178,7 @@ export function FilesScene(_: SceneProps) {
                   index={i}
                   status={status}
                   bestRank={p?.bestRank}
+                  bestPoints={p?.bestRank ? p.bestPoints : undefined}
                   onOpen={() => openCase(c.id)}
                   onFocusCase={() => setFocus(c.id)}
                   onSecondary={p?.lastResult ? () => goto('result', { caseId: c.id }) : undefined}

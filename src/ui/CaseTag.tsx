@@ -9,6 +9,8 @@ export interface CaseTagProps {
   summary: CaseSummary;
   status: CaseStatus;
   bestRank?: Rank;
+  /** Best 獲得度数 of the case (名探偵度数), shown under the BEST stamp. */
+  bestPoints?: number;
   onOpen?: () => void;
   /** Secondary action (e.g. view record). */
   onSecondary?: () => void;
@@ -42,7 +44,7 @@ const ACTION: Record<CaseStatus, { jp: string; en: string }> = {
 };
 
 /** Toe-tag case card for the 事件ファイル screen. */
-export function CaseTag({ summary: c, status, bestRank, onOpen, onSecondary, secondaryLabel, index = 0, onFocusCase, restored }: CaseTagProps) {
+export function CaseTag({ summary: c, status, bestRank, bestPoints, onOpen, onSecondary, secondaryLabel, index = 0, onFocusCase, restored }: CaseTagProps) {
   const num = String(c.number).padStart(2, '0');
   const { body, hook } = splitHook(c.summary);
   const identified = !!restored && (status === 'solved' || status === 'complete');
@@ -116,11 +118,16 @@ export function CaseTag({ summary: c, status, bestRank, onOpen, onSecondary, sec
           {bestRank && (
             <div class="tag__facts-rank">
               <dt class="sr-only">最高ランク</dt>
-              <dd class="tag__rank" aria-label={`最高ランク ${bestRank}`}>
+              <dd class="tag__rank" aria-label={`最高ランク ${bestRank}${typeof bestPoints === 'number' ? `、最高度数 ${bestPoints}` : ''}`}>
                 <span class="tag__rank-label" aria-hidden="true">
                   BEST
                 </span>
                 <span class="tag__rank-value">{bestRank}</span>
+                {typeof bestPoints === 'number' && (
+                  <span class="tag__rank-pts" aria-hidden="true">
+                    +{bestPoints}
+                  </span>
+                )}
               </dd>
             </div>
           )}

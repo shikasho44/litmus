@@ -3,7 +3,8 @@
  * feedback with the explanation. A wrong pick greys that choice out and shows the
  * explanation; the player simply tries again (the retry count is kept, nothing else).
  * All correct → a giant 「RECORD SEALED」 stamp; the run is ranked and saved (completeCase)
- * right there, then 結果へ.
+ * right there, then 結果へ. Each retry costs the 事件スコア 2 (up to 8): a wrong pick flashes
+ * 「減点 −2」 beside its ちがう mark.
  *
  * Save: CaseProgress.quiz = { answers: { [questionIndex]: wrongAttempts }, correct: [questionIndex…] }
  */
@@ -12,7 +13,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/ho
 import type { CaseSummary, SolutionResponse } from '../../../shared/api';
 import { goto, type SceneProps } from '../../app/router';
 import { audio } from '../../audio';
-import { buildCaseResult } from '../../features/rank';
+import { buildCaseResult, penaltyStep } from '../../features/rank';
 import { fx } from '../../fx';
 import { motionReduced } from '../../fx/motion';
 import { pickLine, type ResolvedLine } from '../../lib/lines';
@@ -96,6 +97,9 @@ function Quiz({ caseId, sol, summary }: { caseId: string; sol: SolutionResponse;
       setWrongPicks((w) => [...w, i]);
       setMisses((m) => ({ ...m, [key]: (m[key] ?? 0) + 1 }));
       setLine(pickLine('quiz.wrong'));
+      // after the render that shows the mark: 「減点」 right beside its ちがう (the tag follows it as the page scrolls)
+      const cost = penaltyStep('quiz', totalMisses, summary?.difficulty ?? 2);
+      requestAnimationFrame(() => fx.penalty(cost, `.qz-choice[data-choice="${i}"] .qz-choice__mark`, 'right'));
     }
     requestAnimationFrame(() => feedbackRef.current?.scrollIntoView({ block: 'nearest', behavior: motionReduced() ? 'auto' : 'smooth' }));
   };
@@ -190,6 +194,7 @@ function Quiz({ caseId, sol, summary }: { caseId: string; sol: SolutionResponse;
                         disabled={isWrong || (done && !isRight)}
                         aria-pressed={isRight}
                         onClick={() => pick(i)}
+                        data-choice={i}
                         data-autofocus={i === 0 ? true : undefined}
                       >
                         <span class="qz-choice__key" aria-hidden="true">

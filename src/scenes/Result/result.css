@@ -446,3 +446,167 @@
 .rs[data-rank='S+'] .rs-rank__seal {
   box-shadow: 0 0 0 4px rgba(11, 13, 18, 0.9), 0 0 0 8px color-mix(in srgb, var(--formalin) 55%, transparent), 0 0 80px color-mix(in srgb, var(--formalin) 45%, transparent);
 }
+
+/* ---- 名探偵度数 (Degree.tsx): under the rank, a quiet card; tier colours from .dtier--N ---- */
+.rs-left {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+}
+.rs-deg {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: 11px 16px 13px;
+  background: rgba(20, 24, 33, 0.86);
+  border: 1px solid var(--bone-a14);
+  border-left: 3px solid var(--db-edge);
+}
+.rs-deg__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+}
+.rs-deg__jp {
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.16em;
+  color: var(--bone);
+}
+.rs-deg__en {
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.24em;
+  color: var(--mute);
+}
+.rs-deg__body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+.rs-deg__text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.rs-deg__gain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+.rs-deg__gain-k,
+.rs-deg__total-k {
+  font-weight: 700;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  color: var(--bone-3);
+}
+.rs-deg__gain-num {
+  display: inline-block;
+  font-family: var(--font-en);
+  font-size: 1.9rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--formalin);
+}
+.rs-deg__formula {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--bone-3);
+}
+.rs-deg__bonus {
+  color: var(--formalin);
+  font-weight: 700;
+}
+.rs-deg__note {
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--bone-3);
+}
+.rs-deg__note.is-best {
+  color: var(--formalin);
+  font-weight: 700;
+}
+.rs-deg__total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  margin-top: 4px;
+}
+.rs-deg__total-num {
+  font-family: var(--font-en);
+  font-size: 1.55rem;
+  line-height: 1;
+  color: var(--db-ink);
+}
+.rs-deg.dtier--0 .rs-deg__total-num {
+  color: var(--bone-3);
+}
+.rs-deg__name {
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  color: var(--bone);
+}
+.rs-deg__bar {
+  display: block;
+  height: 5px;
+  background: var(--bone-a14);
+  overflow: hidden;
+}
+.rs-deg__bar > span {
+  display: block;
+  height: 100%;
+  background: var(--db-edge);
+}
+.rs-deg.dtier--5 .rs-deg__bar > span {
+  background: linear-gradient(90deg, var(--alarm), var(--amber), var(--formalin), var(--cyan), var(--violet));
+}
+.rs-deg__next {
+  font-size: var(--fs-2xs);
+  line-height: 1.5;
+  color: var(--mute);
+}
+/* 「ランクアップ！」: a slanted tag pinned to the card's corner (never over the numbers) */
+.rs-deg__up {
+  position: absolute;
+  top: -13px;
+  right: 14px;
+  padding: 2px 12px 3px;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  background: var(--db-edge);
+  box-shadow: 3px 3px 0 var(--alarm);
+  transform: rotate(-6deg);
+}
+.rs-deg.dtier--5 .rs-deg__up {
+  background: linear-gradient(90deg, var(--amber), var(--formalin), var(--cyan));
+}
+[data-layout='narrow'] .rs-left {
+  gap: 20px;
+}
+[data-layout='narrow'] .rs-deg__body {
+  gap: 12px;
+}
+[data-layout='narrow'] .rs-deg .detb--md {
+  --db-size: 66px;
+}
+/* phones: a smaller tag, tucked into the corner clear of the DETECTIVE DEGREE kicker */
+[data-layout='narrow'] .rs-deg__up {
+  top: -14px;
+  right: 8px;
+  padding: 1px 10px 2px;
+  font-size: var(--fs-xs);
+}
+@media (max-width: 374px) {
+  [data-layout='narrow'] .rs-deg.is-up .rs-deg__en {
+    visibility: hidden;
+  }
+}

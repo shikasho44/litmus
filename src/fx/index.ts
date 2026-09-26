@@ -10,6 +10,7 @@
  *   fx.glitch(el)                       one-shot glitch on an element
  *   fx.pulse('alarm')                   heartbeat vignette pulse
  *   fx.setBackdrop('alarm')             retint the living backdrop
+ *   fx.penalty(3.5, el)                 small 「減点 −3.5」 tag next to an element (~1 s)
  *
  * Every effect respects reduced motion: shakes/flashes/glitches are skipped, cut-ins and
  * stamps fade instead of slamming (they still show, because they carry information).
@@ -45,7 +46,19 @@ export interface StampRequest {
   resolve: () => void;
 }
 
+/** Where a penalty tag sits relative to its anchor (it never covers the anchor unless 'center'). */
+export type PenaltyPlace = 'below' | 'above' | 'left' | 'right' | 'center';
+export interface PenaltyRequest {
+  id: number;
+  text: string;
+  /** Followed while the tag is up (the page may scroll, the control may still be animating in). */
+  anchor: Element | null;
+  place: PenaltyPlace;
+}
+
 export const cutInQueue = signal<CutInRequest | null>(null);
+export const penaltyQueue = signal<PenaltyRequest[]>([]);
+export const penaltyAnnounce = signal('');
 export const stampQueue = signal<StampRequest[]>([]);
 export const speedLinesOn = signal<{ kind: 'radial' | 'horizontal'; color: string } | null>(null);
 export const fxAnnounce = signal('');
@@ -189,6 +202,44 @@ export const fx = {
       .to(el, { opacity: 0, duration: 0.6 });
   },
 
+  /**
+   * 「減点 −n」: a small alarm-coloured tag that pops beside `anchor` (element or selector) and
+   * drifts away in about a second (a plain fade with reduced motion). n ≤ 0 shows nothing.
+   * Anchored beside — not over — the control, so it never hides the text being read.
+   */
+  penalty(points: number, anchor: Element | string | null | undefined, place: PenaltyPlace = 'below') {
+    if (!(points > 0)) return;
+    const el = (typeof anchor === 'string' ? document.querySelector(anchor) : anchor) ?? null;
+    const text = `−${Math.round(points * 10) / 10}`;
+    penaltyQueue.value = [...penaltyQueue.peek().slice(-2), { id: ++seq, text, anchor: el, place }];
+    penaltyAnnounce.value = `減点 ${Math.round(points * 10) / 10}`;
+  },
+
+  /**
+   * Internal (FxLayer): where a penalty tag of size w×h goes for its anchor right now — beside
+   * the anchor per `place`, kept 8 px inside the viewport. No anchor on screen → stage centre.
+   */
+  _penaltyPos(req: PenaltyRequest, w: number, h: number): { left: number; top: number } {
+    const r = req.anchor?.isConnected ? req.anchor.getBoundingClientRect() : null;
+    const on = !!r && r.width + r.height > 0;
+    const c = on ? { x: r!.left + r!.width / 2, y: r!.top + r!.height / 2 } : stageCenter();
+    const place = on ? req.place : 'center';
+    const gap = 8;
+    let left = c.x - w / 2;
+    let top = c.y - h / 2;
+    if (place === 'below') top = r!.bottom + gap;
+    else if (place === 'above') top = r!.top - h - gap;
+    else if (place === 'left') left = r!.left - w - gap;
+    else if (place === 'right') left = r!.right + gap;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    return { left: Math.max(8, Math.min(vw - w - 8, left)), top: Math.max(8, Math.min(vh - h - 8, top)) };
+  },
+
+  _penaltyDone(id: number) {
+    penaltyQueue.value = penaltyQueue.peek().filter((p) => p.id !== id);
+  },
+
   setBackdrop(tone: BackdropTone) {
     fxRefs.backdrop?.setTone(tone);
   },
@@ -202,6 +253,7 @@ export const fx = {
     cur?.resolve();
     stampQueue.peek().forEach((s) => s.resolve());
     stampQueue.value = [];
+    penaltyQueue.value = [];
     speedLinesOn.value = null;
   },
 };

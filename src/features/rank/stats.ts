@@ -5,6 +5,7 @@
  * counters (inquest.grants / suspensions are only known to the UI), then the chat log.
  */
 import type { CaseProgress, CaseResult } from '../../state/types';
+import { runPoints, type RunPoints } from './points';
 import { computeRank, type RankInput, type RankResult } from './rank';
 
 export interface CaseMeta {
@@ -31,10 +32,20 @@ export function collectRankInput(p: CaseProgress | undefined, meta: CaseMeta): R
     grants: num(p?.inquest?.grants),
     verdictAttempts: Math.max(1, num(snap?.verdictAttempts, p?.inquest?.verdictAttempts ?? 1)),
     suspensions: num(p?.inquest?.suspensions),
+    gameOvers: runGameOvers(p),
+    quizMisses: quizMisses(p),
     elapsedMs: num(p?.elapsedMs),
     debateRounds: num(p?.inquest?.rounds),
     debateCleared: Array.isArray(snap?.debateCleared) ? snap.debateCleared.length : (p?.inquest?.cleared?.length ?? 0),
   };
+}
+
+/**
+ * Game overs of the run being played: the lifetime counter minus its value at the last clear
+ * (normal / hard game overs wipe the failed run's counters, so this is what remembers them).
+ */
+export function runGameOvers(p: Pick<CaseProgress, 'gameOvers' | 'gameOversAtClear'> | undefined): number {
+  return Math.max(0, num(p?.gameOvers) - num(p?.gameOversAtClear));
 }
 
 /** Quiz retries recorded by the recall test (answers[i] = wrong attempts on question i). */
@@ -44,18 +55,21 @@ export function quizMisses(p: CaseProgress | undefined): number {
   return Object.values(a).reduce((s, v) => s + (typeof v === 'number' && v > 0 ? v : 0), 0);
 }
 
-/** Build the CaseResult stored by completeCase(). */
-export function buildCaseResult(p: CaseProgress | undefined, meta: CaseMeta, now = Date.now()): { result: CaseResult; rank: RankResult; input: RankInput } {
+/** Build the CaseResult stored by completeCase() (stats.points = the run's 獲得度数). */
+export function buildCaseResult(p: CaseProgress | undefined, meta: CaseMeta, now = Date.now()): { result: CaseResult; rank: RankResult; input: RankInput; points: RunPoints } {
   const input = collectRankInput(p, meta);
   const rank = computeRank(input);
+  const playDifficulty = p?.difficulty ?? 'normal';
+  const points = runPoints(rank.score, playDifficulty, rank.rank);
   const result: CaseResult = {
     rank: rank.rank,
     title: rank.title,
     at: now,
     elapsedMs: input.elapsedMs,
-    playDifficulty: p?.difficulty ?? 'normal',
+    playDifficulty,
     stats: {
       score: rank.score,
+      points: points.total,
       asked: input.asked,
       keyQuestions: input.keyQuestions,
       answered: input.answered,
@@ -64,12 +78,13 @@ export function buildCaseResult(p: CaseProgress | undefined, meta: CaseMeta, now
       grants: input.grants,
       verdictAttempts: input.verdictAttempts,
       suspensions: input.suspensions ?? 0,
-      quizMisses: quizMisses(p),
+      gameOvers: input.gameOvers ?? 0,
+      quizMisses: input.quizMisses ?? 0,
       debateRounds: input.debateRounds ?? 0,
       debateCleared: input.debateCleared ?? 0,
       difficulty: meta.difficulty,
       ...(meta.estimatedMinutes ? { estimatedMinutes: meta.estimatedMinutes } : {}),
     },
   };
-  return { result, rank, input };
+  return { result, rank, input, points };
 }

@@ -197,7 +197,8 @@ async function layoutMatrix(browser) {
         completed: true,
         clears: 1,
         bestRank: 'S',
-        lastResult: { rank: 'S', title: '見本', at: Date.now(), elapsedMs: 600000, stats: {} },
+        bestPoints: 100,
+        lastResult: { rank: 'S', title: '見本', at: Date.now(), elapsedMs: 600000, playDifficulty: 'normal', stats: { score: 100, points: 100 } },
         restored: { name: '見本 灯子', kana: 'みほん とうこ' },
       });
     });

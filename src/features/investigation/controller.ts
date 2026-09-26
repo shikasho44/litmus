@@ -21,6 +21,7 @@ import { api } from '../../api';
 import { audio } from '../../audio';
 import { fx } from '../../fx';
 import { motionReduced } from '../../fx/motion';
+import { penaltyStep } from '../rank/rank';
 import { pickLine, type ResolvedLine } from '../../lib/lines';
 import { layout } from '../../lib/viewport';
 import { addFacts, addHint, addMemos, appendLog, getCaseProgress, newLogId, setToken } from '../../state/save';
@@ -576,6 +577,7 @@ export function createController(caseId: string) {
         token = progress()?.token;
       }
       if (!token) throw new ApiError('network', 'no token');
+      const hintsBefore = progress()?.snapshot?.hintsUsed ?? progress()?.hints.length ?? 0;
       const res = await api.hint({ caseId, token });
       if (disposed) return false;
       batch(() => {
@@ -588,6 +590,8 @@ export function createController(caseId: string) {
       });
       audio.sfx('reveal');
       announce.value = `ホルマの囁き ${res.level}：${res.text}`;
+      // what this whisper costs the 事件スコア (the rank charges per hint the server counted)
+      if ((res.progress?.hintsUsed ?? hintsBefore + 1) > hintsBefore) fx.penalty(penaltyStep('hints', hintsBefore, pub.peek()?.difficulty ?? 2), '.ivtop__hint', 'below');
       return true;
     } catch (e) {
       const code = e instanceof ApiError ? e.code : 'network';

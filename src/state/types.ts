@@ -124,6 +124,8 @@ export interface CaseResult {
   playDifficulty?: Difficulty;
   /** Best rank of this case BEFORE this run (set by completeCase; lets the result screen show the change). */
   prevBest?: Rank;
+  /** The case's best 獲得度数 BEFORE this run (set by completeCase; 0 / undefined = first clear). */
+  prevBestPoints?: number;
 }
 
 /** The victim's restored identity, remembered once the identity ceremony has played (shown on the Files tag after completion). */
@@ -137,8 +139,13 @@ export interface CaseProgress {
   stage: CaseStage;
   /** Difficulty chosen when the run started (default 'normal'). Changeable until the inquest opens. */
   difficulty?: Difficulty;
-  /** Game overs in this case (all runs). */
+  /** Game overs in this case (all runs, lifetime counter). */
   gameOvers?: number;
+  /**
+   * `gameOvers` at the last clear (set by completeCase). gameOvers − gameOversAtClear = the game
+   * overs of the run being played, which the rank charges (resetCase keeps both).
+   */
+  gameOversAtClear?: number;
   startedAt: number;
   updatedAt: number;
   /** Active play time (ms). Advanced by useCaseTimer while the case scene is visible. */
@@ -166,6 +173,8 @@ export interface CaseProgress {
   completed: boolean;
   clears: number;
   bestRank?: Rank;
+  /** Best 獲得度数 of this case (名探偵度数 = the sum over all cases; src/features/rank/points.ts). */
+  bestPoints?: number;
   lastResult?: CaseResult;
 }
 

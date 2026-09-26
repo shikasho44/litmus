@@ -1,0 +1,245 @@
+/* ==========================================================================
+   名探偵度数 — badges (DetectiveBadge), the compact meter (DegreeMeter), the static
+   「減点」 tag (PenaltyTag). Tier colours: bronze → silver → gold → formalin → prismatic,
+   mixed from the tokens only. `.dtier--N` carries the tier colours for anything that sits
+   next to a badge (meter edge, progress bar).
+   ========================================================================== */
+.detb--lv0,
+.dtier--0 {
+  --db-metal: transparent;
+  --db-edge: var(--bone-a24);
+  --db-ink: var(--mute);
+  --db-glow: transparent;
+}
+.detb--lv1,
+.dtier--1 {
+  /* bronze: amber burnt with alarm-deep */
+  --db-metal: linear-gradient(145deg, color-mix(in srgb, var(--amber) 62%, var(--bone)) 0%, color-mix(in srgb, var(--amber) 52%, var(--alarm-deep)) 42%, color-mix(in srgb, var(--alarm-deep) 55%, var(--ink)) 100%);
+  --db-edge: color-mix(in srgb, var(--amber) 60%, var(--alarm-deep));
+  --db-ink: color-mix(in srgb, var(--amber) 70%, var(--bone));
+  --db-glow: transparent;
+}
+.detb--lv2,
+.dtier--2 {
+  /* silver */
+  --db-metal: linear-gradient(145deg, var(--bone) 0%, var(--bone-2) 30%, var(--mute) 66%, var(--ink-4) 100%);
+  --db-edge: var(--bone-2);
+  --db-ink: var(--bone);
+  --db-glow: transparent;
+}
+.detb--lv3,
+.dtier--3 {
+  /* gold */
+  --db-metal: linear-gradient(145deg, color-mix(in srgb, var(--amber) 40%, var(--bone)) 0%, var(--amber) 45%, color-mix(in srgb, var(--amber) 58%, var(--alarm-deep)) 100%);
+  --db-edge: var(--amber);
+  --db-ink: var(--amber);
+  --db-glow: color-mix(in srgb, var(--amber) 35%, transparent);
+}
+.detb--lv4,
+.dtier--4 {
+  /* formalin */
+  --db-metal: linear-gradient(145deg, color-mix(in srgb, var(--formalin) 45%, var(--bone)) 0%, var(--formalin) 42%, var(--formalin-deep) 100%);
+  --db-edge: var(--formalin);
+  --db-ink: var(--formalin);
+  --db-glow: var(--formalin-glow);
+}
+.detb--lv5,
+.dtier--5 {
+  /* prismatic */
+  --db-metal: conic-gradient(from 20deg, var(--alarm), var(--amber), var(--formalin), var(--cyan), var(--violet), var(--alarm));
+  --db-edge: var(--bone);
+  --db-ink: var(--bone);
+  --db-glow: color-mix(in srgb, var(--violet) 45%, transparent);
+}
+
+.detb {
+  --db-size: 76px;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--db-size);
+  height: var(--db-size);
+  filter: drop-shadow(0 0 calc(var(--db-size) * 0.12) var(--db-glow)) drop-shadow(2px 3px 0 rgba(0, 0, 0, 0.55));
+}
+.detb--xs { --db-size: 30px; }
+.detb--sm { --db-size: 46px; }
+.detb--md { --db-size: 78px; }
+.detb--lg { --db-size: 104px; }
+.detb__rosette {
+  position: absolute;
+  inset: 0;
+  background: var(--db-metal);
+  overflow: hidden;
+}
+/* a still sheen across the metal (swept once by the rank-up) */
+.detb__rosette::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.4) 48%, transparent 58%);
+  transform: translateX(var(--db-sheen, -18%));
+}
+.detb__disc {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: calc(var(--db-size) * 0.7);
+  height: calc(var(--db-size) * 0.7);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--db-edge) 14%, transparent) 0 0.6px, transparent 1.2px) 0 0 / 5px 5px,
+    radial-gradient(circle at 40% 32%, var(--ink-3), var(--ink) 72%);
+  box-shadow:
+    inset 0 0 0 1.5px var(--db-edge),
+    inset 0 0 0 calc(var(--db-size) * 0.045) var(--ink),
+    inset 0 0 0 calc(var(--db-size) * 0.045 + 1px) color-mix(in srgb, var(--db-edge) 55%, transparent);
+}
+.detb__lv {
+  font-family: var(--font-mono);
+  font-size: max(7px, calc(var(--db-size) * 0.1));
+  line-height: 1;
+  letter-spacing: 0.12em;
+  color: var(--db-edge);
+  margin-bottom: calc(var(--db-size) * 0.01);
+}
+.detb__num {
+  font-family: var(--font-en);
+  font-size: calc(var(--db-size) * 0.34);
+  line-height: 0.95;
+  color: var(--db-ink);
+}
+.detb--xs .detb__num {
+  font-size: calc(var(--db-size) * 0.42);
+}
+.detb--lv5 .detb__num {
+  background: conic-gradient(from 200deg, var(--alarm), var(--amber), var(--formalin), var(--cyan), var(--violet), var(--alarm));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* no badge yet: an empty dashed ring */
+.detb--lv0 {
+  filter: none;
+}
+.detb--lv0 .detb__rosette {
+  border: 1.5px dashed var(--bone-a24);
+  border-radius: 50%;
+  clip-path: none !important;
+}
+.detb--lv0 .detb__rosette::after {
+  display: none;
+}
+.detb--lv0 .detb__disc {
+  background: rgba(20, 24, 33, 0.7);
+  box-shadow: inset 0 0 0 1px var(--bone-a14);
+}
+
+/* ---- compact meter (Files header) ---- */
+.dmeter {
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 6px 12px 6px 6px;
+  text-align: left;
+  color: var(--bone);
+  background: rgba(20, 24, 33, 0.86);
+  border: 1px solid var(--bone-a14);
+  border-left: 3px solid var(--db-edge);
+}
+button.dmeter {
+  cursor: pointer;
+  transition: border-color var(--dur-1), background var(--dur-1);
+}
+button.dmeter:hover {
+  background: rgba(30, 36, 48, 0.92);
+  border-color: color-mix(in srgb, var(--db-edge) 55%, transparent);
+  border-left-color: var(--db-edge);
+}
+.dmeter__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.dmeter__row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.dmeter__k {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.12em;
+  color: var(--bone-3);
+}
+.dmeter__total {
+  font-family: var(--font-en);
+  font-size: 1.35rem;
+  line-height: 1;
+  color: var(--db-ink);
+}
+.dmeter.dtier--0 .dmeter__total {
+  color: var(--bone-3);
+}
+.dmeter__name {
+  font-weight: 700;
+  font-size: var(--fs-xs);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dmeter__bar {
+  display: block;
+  height: 4px;
+  margin-top: 2px;
+  background: var(--bone-a14);
+  overflow: hidden;
+}
+.dmeter__bar > span {
+  display: block;
+  height: 100%;
+  background: var(--db-edge);
+}
+.dmeter.dtier--5 .dmeter__bar > span {
+  background: linear-gradient(90deg, var(--alarm), var(--amber), var(--formalin), var(--cyan), var(--violet));
+}
+.dmeter__next {
+  font-size: var(--fs-2xs);
+  line-height: 1.3;
+  color: var(--mute);
+  white-space: nowrap;
+}
+
+/* ---- static 「減点 −n」 (same ink as the in-play float, src/fx/fx.css .fx-pen) ---- */
+.pen-tag {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  padding: 1px 10px 2px 7px;
+  background: var(--ink);
+  border: 1.5px solid var(--alarm);
+  border-left-width: 4px;
+  box-shadow: 3px 3px 0 var(--alarm-deep);
+}
+.pen-tag__k {
+  font-weight: 700;
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.12em;
+  color: var(--bone);
+}
+.pen-tag__n {
+  font-family: var(--font-en);
+  font-size: 1.05rem;
+  line-height: 1.15;
+  color: var(--alarm);
+}
+.pen-tag__label {
+  font-size: var(--fs-2xs);
+  color: var(--bone-3);
+}

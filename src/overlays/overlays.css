@@ -396,6 +396,59 @@
   color: var(--cyan);
 }
 
+/* art: 名探偵度数 — the five badges as a ladder, with the in-play 「減点」 tag */
+.howto-degree {
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+}
+.howto-degree__list {
+  display: grid;
+  gap: 6px;
+  width: min(100%, 300px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.howto-degree__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 3px 12px 3px 4px;
+  background: rgba(20, 24, 33, 0.85);
+  border: 1px solid var(--bone-a14);
+}
+.howto-degree__row:nth-child(2) { margin-left: 10px; }
+.howto-degree__row:nth-child(3) { margin-left: 20px; }
+.howto-degree__row:nth-child(4) { margin-left: 30px; }
+.howto-degree__row:nth-child(5) { margin-left: 40px; }
+.howto-degree__name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+.howto-degree__lv {
+  font-size: var(--fs-2xs);
+  color: var(--bone-3);
+}
+.howto-degree__min {
+  font-size: var(--fs-xs);
+  color: var(--formalin);
+}
+.howto-degree__pen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 10px;
+  font-size: var(--fs-xs);
+  color: var(--bone-2);
+}
+
 [data-layout='narrow'] .howto {
   grid-template-columns: 1fr;
   gap: 18px;

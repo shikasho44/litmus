@@ -664,3 +664,15 @@
 .iq.is-narrow .gover__jane {
   height: min(260px, 30vh);
 }
+
+/* what the game over costs the 事件スコア (名探偵度数, 2026-09-27) */
+.gover__pen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0 0 6px;
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  color: var(--bone-3);
+}

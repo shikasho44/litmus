@@ -38,7 +38,7 @@ describe('rules judge', () => {
     const d = judge('雨が降っていましたか？');
     expect(d.source).toBe('probe');
     expect(d.factIds).toEqual(['F04']);
-    expect(judge('彼女は毒を盛られましたか').answerClass).toBe('no');
+    expect(judge('彼女は毒を飲みましたか').answerClass).toBe('no');
   });
 
   it('flips polarity for negated confirmations', () => {

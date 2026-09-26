@@ -26,6 +26,7 @@ import { containsAffirmed, detectMeta, marksPolarity } from './normalize.js';
 import type { Candidates, ScoredFact, ScoredProbe } from './retrieve.js';
 import { retrieve } from './retrieve.js';
 import type { Judge, JudgeDecision, JudgeInput } from './judge-types.js';
+import { detectManner } from './manner.js';
 
 export const PROBE_THRESHOLD = 0.6;
 export const PROBE_OVERRIDE = 0.9;
@@ -39,6 +40,7 @@ const META_CLASS: Record<MetaKind, AnswerClass> = {
   rude: 'cannot',
   empty: 'vague',
   tooLong: 'vague',
+  manner: 'cannot',
 };
 
 export function flipAnswer(a: AnswerClass): AnswerClass {
@@ -108,6 +110,8 @@ export function judgeRules(q: AnalyzedQuestion, cand: Candidates, index: CaseInd
   if (meta === 'tooLong' || meta === 'empty') return metaDecision(meta, best);
   // The victim's real name is secret until solved: never confirm or deny it (no model either).
   if (secretNamesIn(q.norm, index.secretNames ?? []).length > 0) return { ...metaDecision('askAnswer', best), confidence: 1, guard: 'secretName' };
+  // Murder, accident or suicide is the inquest's question: never confirmed or denied here (manner.ts).
+  if (meta !== 'askAnswer' && meta !== 'rude' && detectManner(q.raw, q.norm)) return { ...metaDecision('manner', best), confidence: 1, guard: 'manner' };
   if (best && best.score >= PROBE_OVERRIDE && meta !== 'rude') return openGuard(fromProbe(best, index), q);
   if (meta) return metaDecision(meta, best);
   if (best && best.score >= PROBE_THRESHOLD) return openGuard(fromProbe(best, index), q);

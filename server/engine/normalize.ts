@@ -316,7 +316,8 @@ export function isRelevanceQuestion(norm: string): boolean {
   return RELEVANCE_Q.test(norm);
 }
 
-export type MetaKind = 'askAnswer' | 'askHint' | 'offtopic' | 'aboutHolma' | 'rude' | 'empty' | 'tooLong';
+/** 'manner' is decided by the manner-of-death guard (manner.ts), not by detectMeta. */
+export type MetaKind = 'askAnswer' | 'askHint' | 'offtopic' | 'aboutHolma' | 'rude' | 'empty' | 'tooLong' | 'manner';
 
 const META_ASK_ANSWER: RegExp[] = [
   // 犯人 is deliberately absent: 「犯人は誰？」 must not imply that a culprit exists (→ open/vague).

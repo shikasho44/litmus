@@ -98,7 +98,7 @@ const CLASS_MOOD: Record<AnswerClass, HolmaMood> = {
   vague: 'normal',
 };
 
-const META_MOOD: Partial<Record<MetaKind | 'open', HolmaMood>> = { rude: 'serious', askAnswer: 'laugh' };
+const META_MOOD: Partial<Record<MetaKind | 'open', HolmaMood>> = { rude: 'serious', askAnswer: 'laugh', manner: 'laugh' };
 
 export interface ComposeInput {
   answerClass: AnswerClass;

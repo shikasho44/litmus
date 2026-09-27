@@ -5,7 +5,9 @@
 import type { AnswerClass } from '../../shared/case-schema.js';
 import type { VerdictResult } from '../../shared/api.js';
 
-export type PersonaId = 'beginner' | 'science' | 'clumsy' | 'sharp' | 'adversarial';
+export type PersonaId = 'beginner' | 'science' | 'clumsy' | 'sharp' | 'adversarial'
+  // 年齢・立場の違う人（2026-09-28 ヨンサン依頼：何も知らない状態から、審問に足りる所見をどれだけ集められるか）
+  | 'kid10' | 'teen14' | 'hs17' | 'college' | 'office' | 'parent' | 'senior72' | 'nurse' | 'mysteryfan';
 
 /** One answered part of a question (a message may be split into up to 3 parts). */
 export interface AskPart {

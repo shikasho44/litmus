@@ -38,7 +38,7 @@ import type { DecisionProvider, LlmProvider, LlmRequest, LlmResult } from '../se
 import { CANDIDATE_STRATEGIES, type CandidateStrategy } from '../server/engine/ai/jev-judge.js';
 import { strategyFrom } from '../server/engine/factory.js';
 import type { ContentRegistry } from '../server/engine/registry.js';
-import { PERSONAS, type Persona } from './playtest/personas.js';
+import { PERSONAS, AGE_PERSONAS, personaById, type Persona } from './playtest/personas.js';
 import { BudgetedDecision, BudgetedLlm, newRunSpend, SharedBudget } from './playtest/budget.js';
 import { playCase } from './playtest/session.js';
 import { findContradictions, labelDisagreements, runMetrics, type PooledAsk } from './playtest/analysis.js';
@@ -71,9 +71,10 @@ function parseArgs(argv: string[]): Args {
       case '--case': case '--cases': a.cases = val(i++); break;
       case '--persona': case '--personas': {
         const v = val(i++);
-        if (v !== 'all') {
+        if (v === 'ages') a.personas = [...AGE_PERSONAS];   // 年齢・立場の9人（2026-09-28）
+        else if (v !== 'all') {
           a.personas = v.split(',').map((id) => {
-            const p = PERSONAS.find((x) => x.id === id.trim());
+            const p = personaById(id.trim());
             if (!p) throw new Error(`unknown persona ${id}`);
             return p;
           });

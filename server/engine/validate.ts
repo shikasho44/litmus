@@ -83,6 +83,15 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
   if (!c.facts.some((f) => f.importance >= 3)) errors.push('no core fact (importance ≥ 3)');
   if (!c.facts.some((f) => f.spoilerLevel >= 4)) info.push('no spoilerLevel-4 fact (nearCore relies on closeness/progress only)');
 
+  // ── manner of death / culprit seal (2026-09-28) ───────────────
+  const mannerFacts = c.facts.filter((f) => f.manner);
+  if (mannerFacts.length > 1) errors.push(`more than one manner fact (${mannerFacts.map((f) => f.id).join(', ')})`);
+  if (mannerFacts.length === 0 && c.publish) warnings.push('no manner fact (fact.manner): 「殺されたの？」「事故ですか？」 are routed by keywords only');
+  for (const f of mannerFacts) if (f.spoilerLevel >= 4) errors.push(`${f.id}: the manner fact must be reachable (spoilerLevel ≤ 3)`);
+  if (c.truth.culpritSeal && mannerFacts.length > 0 && mannerFacts[0].manner !== 'homicide') {
+    warnings.push(`truth.culpritSeal is set but the manner fact ${mannerFacts[0].id} says ${mannerFacts[0].manner} (the seal is for cases whose verdict names a culprit)`);
+  }
+
   // ── unique ids ────────────────────────────────────────────────
   for (const f of c.facts) {
     if (factIds.has(f.id)) errors.push(`duplicate fact id ${f.id}`);

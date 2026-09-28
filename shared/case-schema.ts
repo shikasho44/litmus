@@ -51,6 +51,15 @@ export const FactSchema = z.object({
   scienceMemo: z.string().optional(),
   /** SECRET. Extra context for the judge model only (never shown). */
   judgeNote: z.string().optional(),
+  /**
+   * Marks THE manner fact of the case (at most one; added 2026-09-28): the kind of death it
+   * records. Murder / accident / suicide questions are answered truthfully during the
+   * investigation, and the offline rules judge answers a question that proposes a kind of death
+   * (「殺されたの？」「事故ですか？」「自殺？」「誰かが毒を混ぜた？」, server/engine/manner.ts) from
+   * this value and routes it to this fact. Its keywords should hold only the words whose answer
+   * is its ifAsked (the crime words: 殺され・犯人・事件…); accident words are decided by manner.ts.
+   */
+  manner: z.enum(['accident', 'homicide', 'suicide']).optional(),
 });
 export type Fact = z.infer<typeof FactSchema>;
 
@@ -282,6 +291,18 @@ export const CaseSchema = z.object({
     causeOfDeath: z.string(),
     mechanism: z.string(),
     timeline: z.array(z.object({ time: z.string(), event: z.string() })).min(4),
+    /**
+     * Opt-in culprit seal (2026-09-28). Set it only when the verdict asks the player to NAME who
+     * did it (e.g. CASE 04's answer element 「混ぜた人物」): questions that identify the culprit —
+     * 「犯人は誰？」「犯人は編集者？」「老人が毒を入れたの？」「編集者のせい？」「友人は関係ある？」 —
+     * are then answered 'cannot' (meta 'culprit') during the investigation, so the suspects cannot be
+     * eliminated one by one with yes/no questions. The manner itself (「殺されたの？」「誰かが毒を
+     * 混ぜたの？」) and evidence about named people (「編集者が盛り付けをしましたか？」) stay answered.
+     * `people`: extra words the questions may use for the people who could be named, beyond the
+     * engine's role words (編集者・老人・友人・男・女性 …; server/engine/culprit.ts) — nicknames,
+     * relations and names (お隣・幼なじみ・看護師). Never the victim.
+     */
+    culpritSeal: z.object({ people: z.array(z.string().min(1)).default([]) }).optional(),
   }),
 
   facts: z.array(FactSchema).min(15),

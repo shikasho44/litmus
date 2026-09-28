@@ -4,6 +4,7 @@
  */
 import type { Case, Fact, Probe } from '../../shared/case-schema.js';
 import { bigrams, coreForm, isNegatedConfirmation, isOpenQuestion, marksPolarity, normalize, polarityMarks, questionProposition, type Polarity, type PolarityFamily, type PolarityMark, type Proposition } from './normalize.js';
+import { compileCulpritSeal, type CulpritSeal } from './culprit.js';
 
 export interface IndexedFact {
   fact: Fact;
@@ -49,6 +50,13 @@ export interface CaseIndex {
    * leak the identity (the judge sees the truth summary, which names her).
    */
   secretNames: string[];
+  /**
+   * The case's manner fact (fact.manner): murder / accident / suicide questions are answered from
+   * it (rules-judge.ts, manner.ts). Undefined when the case has none (old keyword routing only).
+   */
+  mannerFact?: IndexedFact;
+  /** Opt-in culprit seal (truth.culpritSeal, culprit.ts): questions naming the culprit → cannot. */
+  culpritSeal?: CulpritSeal;
 }
 
 const HONORIFICS = ['さん', 'ちゃん', 'くん', '氏', '様', 'さま', 'せんせい', '先生'];
@@ -144,5 +152,7 @@ export function buildCaseIndex(c: Case): CaseIndex {
     memoById: new Map(c.scienceMemos.map((m) => [m.id, m])),
     leakTerms: [...new Set(c.leakTerms.map(normalize).filter((t) => t.length > 0))],
     secretNames: secretNamesOf(c),
+    mannerFact: facts.find((f) => f.fact.manner),
+    culpritSeal: c.truth.culpritSeal ? compileCulpritSeal(c.truth.culpritSeal) : undefined,
   };
 }

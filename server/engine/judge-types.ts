@@ -68,9 +68,10 @@ export interface JudgeDecision {
   /**
    * A deterministic guard decided this part (rules judge): no model is consulted.
    * 'secretName' = the question names the victim (identity is secret until solved).
-   * 'manner' = murder / accident / suicide / culprit / intent — decided in the inquest (manner.ts).
+   * 'culprit' = the question identifies the culprit in a case that seals it (culprit.ts;
+   * murder / accident / suicide themselves are answered, manner.ts).
    */
-  guard?: 'secretName' | 'manner';
+  guard?: 'secretName' | 'culprit';
   /**
    * Rules: a qualifier of the question (「毒」 in 「毒ガスが出ていた？」) that a ruled-out fact
    * denies, so a はい was lowered to 一部そう (rules-judge.ts). Model judges keep a はい from

@@ -378,3 +378,80 @@ describe('penaltyStep (the in-play 「減点 −n」)', () => {
     expect(formatPenalty(2.5000001)).toBe('2.5');
   });
 });
+
+describe('question budget (shared/budget.ts) as the question par', () => {
+  const soft = { budget: 29, overCost: 1.5, overCap: 24 };
+  const qPoints = (i: RankInput) => computeRank(i).penalties.find((p) => p.id === 'questions')?.points ?? 0;
+
+  it('charges only counted questions beyond the budget, at the mode cost and cap', () => {
+    expect(qPoints(base({ ...soft, asked: 29, spent: 29, answered: 29, keyQuestions: 15 }))).toBe(0);
+    expect(qPoints(base({ ...soft, asked: 33, spent: 33, answered: 33, keyQuestions: 17 }))).toBe(6);
+    // free questions (「具体的に」, small talk…) do not count
+    expect(qPoints(base({ ...soft, asked: 40, spent: 29, answered: 40, keyQuestions: 20 }))).toBe(0);
+    expect(qPoints(base({ ...soft, asked: 120, spent: 120, answered: 120, keyQuestions: 60 }))).toBe(24);
+    // 見習い: a guide only, no cost
+    expect(qPoints(base({ budget: 35, overCost: 0, overCap: 0, asked: 80, spent: 80, answered: 80, keyQuestions: 40 }))).toBe(0);
+    expect(computeRank(base({ ...soft })).budget).toBe(29);
+  });
+
+  it('without budget fields the old rule applies (par by case difficulty, 0.6 per question)', () => {
+    const r = computeRank(base({ asked: 32, answered: 32, keyQuestions: 16 }));
+    expect(r.budget).toBe(questionPar(1));
+    expect(r.penalties.find((p) => p.id === 'questions')?.points).toBe(6);
+  });
+
+  it('names the budget in the advice', () => {
+    const i = base({ ...soft, asked: 45, spent: 45, answered: 45, keyQuestions: 23 });
+    const a = rankAdvice(i);
+    expect(computeRank(i).rank).not.toBe('S');
+    expect(a.line).toContain('質問枠より16問多い質問');
+    expect(rankAdvice(base({ asked: 30, answered: 30, keyQuestions: 15, hintsUsed: 1 })).line).not.toContain('質問枠');
+  });
+
+  it('collectRankInput takes the budget of the difficulty played (and the case override)', () => {
+    const p = (difficulty: 'easy' | 'normal' | 'hard', spent?: number) =>
+      ({
+        caseId: 'c01',
+        stage: 'quiz',
+        difficulty,
+        startedAt: 0,
+        updatedAt: 0,
+        elapsedMs: 0,
+        log: [],
+        facts: {},
+        factOrder: [],
+        seenFacts: [],
+        memos: {},
+        hints: [],
+        notes: '',
+        completed: false,
+        clears: 0,
+        snapshot: { unlocked: [], memos: [], asked: 30, ...(spent === undefined ? {} : { spent }), hintsUsed: 0, debateCleared: [], debateMisses: 0, verdictAttempts: 1, solved: true, reconstructed: true, progress: 1, nearCore: true },
+      }) as CaseProgress;
+    expect(collectRankInput(p('normal', 26), { difficulty: 1 })).toMatchObject({ asked: 30, spent: 26, budget: 29, overCost: 1.5, overCap: 24 });
+    expect(collectRankInput(p('easy', 26), { difficulty: 1 })).toMatchObject({ budget: 35, overCost: 0 });
+    expect(collectRankInput(p('hard', 26), { difficulty: 3 })).toMatchObject({ budget: 42, overCost: 1.5 });
+    expect(collectRankInput(p('hard', 26), { difficulty: 1, questionBudget: { hard: 8 } })).toMatchObject({ budget: 8 });
+    // a snapshot from before the budget: spent = asked
+    expect(collectRankInput(p('normal'), { difficulty: 1 }).spent).toBe(30);
+    // stored stats recompute to the same result
+    const { result, rank } = buildCaseResult(p('normal', 33), { difficulty: 1 });
+    expect(result.stats).toMatchObject({ asked: 30, spent: 30, budget: 29, budgetCost: 1.5, budgetCap: 24 });
+    const again = computeRank({
+      difficulty: 1,
+      asked: result.stats.asked,
+      spent: result.stats.spent,
+      budget: result.stats.budget,
+      overCost: result.stats.budgetCost,
+      overCap: result.stats.budgetCap,
+      keyQuestions: result.stats.keyQuestions,
+      answered: result.stats.answered,
+      hintsUsed: 0,
+      debateMisses: 0,
+      grants: 0,
+      verdictAttempts: 1,
+      elapsedMs: 0,
+    });
+    expect(again.score).toBe(rank.score);
+  });
+});

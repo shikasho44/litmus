@@ -9,6 +9,11 @@
  * forgives more. The count-based penalties are one table (PENALTY_RULES) so the in-play
  * 「減点 −n」 feedback (penaltyStep) always matches what the result will charge.
  *
+ * Questions (2026-09-28, shared/budget.ts): the run's question budget (質問枠, per case and play
+ * difficulty) is the par, and every counted question beyond it costs `overCost` points (見習い 0,
+ * 審問官 1.5, cap 24). A stored result without those fields is scored the old way (par
+ * 22/30/38 by case difficulty, every question 0.6 beyond it) so older records still explain.
+ *
  *   S ≥ 88 (and no hints / no grants) · A ≥ 70 · B ≥ 50 · C otherwise
  *   S+ = S, and every noise-break round of the case cleared by the player's own shots (none
  *        skipped — the noise break is optional — and no begging Holma for evidence)
@@ -17,12 +22,20 @@
  * trait (e.g. no misses → 「ためらわぬ弾丸」, hints used → 「囁きに耳を貸す者」).
  */
 import type { Rank } from '../../state/types';
+import { casePar, overBudgetPoints } from '../../../shared/budget';
 
 export interface RankInput {
   /** Case difficulty 1..3 (clamped). */
   difficulty: number;
   /** Questions the server counted (ProgressSnapshot.asked). */
   asked: number;
+  /** Questions counted against the budget (ProgressSnapshot.spent). Default: `asked`. */
+  spent?: number;
+  /** The run's question budget (shared/budget.ts questionBudget). Default: questionPar(difficulty). */
+  budget?: number;
+  /** Points per counted question beyond the budget (default 0.6, the rule before 2026-09-28) and their cap (default 24). */
+  overCost?: number;
+  overCap?: number;
   /** Answers that unlocked at least one finding. */
   keyQuestions: number;
   /** Answers in the log — the denominator of the key-question rate. 0 = unknown (no penalty). */
@@ -74,8 +87,10 @@ export interface RankResult {
   comment: string;
   /** keyQuestions / answered, or null when unknown. */
   keyRate: number | null;
-  /** Question par for this difficulty. */
+  /** Question par for this case difficulty. */
   par: number;
+  /** The question budget the run was scored against (= par for older records). */
+  budget: number;
   penalties: Penalty[];
 }
 
@@ -111,8 +126,21 @@ const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 
 
 /** Question par: how many questions a sharp player needs. Grows with difficulty. */
 export function questionPar(difficulty: number): number {
-  const d = clamp(Math.round(n(difficulty)) || 1, 1, 3);
-  return 14 + 8 * d; // 22 / 30 / 38
+  return casePar(clamp(Math.round(n(difficulty)) || 1, 1, 3)); // 22 / 30 / 38
+}
+
+/** Legacy question rule (records from before the question budget). */
+const LEGACY_OVER_COST = 0.6;
+const LEGACY_OVER_CAP = 24;
+
+/** The question budget, cost and count a rank input is scored with (defaults = the legacy rule). */
+export function questionTerms(input: Pick<RankInput, 'difficulty' | 'asked' | 'spent' | 'budget' | 'overCost' | 'overCap'>) {
+  const d = clamp(Math.round(n(input.difficulty)) || 1, 1, 3);
+  const spent = input.spent === undefined ? n(input.asked) : n(input.spent);
+  const budget = n(input.budget) || questionPar(d);
+  const overCost = input.overCost === undefined ? LEGACY_OVER_COST : n(input.overCost);
+  const overCap = input.overCap === undefined ? LEGACY_OVER_CAP : n(input.overCap);
+  return { spent, budget, overCost, overCap, legacy: input.budget === undefined };
 }
 
 /** Target key-question rate (a hard case has more dead ends). */
@@ -162,7 +190,6 @@ export const formatPenalty = (points: number) => (Number.isInteger(round1(points
 
 export function computeRank(input: RankInput): RankResult {
   const d = clamp(Math.round(n(input.difficulty)) || 1, 1, 3);
-  const asked = n(input.asked);
   const answered = n(input.answered);
   const key = Math.min(n(input.keyQuestions), answered || Infinity);
   const hints = n(input.hintsUsed);
@@ -175,6 +202,7 @@ export function computeRank(input: RankInput): RankResult {
   const minutes = n(input.elapsedMs) / 60000;
   const est = n(input.estimatedMinutes) || 10 + 5 * d;
   const par = questionPar(d);
+  const q = questionTerms(input);
   const keyRate = answered > 0 ? key / answered : null;
   const target = keyRateTarget(d);
 
@@ -185,7 +213,7 @@ export function computeRank(input: RankInput): RankResult {
   };
 
   const counted = (id: CountPenaltyId, count: number) => add(id, PENALTY_RULES[id].label, penaltyPoints(id, count, d));
-  add('questions', '質問の多さ', Math.min(24, Math.max(0, asked - par) * 0.6));
+  add('questions', '質問の多さ', overBudgetPoints(q.spent, q.budget, q.overCost, q.overCap));
   if (keyRate !== null) add('keyRate', '空振りの質問', Math.min(20, Math.max(0, target - keyRate) * 50));
   counted('hints', hints);
   counted('misses', misses);
@@ -214,7 +242,7 @@ export function computeRank(input: RankInput): RankResult {
         return 'flawless';
       case 'S':
         if (verdicts === 1 && misses === 0) return 'one-shot';
-        if (asked > 0 && asked <= par * 0.7) return 'silent';
+        if (q.spent > 0 && q.spent <= par * 0.7) return 'silent';
         return 'ace';
       case 'A':
         if (keyRate !== null && keyRate >= target + 0.1) return 'probe';
@@ -231,7 +259,7 @@ export function computeRank(input: RankInput): RankResult {
     }
   };
   const t = RANK_TITLES.find((x) => x.id === pick())!;
-  return { rank, score, title: t.title, titleId: t.id, comment: t.comment, keyRate, par, penalties };
+  return { rank, score, title: t.title, titleId: t.id, comment: t.comment, keyRate, par, budget: q.budget, penalties };
 }
 
 /** Every noise-break round cleared by shooting (none skipped). Unknown round count → false. */
@@ -263,8 +291,10 @@ function withoutPenalty(input: RankInput, id: PenaltyId): RankInput {
   const d = clamp(Math.round(n(input.difficulty)) || 1, 1, 3);
   const est = n(input.estimatedMinutes) || 10 + 5 * d;
   switch (id) {
-    case 'questions':
-      return { ...input, asked: Math.min(n(input.asked), questionPar(d)) };
+    case 'questions': {
+      const q = questionTerms(input);
+      return { ...input, asked: Math.min(n(input.asked), q.budget), spent: Math.min(q.spent, q.budget) };
+    }
     case 'keyRate':
       return { ...input, keyQuestions: Math.max(n(input.keyQuestions), Math.ceil(keyRateTarget(d) * n(input.answered))) };
     case 'hints':
@@ -288,10 +318,11 @@ function withoutPenalty(input: RankInput, id: PenaltyId): RankInput {
 
 /** 「囁き1回」「撃ち損じ2回」… — the player's own numbers, not points. */
 export function penaltyText(id: PenaltyId, input: RankInput): string {
-  const d = clamp(Math.round(n(input.difficulty)) || 1, 1, 3);
   switch (id) {
-    case 'questions':
-      return `目安より${Math.max(1, Math.round(n(input.asked) - questionPar(d)))}問多い質問`;
+    case 'questions': {
+      const q = questionTerms(input);
+      return `${q.legacy ? '目安' : '質問枠'}より${Math.max(1, Math.round(q.spent - q.budget))}問多い質問`;
+    }
     case 'keyRate':
       return '空振りの質問';
     case 'hints':

@@ -18,7 +18,7 @@ import { openCase } from '../../app/flow';
 import { goto, type SceneProps } from '../../app/router';
 import { audio } from '../../audio';
 import { APP_CONFIG } from '../../config/app';
-import { buildCaseResult, computeRank, detectiveLevel, detectiveTotal, questionPar, rankAdvice, RANK_LABEL, RANK_TITLES, resultPoints, S_CONDITION, S_PLUS_CONDITION, type RankInput } from '../../features/rank';
+import { buildCaseResult, computeRank, detectiveLevel, detectiveTotal, questionPar, questionTerms, rankAdvice, RANK_LABEL, RANK_TITLES, resultPoints, S_CONDITION, S_PLUS_CONDITION, type RankInput } from '../../features/rank';
 import { DifficultyBadge } from '../../features/difficulty/Badge';
 import { DIFFICULTY_META } from '../../features/difficulty/meta';
 import { fx } from '../../fx';
@@ -58,7 +58,7 @@ export function ResultScene({ params }: SceneProps) {
     if (!p || p.lastResult || p.stage === 'complete') return;
     const quizDone = (p.quiz?.correct.length ?? 0) > 0 && (p.stage === 'quiz' || p.stage === 'result');
     if (!quizDone || !list) return;
-    const { result } = buildCaseResult(p, { difficulty: summary?.difficulty ?? 2, estimatedMinutes: summary?.estimatedMinutes });
+    const { result } = buildCaseResult(p, { difficulty: summary?.difficulty ?? 2, estimatedMinutes: summary?.estimatedMinutes, questionBudget: summary?.questionBudget });
     completeCase(caseId, result);
   }, [caseId, list]);
 
@@ -93,6 +93,11 @@ function rankInputFrom(r: CaseResult, estimatedMinutes?: number): RankInput {
     estimatedMinutes: s.estimatedMinutes || estimatedMinutes,
     difficulty: s.difficulty ?? 2,
     asked: s.asked ?? 0,
+    // question budget fields (2026-09-28); absent in older records → the legacy question rule
+    spent: s.spent,
+    budget: s.budget,
+    overCost: s.budget === undefined ? undefined : (s.budgetCost ?? 0),
+    overCap: s.budget === undefined ? undefined : (s.budgetCap ?? 0),
     keyQuestions: s.keyQuestions ?? 0,
     answered: s.answered ?? 0,
     hintsUsed: s.hintsUsed ?? 0,
@@ -129,6 +134,7 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
   const canShare = typeof navigator !== 'undefined' && (typeof navigator.share === 'function' || !!navigator.clipboard);
   const keyRate = s.answered ? Math.round(((s.keyQuestions ?? 0) / s.answered) * 100) : null;
   const par = questionPar(input.difficulty);
+  const q = questionTerms(input);
   const degree = detectiveTotal(saveData.value.cases);
   const bestPoints = saveData.value.cases[caseId]?.bestPoints;
 
@@ -175,7 +181,17 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
   const rounds = s.debateRounds ?? 0;
   const roundsCleared = s.debateCleared ?? 0;
   const stats: { icon: IconName; label: string; num: string; unit?: string; sub?: string; tone?: 'good' | 'warn' }[] = [
-    { icon: 'send', label: '質問数', num: `${s.asked ?? 0}`, unit: '問', sub: `目安 ${par}問`, tone: (s.asked ?? 0) <= par ? 'good' : undefined },
+    q.legacy
+      ? { icon: 'send', label: '質問数', num: `${s.asked ?? 0}`, unit: '問', sub: `目安 ${par}問`, tone: (s.asked ?? 0) <= par ? 'good' : undefined }
+      : {
+          icon: 'send',
+          label: '質問数',
+          num: `${q.spent}`,
+          unit: `/${q.budget}問`,
+          // 質問枠 and what went beyond it; free questions (「具体的に」, small talk…) are listed apart
+          sub: `質問枠 ${q.budget}問${q.spent > q.budget ? `・${q.spent - q.budget}問超過` : ''}${(s.asked ?? 0) > q.spent ? `・数えない質問 ${(s.asked ?? 0) - q.spent}` : ''}`,
+          tone: q.spent <= q.budget ? 'good' : q.overCost > 0 ? 'warn' : undefined,
+        },
     { icon: 'star', label: '重要質問率', num: keyRate === null ? '—' : `${keyRate}`, unit: keyRate === null ? undefined : '%', sub: s.answered ? `所見を得た質問 ${s.keyQuestions ?? 0} / ${s.answered}` : '記録なし' },
     { icon: 'hint', label: 'ホルマの囁き', num: `${s.hintsUsed ?? 0}`, sub: 'ヒントを使った回数', tone: (s.hintsUsed ?? 0) === 0 ? 'good' : 'warn' },
     rounds > 0

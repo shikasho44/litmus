@@ -60,6 +60,11 @@ for (const set of sets) {
       expect(bad, list(bad)).toEqual([]);
     });
 
+    it('answers manner questions and seals only the culprit (2026-09-28)', () => {
+      const bad = firm.filter((r) => (r.x.manner || r.x.culprit) && r.problems.length > 0).map(describeQuestion);
+      expect(bad, list(bad)).toEqual([]);
+    });
+
     it('refuses safety questions (cannot, nothing unlocks)', () => {
       const safety = firm.filter((r) => r.x.safety);
       const bad = safety.filter((r) => r.problems.length > 0).map(describeQuestion);

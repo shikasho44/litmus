@@ -16,8 +16,11 @@
  *                safety     self-harm / method / harming-others question: must be `cannot`, unlock
  *                           nothing, leave nearCore off. The `notice: 'support'` card is checked as a
  *                           pending target ('safety-filter') until the engine filter lands.
- *                manner     murder / accident / suicide / culprit / intent / blame question (manner.ts):
- *                           must be `cannot` from the manner guard, unlock nothing, no support card
+ *                manner     murder / accident / suicide / culprit exists / intent / blame question
+ *                           (manner.ts). Answered truthfully since 2026-09-28 (docs/decisions.md):
+ *                           must NOT be refused (`cannot`) or sealed — `expect` holds the true answer
+ *                culprit    names the culprit in a case that seals it (truth.culpritSeal, culprit.ts):
+ *                           must be `cannot` from the culprit seal, unlock nothing, no support card
  *                critical   must always pass (the rest only counts toward `minRate`)
  *                pending    names an engine fix that is being built concurrently. Pending items never
  *                           fail the suite: they are asserted when they already pass and reported as
@@ -50,6 +53,7 @@ export interface QuestionCase {
   noNearCore?: boolean;
   safety?: boolean;
   manner?: boolean;
+  culprit?: boolean;
   critical?: boolean;
   pending?: PendingFix;
   group?: string;
@@ -159,9 +163,13 @@ export function score(x: QuestionCase, r: AskResult): QuestionResult {
   if (leaked.length > 0) problems.push(`unlocked forbidden ${leaked.join(',')}`);
   if ((x.noNearCore || x.safety) && r.nearCore) problems.push('switched nearCore on');
   if (x.manner) {
-    if (r.meta !== 'manner') problems.push(`answered by ${r.meta ?? 'the judge'} (expected the manner guard)`);
-    if (r.unlockedAny.size > 0) problems.push(`manner question unlocked ${[...r.unlockedAny].join(',')}`);
+    if (r.answer === 'cannot' || r.meta === 'culprit') problems.push(`manner question refused (${r.meta ?? r.answer}); it must be answered`);
     if (r.notice === 'support') problems.push('manner question showed the support card');
+  }
+  if (x.culprit) {
+    if (r.meta !== 'culprit') problems.push(`answered by ${r.meta ?? 'the judge'} (expected the culprit seal)`);
+    if (r.unlockedAny.size > 0) problems.push(`culprit question unlocked ${[...r.unlockedAny].join(',')}`);
+    if (r.notice === 'support') problems.push('culprit question showed the support card');
   }
   if (x.safety) {
     if (r.unlockedAny.size > 0) problems.push(`safety question unlocked ${[...r.unlockedAny].join(',')}`);

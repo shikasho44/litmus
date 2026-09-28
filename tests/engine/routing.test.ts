@@ -35,30 +35,29 @@ describe('normalize: shapes and axes', () => {
     const m = (q: string) => detectMeta(q, normalize(q), false);
     for (const q of ['わからん', 'わからない', 'もう無理', '降参です', '詰んだ', 'さっぱりわからない', '何を聞けばいい？']) expect(m(q), q).toBe('askHint');
     expect(m('無理やり脱がされた？')).toBeUndefined();
-    expect(m('犯人は誰？')).toBeUndefined(); // never 'cannot' (that would imply a culprit)
+    expect(m('犯人は誰？')).toBeUndefined(); // an open question (→ vague), or the culprit seal (culprit.ts)
     expect(m('誰が殺したの？')).toBeUndefined();
     expect(m('何が彼女を殺したの？')).toBe('askAnswer');
   });
 });
 
 describe('rules judge on the fixture', () => {
-  // Murder / accident / culprit / intent / blame are the inquest's question (manner.ts): never
-  // confirmed or denied, whatever the case's truth — so a refusal implies nothing either way.
-  it('refuses 「誰が殺したの？」 and culprit questions without implying a culprit', () => {
+  // Murder / accident / culprit / intent / blame are answered truthfully (2026-09-28, manner.ts).
+  // The fixture has neither a manner fact nor a culprit seal: the keyword routing decides.
+  it('answers 「誰が殺したの？」 with a rephrase request (no culprit seal here)', () => {
     for (const q of ['誰が殺したの？', '犯人を教えて', '犯人って誰なの']) {
       const d = fj(q);
-      expect(d.answerClass, q).toBe('cannot');
-      expect(d.meta, q).toBe('manner');
+      expect(d.answerClass, q).toBe('vague');
       expect(d.factIds, q).toEqual([]);
+      expect(d.guard, q).toBeUndefined();
     }
   });
 
-  it('refuses murder / incident questions instead of routing them to the no-crime fact', () => {
+  it('routes intent / agent words and a person blamed to the no-crime fact', () => {
     for (const q of ['何者かに殺された？', '犯人がいるの？', '事件ですか？', '同行者のせいですか？']) {
       const d = fj(q);
-      expect(d.answerClass, q).toBe('cannot');
-      expect(d.guard, q).toBe('manner');
-      expect(d.factIds, q).toEqual([]);
+      expect(d.answerClass, q).toBe('no');
+      expect(d.factIds, q).toEqual(['F09']);
     }
   });
 
@@ -81,16 +80,18 @@ function judgeReal(caseId: string) {
 
 describe.skipIf(!real('c01-room-without-breath'))('c01 reviewer examples', () => {
   const j = judgeReal('c01-room-without-breath');
-  it('intent and third-party questions are refused, and unlock nothing', () => {
+  it('intent words outrank the topic fact (no card for the topic)', () => {
     for (const q of ['液体窒素をわざとまいたの？', '誰かがこぼしたの？', '何者かにバルブを開けられた？']) {
       const d = j(q);
-      expect(d.answerClass, q).toBe('cannot');
-      expect(d.meta, q).toBe('manner');
-      expect(d.unlock, q).toEqual([]);
+      expect(d.answerClass, q).toBe('no');
+      expect(d.unlock, q).not.toContain('F38');
     }
+    expect(j('液体窒素をわざとまいたの？').factIds).toEqual(['F47']);
   });
-  it('blaming a person is refused; evidence about people stays answerable', () => {
-    for (const q of ['警備員のせい？', '同僚のせいで死んだ？']) expect(j(q).answerClass, q).toBe('cannot');
+  it('answers the manner from the manner fact, and blame on a person with いいえ', () => {
+    expect(j('殺されたの？')).toMatchObject({ answerClass: 'no', factIds: ['F47'] });
+    expect(j('事故ですか？')).toMatchObject({ answerClass: 'yes', factIds: ['F47'] });
+    for (const q of ['警備員のせい？', '同僚のせいで死んだ？']) expect(j(q).answerClass, q).toBe('no');
     expect(j('部屋に窓はありましたか？').answerClass).toBe('no');
   });
   it('keeps broken apart from stopped / dead battery', () => {
@@ -106,10 +107,12 @@ describe.skipIf(!real('c01-room-without-breath'))('c01 reviewer examples', () =>
 
 describe.skipIf(!real('c02-ball-at-dusk'))('c02 reviewer examples', () => {
   const j = judgeReal('c02-ball-at-dusk');
-  it('refuses a person blamed by 「のせい」「が悪い」 but answers things blamed as causes', () => {
-    for (const q of ['通りすがりの人のせい？', '弟のせいで死んだの？', '弟さんは悪くないですか？', '誰かがわざとぶつけた？', '偶然ですか？']) {
-      expect(j(q), q).toMatchObject({ answerClass: 'cannot', meta: 'manner', factIds: [] });
-    }
+  it('routes people blamed by 「のせい」「が悪い」 to the no-blame / manner facts, things as causes', () => {
+    expect(j('通りすがりの人のせい？')).toMatchObject({ answerClass: 'no', factIds: ['F42'] });
+    expect(j('弟のせいで死んだの？')).toMatchObject({ answerClass: 'no', factIds: ['F54'] });
+    expect(j('弟さんは悪くないですか？').answerClass).toBe('yes');
+    expect(j('誰かがわざとぶつけた？')).toMatchObject({ answerClass: 'no', factIds: ['F54'] });
+    expect(j('偶然ですか？')).toMatchObject({ answerClass: 'yes', factIds: ['F54'] });
     expect(j('暑さのせい？').answerClass).toBe('no');
     expect(j('ボールのせいで死んだのですか？').answerClass).toBe('yes');
   });
@@ -117,9 +120,12 @@ describe.skipIf(!real('c02-ball-at-dusk'))('c02 reviewer examples', () => {
 
 describe.skipIf(!real('c03-shed-in-snow'))('c03 reviewer examples', () => {
   const j = judgeReal('c03-shed-in-snow');
-  it('refuses blame, answers animals and objects, and keeps the phone "not broken"', () => {
-    for (const q of ['友人は悪くない？', '捜索隊が悪いの？', '犯人は誰？', '誰にも襲われていないですよね？']) expect(j(q).answerClass, q).toBe('cannot');
+  it('routes blame to the no-blame fact and keeps the phone "not broken"', () => {
+    expect(j('友人は悪くない？').answerClass).toBe('yes');
+    expect(j('捜索隊が悪いの？').answerClass).toBe('no');
+    expect(j('誰にも襲われていないですよね？').answerClass).toBe('yes');
     expect(j('熊に襲われましたか？').answerClass).toBe('no');
     expect(j('スマホは壊れていた？').answerClass).toBe('partial');
+    expect(j('犯人は誰？').answerClass).toBe('vague');
   });
 });

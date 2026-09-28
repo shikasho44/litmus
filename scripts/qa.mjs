@@ -227,7 +227,8 @@ async function shot(page, name) {
   await sleep(200); // CSS-only transitions run on real time
   await overflow(page, name);
   await brokenImages(page, name);
-  await page.screenshot({ path: resolve(out, `${name}.png`) });
+  // generous timeout: SwiftShader screenshots crawl when other browsers share the CPU
+  await page.screenshot({ path: resolve(out, `${name}.png`), timeout: 120000 });
   console.log(`  📷 ${name}.png`);
 }
 
@@ -274,8 +275,8 @@ async function drainRoutes(page, into) {
 async function boot(page, { url = `${BASE}?mute=1`, reload = false } = {}) {
   if (reload) {
     await page.evaluate(() => window.__JD?.flushSave?.());
-    await page.reload({ waitUntil: 'load' });
-  } else await page.goto(url, { waitUntil: 'load' });
+    await page.reload({ waitUntil: 'load', timeout: 120000 });
+  } else await page.goto(url, { waitUntil: 'load', timeout: 120000 });
   for (let i = 0; i < 600; i++) {
     if (await page.evaluate(() => !!window.__JD && document.documentElement.classList.contains('app-ready'))) break;
     await tick(page, 100);

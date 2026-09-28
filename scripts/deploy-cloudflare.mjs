@@ -12,7 +12,7 @@
  *   VITE_API_MODE=http                                 VITE_INCLUDE_ADMIN=false
  */
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -63,7 +63,8 @@ if (embedded) {
 }
 
 console.log('\n▶ 3/5 response headers → dist/_headers');
-copyFileSync(join(ROOT, 'cloudflare', '_headers'), join(ROOT, 'dist', '_headers'));
+// LF only: a Windows checkout (core.autocrlf) turns the file into CRLF.
+writeFileSync(join(ROOT, 'dist', '_headers'), readFileSync(join(ROOT, 'cloudflare', '_headers'), 'utf8').replace(/\r\n/g, '\n'));
 
 if (dryRun) {
   console.log('\n▶ 4/5 D1 migrations skipped (--dry-run)');

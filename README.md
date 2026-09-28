@@ -11,6 +11,16 @@
 
 > 開発の記録と引き継ぎは **`docs/handover.html`**（ブラウザで開く1枚のノート）から始めてください。
 
+**公開中（2026-09-28・PREVIEW 表示・検索エンジンには載せない）**
+
+| 版 | URL | 判定 | オンライン対戦 |
+|---|---|---|---|
+| **AI 判定版（本番・Cloudflare）** | **https://litmus.fourthplace43.com/** | Jev（AI） | あり |
+| AI 判定版（Vercel・監修者向けに継続） | https://janedoe-mauve.vercel.app/ | Jev（AI） | なし |
+| 静的版（体験版・AI なし） | https://fourthplace43.com/games/litmus/ | rules | なし |
+
+旧URL https://fourthplace43.com/games/janedoe/ は games/litmus/ へ転送します。公開・更新の手順は `docs/DEPLOY.md`（Cloudflare は §3）。
+
 ---
 
 ## 1. 動かす（自分のPCで遊ぶ）
@@ -39,7 +49,7 @@ npm run dev          # 開発サーバーを起動
 **スマホで試す**: 開発サーバーはこのPCの中からしか開けません（安全のため）。同じWi-FiのスマホからPCに繋ぐときは、
 `npx vite --host 0.0.0.0` で起動し、スマホで `http://<PCのIPアドレス>:5190/` を開きます（終わったら止めること）。
 開発サーバーは管理画面が鍵なしで開き、Jev モードなら質問ごとに費用もかかるので、**自宅など信頼できる Wi-Fi でだけ**使ってください。
-本番に近い形で試すなら Vercel のプレビュー配備が確実です（`docs/DEPLOY.md`）。
+本番に近い形で試すなら、公開中の Cloudflare 版（https://litmus.fourthplace43.com/）か Vercel のプレビュー配備が確実です（`docs/DEPLOY.md`）。
 
 **途中から試す近道**（開発サーバーのみ）: 管理画面の「トークン」で、捜査済み・審問突破・解決済みなどの段階まで進めた状態を作れます（`POST /api/admin/mint-token`）。
 セーブはブラウザの localStorage に入ります。最初からやり直したいときは設定画面の「記録をすべて消去」。
@@ -63,6 +73,9 @@ npm run dev          # 開発サーバーを起動
 | `npm run qa` | 本物のブラウザ（見えない Chromium）で、タイトルから結果画面まで自動で通しプレイ（PC 1440×900、rules モード、ポート 5198）。画面写真は `qa/flow/` |
 | `npm run qa:mobile` | 同じ通しプレイをスマホ（390×844・タッチ）で |
 | `npm run qa:versus` | オンライン対戦を PC とスマホの2台で通しプレイ（部屋→開始→勝敗→結果→脱落、ひとりのセーブが無傷か。ポート 5199）。画面写真は `qa/versus/` |
+| `npm run deploy:cf` | Cloudflare 版を配備（事件データの埋め込み → ビルド → D1 → `wrangler deploy`。`docs/DEPLOY.md` §3）。`-- --dry-run` で大きさの確認だけ |
+| `npm run smoke:cf` | 公開中の Cloudflare 版を外から確かめる（画面・API・対戦。無料）。`-- --ask --browser` で Jev に1問＋実ブラウザ |
+| `npm run cf:content` | Cloudflare の Worker に同梱する事件データの一覧（`server/cloudflare/content.generated.ts`）を作り直す（事件を足したとき） |
 
 `npm run qa -- --case all` で3事件すべてを通しプレイします（1回 数分〜十数分）。
 場面ごとの細かい写真: `node scripts/shots-investigation.mjs` / `shots-inquest.mjs` / `shots-ending.mjs` / `ui-shots.mjs` / `shots-score.mjs`（名探偵度数と「減点」表示）（各ファイル冒頭に使い方）。
@@ -120,8 +133,8 @@ npx tsc --noEmit && npx vitest run && npm run validate && npx vite build && npm 
 | ファイル | 中身 |
 |---|---|
 | `docs/handover.html` | **引き継ぎノート**（全体像・画面写真・構成図・測定結果・既知の問題・次にやること・再開のしかた） |
-| `docs/DEPLOY.md` | 公開の手順（Vercel・静的版）と公開前チェックリスト |
-| `docs/versus.md` | オンライン対戦（部屋・API・不正の防ぎ方・セーブの守り方・Upstash） |
+| `docs/DEPLOY.md` | 公開の手順（Cloudflare・Vercel・静的版）、上限と費用、Vercel への戻し方、公開前チェックリスト |
+| `docs/versus.md` | オンライン対戦（部屋・API・不正の防ぎ方・セーブの守り方・部屋の置き場所 D1／Upstash） |
 | `docs/design-bible.md` | 設計の正本（世界観・人物・流れ・画面・音・事件） |
 | `docs/decisions.md` | 決めたこと・仮定したことの記録（日付つき） |
 | `docs/engine.md` | 判定エンジン・API・トークン・環境変数 |
@@ -136,4 +149,4 @@ npx tsc --noEmit && npx vitest run && npm run validate && npx vite build && npm 
 
 - 題名は 2026-09-26 に「ジェーンドゥの死因」から **『リトマス審問』** に変えました（元の名前は薬理凶室さんの企画と重なるため。くられ先生からの返信による）。作中の「ジェーン・ドゥ」という呼び名を変えるかは確認中です。正式公開までは `VITE_OFFICIAL_RELEASE_ENABLED=false`（PREVIEW 表示・検索エンジンに載せない）のままにします。名前は `VITE_APP_TITLE` などで差し替えられます。
 - 科学解説は AI が公的資料で裏を取った下書きで、**人の専門家の確認前**です。
-- 静的版（`build:static`）は事件の答えをすべてブラウザに同梱します。答えを守りたい公開には Vercel 版を使います。
+- 静的版（`build:static`）は事件の答えをすべてブラウザに同梱します。答えを守りたい公開には API のある版（Cloudflare 版・Vercel 版）を使います。

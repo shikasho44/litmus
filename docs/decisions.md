@@ -154,3 +154,17 @@ Codex（ChatGPT のサインイン枠）は2回だけ使用（費用 0）。仕�
 - 持ち主の指示で公開。Vercel 本番（AI判定）と fourthplace43.com/games/janedoe/（静的版）。どちらも4事件が並び、エラーなしを実ブラウザで確認。Vercel で「事故ですか？」が封印の台詞、「部屋に窓は？」が Jev で「いいえ」。
 - オンライン対戦は Vercel で `enabled:false`（Upstash 未接続のため。想定どおり）。
 - fourthplace43.com は 2026-09-28 09:14 に Cloudflare Workers（静的アセット）配信へ切り替わっていた（別チャットの作業）。ConoHa へ送ったあと `01_active-projects/fourthplace43-cloudflare` の `bash scripts/publish.sh` で公開する。1回目は別チャットが ConoHa を書き換え中で tar が止まり、数分後にやり直して成功。
+
+## 2026-09-28 AI 判定版を Cloudflare へ（litmus.fourthplace43.com）・静的版を games/litmus へ
+
+- **持ち主の指示**: AI 判定版を Vercel から持ち主の Cloudflare アカウント（Workers Paid）へ移し、URL を新しい題名に合わせる。オンライン対戦も Cloudflare で動かす。Vercel（janedoe-mauve.vercel.app）は監修者が使っているので止めない・触らない。
+- **URL**: AI 判定版 **https://litmus.fourthplace43.com/**（Worker「litmus-shinmon」の独自ドメイン）。静的版 **https://fourthplace43.com/games/litmus/**。旧 `games/janedoe/` は転送ページ（`#/…` を付けたまま移る）。セーブは localStorage＝オリジンごとなので、games/janedoe → games/litmus は引き継がれ、Vercel → litmus は引き継がれない（別サイト扱い）。
+- **形**: fourthplace43.com の Worker には混ぜず、**別の Worker**にした（サイト側の配備・D1・ルールと独立して更新・ロールバックできる。ゲームの `/api` だけが Worker を起動し、静的ファイルは無料）。入口は `server/cloudflare/worker.ts` で、HTTP の処理は Vercel・開発サーバーと同じ `server/http/handler.ts`。
+- **事件データの同梱**: Workers には fs が無いので、`scripts/cf-content.ts` が `content/cases/*/case.json` などを JSON import する `server/cloudflare/content.generated.ts` を作る（commit する。テストがずれを検出、`deploy:cf` が毎回作り直す）。静的版と違い、Worker の中にあるだけでブラウザには出ない。
+- **対戦の部屋は D1**（`litmus-versus`、APAC）: Upstash を足さず、同じアカウントの D1 に Redis ハッシュと同じ意味の `D1RoomStore` を書いた。1書き込み＝1 batch（トランザクション）、先着は `INSERT … ON CONFLICT DO NOTHING RETURNING`、期限は `vs_keys.exp`＋読むときに隠す＋Cron で削除。テストは Node 24 内蔵の SQLite で同じ SQL を流す（新しい依存なし）。既存の service のテスト一式を D1 でも流している。
+- **1日の費用上限を全インスタンスで共有**: Workers は拠点ごとに多数のインスタンスが立つので、メモリの `BudgetGuard` だけでは上限が拠点の数だけ緩む。D1 の `budget_daily` に日ごとの合計を持ち、AI を呼ぶ前に15秒に1回まで読み直し、応答のあとに足し込む（`BudgetStore`。Vercel・開発サーバーは今までどおりメモリだけ）。
+- **Workers 固有の直し**: モジュール読み込み時の乱数（`env.ts` の予備の鍵・`handler.ts` の比較用の鍵）を最初の利用時に作るよう変更（Workers はグローバルスコープで乱数を作れない）。クライアント IP は `CF-Connecting-IP` を使い、利用者が偽れる `X-Forwarded-For` などは捨てる。質問・宣告の前に Rate Limiting binding（IP ごと 40回/分）。
+- **Cloudflare Web Analytics**: ゾーン全体でビーコンが自動挿入されていた。litmus は CSP が外部スクリプトを止め（コンソールエラーになる）、プライバシーポリシーも「アクセス解析なし」なので、`Cache-Control: no-transform` で挿入させないことにした。静的版（fourthplace43.com 側）には入っている → 持ち主の判断待ち（`docs/DEPLOY.md` §3-6）。
+- **秘密の値**: `SESSION_SECRET` は新しく乱数を作り、画面に出さずに `wrangler secret put` へ直接渡した（控えは無い。Vercel とは別の値）。`OPENROUTER_API_KEY` は開発機の環境変数のキー（`.env.local` には入っていなかった）を同じく標準入力で登録。専用キー＋上限への差し替えを推奨。
+- **費用**: Workers Paid（既存 $5/月）の込み分で収まる見込み（`docs/DEPLOY.md` §3-5）。この作業で使った AI は Jev 1問（$0.00042、D1 の `budget_daily` に記録されたことも確認）。決まった言い回しの「部屋に窓はありましたか？」は AI を呼ばない近道で答える（無料・116ms）ので、確認には言い換えの質問を使った。
+- 確認: `npm run smoke:cf -- --ask --browser`（画面・ヘッダー・API・4事件・対戦を2クライアントで作成→入室→開始→ポーリング→トークン→退出、Jev で「いいえ」、実ブラウザでコンソールエラー 0）、ローカルは tsc・vitest（43ファイル 644件）・`npm run build`・`npm run build:static`・validate。

@@ -3,8 +3,9 @@
 2026-09-27 追加。くられ先生の提案「同時プレイに対応して、どちらが先に答えにたどり着くかを競えると、実況者にも受けが良い」から。
 持ち主の選択は**オンライン**: それぞれの端末で部屋コードを共有し、同じ事件を同じ瞬間に始め、相手の進み具合を見ながら、**死因宣告を先に通した人が勝ち**。実況者のコラボ配信を想定している。
 
-- 使えるのは **Vercel 版（API あり）だけ**。静的版（`build:static`）には対戦のコードも入口も入らない（§8）。
-- Vercel で使うには **Upstash Redis をつなぐ必要がある**（`docs/DEPLOY.md` §1-6）。つないでいない本番では対戦は出ない（タイトルに項目が出ない）。`npm run dev` ではメモリで動く。
+- 使えるのは **API のある版**（Cloudflare 版・Vercel 版）だけ。静的版（`build:static`）には対戦のコードも入口も入らない（§8）。
+- **Cloudflare 版 https://litmus.fourthplace43.com/ で動いている**（2026-09-28〜。部屋は Cloudflare D1。`docs/DEPLOY.md` §3）。
+- Vercel で使うには **Upstash Redis をつなぐ必要がある**（`docs/DEPLOY.md` §1-6）。未接続なので Vercel 版（janedoe-mauve.vercel.app）には対戦が出ない（タイトルに項目が出ない）。`npm run dev` ではメモリで動く。
 
 ---
 
@@ -32,11 +33,12 @@
 ## 2. 仕組み（全体）
 
 ```
-ブラウザ（http 版だけ）                         サーバー（dev: vite プラグイン / Vercel: api/router.ts → 同じ handleApi）
+ブラウザ（http 版だけ）                         サーバー（dev: vite プラグイン / Vercel: api/router.ts / Cloudflare: server/cloudflare/worker.ts → 同じ handler）
  src/scenes/Versus        画面                   server/http/versus-routes.ts   /api/versus/*（zod で入力検査・レート制限）
  src/features/versus/                            server/versus/service.ts       VersusService（部屋の規則・勝敗・派生した進み具合）
    client.ts   fetch                             server/versus/store.ts         RoomStore（メモリ）
    session.ts  部屋・ポーリング・時計補正・告知   server/versus/upstash.ts       RoomStore（Upstash Redis REST, fetch だけ）
+                                                 server/versus/d1.ts            RoomStore（Cloudflare D1）
    slot.ts     セーブの差し替え（§4）            server/engine/room-binding.ts  トークンの部屋の結びつけ
    Hud.tsx     VERSUS HUD                        server/engine/token.ts         ペイロードに省略可能な `vs`
    Standings   順位表                            server/engine/game.ts          部屋の難易度の宣告形式を強制
@@ -115,12 +117,22 @@ QA（`npm run qa:versus`）で、対戦の前後・途中・再読み込み後�
 
 ## 7. 部屋の保存（RoomStore）
 
-新しい npm 依存は無し。`server/versus/store.ts` の小さな口（HGETALL / HSETNX / HSET / HDEL / HINCRBY、書き込みに TTL 付き）を2通りで実装:
+新しい npm 依存は無し。`server/versus/store.ts` の小さな口（HGETALL / HSETNX / HSET / HDEL / HINCRBY、書き込みに TTL 付き）を3通りで実装:
 
 - **メモリ**（`MemoryRoomStore`）: dev サーバー・テスト・`VERSUS_STORE=memory`（`vite preview` のような1プロセスのとき）。サーバーを再起動すると部屋は消える。
 - **Upstash Redis**（`UpstashRoomStore`）: REST の `/pipeline` を fetch で呼ぶ。環境変数は `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`、または Vercel の連携が入れる `KV_REST_API_URL` + `KV_REST_API_TOKEN`。https 以外は使わない。トークンはログにも応答にも出さない。障害は 503（再試行可）。
 
-選び方（`server/http/runtime.ts` `versusStoreFor`）: Upstash があればそれ → 無ければ dev はメモリ → 本番は**無効**（Vercel の関数どうしはメモリを共有しないので、メモリで動かすと部屋が見えたり消えたりする）。`VERSUS_ENABLED=false` で止められる。Vercel 上では `VERSUS_STORE=memory` も無視する。
+- **Cloudflare D1**（`D1RoomStore`、`server/versus/d1.ts`、2026-09-28）: Cloudflare Worker の D1 バインディング `VERSUS_DB`（データベース `litmus-versus`）。表は `cloudflare/migrations/0001_init.sql`:
+  `vs_keys(k, exp)`（部屋のキー1つ＝1行、期限はミリ秒）と `vs_fields(k, f, v)`（ハッシュの1項目＝1行）。Redis と同じ意味になるように:
+  - **書き込み1回＝D1 の batch 1回**（D1 では batch が1つのトランザクション）。中身は「期限切れのキーを消す → 操作 → 期限を付け直す」。期限切れのキーへの書き込みは新しいハッシュから始まる（Redis と同じ）。
+  - HSETNX は `INSERT … ON CONFLICT (k, f) DO NOTHING RETURNING 1`: 行が返ってきた1人だけが取れる（勝者 `win`・空き枠 `p:<枠>`・`start`・`meta`）。D1 は書き込みが1か所に集まるので、同時に届いても1人。
+  - HINCRBY は `INSERT … ON CONFLICT DO UPDATE SET v = CAST(v AS INTEGER) + ? RETURNING v`（値は Redis と同じく文字列で持つ）。HDEL で項目が0になったキーは消える。
+  - 期限切れの部屋は読んでも見えない。実際の削除は次の書き込みか、Worker の Cron（毎時17分）。
+  - 障害は 503（再試行可）、理由はログだけ。
+  - テスト: `tests/cloudflare/d1-store.test.ts`（メモリと D1 に同じ契約のテスト）、`tests/cloudflare/service-d1.test.ts`（§9 の service のテスト一式を D1 でもう一度）。SQL は Node 24 内蔵の SQLite（`node:sqlite`）で本物を流す（依存の追加なし）。
+  - 目安: 4人・30分の対戦でポーリング約3,600回 × 約25行 ≈ 9万行の読み取り。Workers Paid の込み分（月250億行）に対してごくわずか。
+
+選び方（`server/http/runtime.ts` `versusStoreFor`）: Upstash があればそれ → 無ければ D1（Cloudflare の `VERSUS_DB`）→ 無ければ dev はメモリ → 本番は**無効**（Vercel の関数・Workers のインスタンスどうしはメモリを共有しないので、メモリで動かすと部屋が見えたり消えたりする）。`VERSUS_ENABLED=false` で止められる。Vercel 上と Cloudflare 上では `VERSUS_STORE=memory` も無視する。
 
 部屋 = ハッシュ1つ `jd:vs:<コード>`。項目:
 
@@ -137,7 +149,7 @@ QA（`npm run qa:versus`）で、対戦の前後・途中・再読み込み後�
 | `a:<枠>` / `k:<枠>` | 宣告回数／トークン発行回数 | HINCRBY |
 
 **1人は自分の枠の項目しか書かない**ので、同時の更新で他人の値を上書きしない（1つの塊を読んで書き戻す方式は使っていない）。
-部屋は**最後の書き込みから3時間**で消える（書き込みのたびに EXPIRE。どの書き込みも期限なしのキーを残さない）。作成から8時間を過ぎた部屋は使えない。
+部屋は**最後の書き込みから3時間**で消える（書き込みのたびに EXPIRE／D1 では `vs_keys.exp` を付け直す。どの書き込みも期限なしのキーを残さない）。作成から8時間を過ぎた部屋は使えない。
 
 Upstash の無料枠（月 50万コマンド）の目安: 4人・30分の対戦で約5,000コマンド（ほぼポーリングの HGETALL。見えた時刻の書き込みは8秒に1回）。月100試合程度まで無料。
 
@@ -153,6 +165,8 @@ Upstash の無料枠（月 50万コマンド）の目安: 4人・30分の対戦�
 npx vitest run tests/versus          単体（部屋の一連・コードの文字・名前・席の署名・トークンの結びつけと偽造・同時の解決・脱落・
                                      進み具合の計算・入力検査・無効時・Upstash の REST の形（偽の Redis）・静的な判定）
 npm run qa:versus                    実ブラウザ2台（PC 1440×900 ＋ スマホ 390×844）で対戦を通し、qa/versus/ に写真
+npx vitest run tests/cloudflare      D1 の部屋（本物の SQL を node:sqlite で）・service 一式を D1 で・Worker 経由の作成→入室→開始→ポーリング→退出
+npm run smoke:cf                     本番の Cloudflare 版に2クライアントで部屋を作って一通り（AI は使わない・無料）
 ```
 
 `qa:versus` の流れ: ひとりの進行をセーブに置く → タイトルの「対戦」→ 作成（見習い）→ スマホが招待リンクで入室・API で2人追加して4人（5人目は満員）→ コードを隠す・コピー →
@@ -166,5 +180,5 @@ QA は自前の dev サーバーを **:5199** で立てる（`npm run qa` の :5
 
 - 同じ部屋のホストの交代（ホストがロビーで抜けると部屋は閉じる）、キック、開始前の事件・難易度の変更。
 - 閉じたタブからの復帰（sessionStorage のため）。
-- 対戦中の「リアルタイム」はポーリング（2秒）。WebSocket は Vercel の関数では持てないので使っていない。
-- レート制限はインスタンスごとのメモリ（他の API と同じ）。本気の乱用対策は Vercel の Firewall で `/api/versus/*` を絞る。
+- 対戦中の「リアルタイム」はポーリング（2秒）。WebSocket は Vercel の関数では持てないので使っていない（Cloudflare なら Durable Objects で持てるが、今はポーリングのまま。D1 の読み取りはごく安い）。
+- レート制限はインスタンスごとのメモリ（他の API と同じ）。本気の乱用対策は Vercel の Firewall／Cloudflare の WAF で `/api/versus/*` を絞る。

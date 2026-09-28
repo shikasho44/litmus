@@ -192,7 +192,7 @@
       <span class="badge ok">3事件 通しで遊べる</span>
       <span class="badge ok">PC・スマホ 自動通しプレイ 合格</span>
       <span class="badge ok">判定AI 正答率 91.1%</span>
-      <span class="badge warn">未配備（手順書あり）</span>
+      <span class="badge ok">公開中 litmus.fourthplace43.com（2026-09-28）</span>
       <span class="badge warn">題名 権利者確認待ち</span>
       <span class="badge no">科学解説 専門家確認前</span>
       <span class="badge warn">変更は未 commit</span>
@@ -254,9 +254,21 @@
     <li><b>ミスディレクション</b>: 事故の3件に「殺人では？」と思わせる手がかりと、それを晴らす証拠を追加（c01 もう一人の入館者・外されたストッパー／c02 土手の男・胸の丸い痕／c03 霧の中の人影＝ブロッケン現象・裂けた袖）。c03 の審問は3ラウンド。</li>
     <li><b>CASE 04「白い花の夕餉」</b>: 初めての殺人事件。山菜の採り違え事故に見えるトリカブトの混入。宣告で犯人を名指しする。</li>
     <li><b>名探偵度数</b>: ミスのたびに「減点 −n」をその場で表示。事件ごとの最高点（難易度の倍率つき）の合計と、5段階の称号。</li>
-    <li><b>オンライン対戦</b>: 部屋番号で2〜4人。同時スタート、相手の解明度が見え、先に解いた人が勝ち。Vercel で Upstash Redis をつなぐと有効（<code>docs/versus.md</code>、<code>docs/DEPLOY.md</code> §1-6）。静的版には入らない。</li>
+    <li><b>オンライン対戦</b>: 部屋番号で2〜4人。同時スタート、相手の解明度が見え、先に解いた人が勝ち。Cloudflare 版で動いている（部屋は D1。<code>docs/versus.md</code>、<code>docs/DEPLOY.md</code> §3）。Vercel 版は Upstash をつなぐまで出ない（§1-6）。静的版には入らない。</li>
     <li><b>イラスト依頼の一覧</b>: <code>docs/illustration-commission.md</code>。</li>
   </ul>
+
+  <h3>公開先（2026-09-28）</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>版</th><th>URL</th><th>判定</th><th>対戦</th></tr></thead>
+    <tbody>
+      <tr><td><b>AI 判定版（本番・Cloudflare）</b></td><td><a href="https://litmus.fourthplace43.com/">https://litmus.fourthplace43.com/</a></td><td>Jev（AI）</td><td>あり（D1）</td></tr>
+      <tr><td>AI 判定版（Vercel・監修者向けに継続）</td><td><a href="https://janedoe-mauve.vercel.app/">https://janedoe-mauve.vercel.app/</a></td><td>Jev（AI）</td><td>なし</td></tr>
+      <tr><td>静的版（体験版・答えが読める）</td><td><a href="https://fourthplace43.com/games/litmus/">https://fourthplace43.com/games/litmus/</a></td><td>rules</td><td>なし</td></tr>
+      <tr><td>旧URL</td><td>https://fourthplace43.com/games/janedoe/</td><td colspan="2">games/litmus/ へ転送（セーブは引き継がれる）</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">どれも PREVIEW 表示・検索エンジンに載せない設定。セーブはブラウザの URL（オリジン）ごとなので、版を移ると最初から。配備・更新・戻し方は <code>docs/DEPLOY.md</code>（Cloudflare は §3: <code>npm run deploy:cf</code> → <code>npm run smoke:cf</code>）。</p>
 
   <h3>事件（4件・すべて架空）</h3>
   <div class="case"><div class="no">01</div><div><h4>息のない部屋</h4><div class="en">THE ROOM WITHOUT BREATH · 難易度1 · 化学／生理学</div><p>窓のない地下の試料保管室で、若い研究者が眠るように亡くなっていた。液体窒素が気化して酸素を押しのける「酸素欠乏」。苦しさで気づけない理由と、酸素濃度計・換気・単独作業の大切さ。</p></div></div>
@@ -325,8 +337,8 @@
       <text x="36" y="198" fill="#F2EFE6" font-size="14" font-weight="700">開発: Vite プラグイン</text>
       <text x="36" y="219" fill="#A7A08F" font-size="12.5">npm run dev（127.0.0.1:5190）</text>
       <rect x="340" y="174" width="300" height="56" fill="#141821" stroke="rgba(242,239,230,.24)"/>
-      <text x="356" y="198" fill="#F2EFE6" font-size="14" font-weight="700">本番: Vercel の関数</text>
-      <text x="356" y="219" fill="#A7A08F" font-size="12.5">api/[...path].ts（15秒・content 同梱）</text>
+      <text x="356" y="198" fill="#F2EFE6" font-size="14" font-weight="700">本番: Cloudflare Worker ／ Vercel の関数</text>
+      <text x="356" y="219" fill="#A7A08F" font-size="12.5">server/cloudflare/worker.ts ／ api/router.ts</text>
 
       <line x1="170" y1="230" x2="170" y2="256" stroke="#A7A08F" stroke-width="1.5" marker-end="url(#ah)"/>
       <line x1="490" y1="230" x2="490" y2="256" stroke="#A7A08F" stroke-width="1.5" marker-end="url(#ah)"/>
@@ -414,7 +426,7 @@
     <tbody>
       <tr><td><code>src/</code></td><td>画面（scenes / features / ui / fx / audio）、セーブ（state）、API の呼び出し口（api）、管理画面（admin）</td></tr>
       <tr><td><code>server/engine/</code></td><td>判定エンジン本体。安全フィルター・正規化・判定（rules / Jev / LLM）・開示の規則・死因宣告の判定・トークン・予算</td></tr>
-      <tr><td><code>server/http/</code>, <code>api/</code></td><td>HTTP の入口（Vite 開発サーバーと Vercel で共用）</td></tr>
+      <tr><td><code>server/http/</code>, <code>api/</code>, <code>server/cloudflare/</code></td><td>HTTP の入口（Vite 開発サーバー・Vercel・Cloudflare Worker で共用）。Cloudflare 用は Worker の入口・事件データの同梱・D1（<code>wrangler.jsonc</code>、<code>cloudflare/</code>）</td></tr>
       <tr><td><code>shared/</code></td><td>事件データの形（<code>case-schema.ts</code>）と画面⇔サーバーの約束（<code>api.ts</code>）。ここが正本</td></tr>
       <tr><td><code>content/</code></td><td>事件（<code>cases/*/case.json</code>）、ホルマの台詞、プロローグ、口調の決まり（<code>VOICE.md</code>）</td></tr>
       <tr><td><code>public/</code></td><td>画像（WebP）、利用規約・プライバシー・お問い合わせ、OG 画像。原本は <code>art-src/</code></td></tr>
@@ -566,10 +578,10 @@
       <p>AI プレイテストで 15本中13本が2ラウンド目で所見をもらっていた（必要な所見が核心へ向かう質問では開きにくい）。別解を増やし、ヒントと例チップで誘導したが、効果は未測定。人のプレイテストで確かめる。</p></li>
     <li><span class="sev s2">判定</span><h4>所見の語を多く含む「作り話」に はい が返ることがある</h4>
       <p>判定文 v2 で減らした（プレイテストの作り話 44問の再生で正解 21→29）。その後、内容側で判定メモ（「〜と訊かれたら いいえ／一部そう」）を足したが、効果は未測定。曖昧な質問（正解が「一部そう」になりやすい種類）の正答率は約 77%。構造的な対策（質問の中の、真相に無い語を Jev に選ばせる）は未着手。<code>docs/ai.md</code> §7。</p></li>
-    <li><span class="sev s2">費用・乱用</span><h4>1日の費用上限と連打の制限は「サーバー1台ごと」</h4>
-      <p>Vercel は負荷で台数が増えるので、合計は上限を超えうる。<strong>OpenRouter のキーに Credit limit を必ず付け</strong>、Vercel の Firewall で <code>/api/*</code> を絞る（<code>docs/DEPLOY.md</code> §1-3）。</p></li>
+    <li><span class="sev s2">費用・乱用</span><h4>1日の費用上限と連打の制限は「サーバー1台ごと」（Cloudflare 版の費用上限は全体で共有）</h4>
+      <p>Vercel は負荷で台数が増えるので、合計は上限を超えうる。Cloudflare 版は1日の費用を D1 で合計している（15秒ぶんの遅れはある）が、連打の制限はインスタンスごと＋拠点ごとの Rate Limiting。<strong>OpenRouter のキーに Credit limit を必ず付け</strong>、Firewall／WAF で <code>/api/*</code> を絞る（<code>docs/DEPLOY.md</code> §1-3・§3-6）。</p></li>
     <li><span class="sev s2">決定待ち</span><h4>静的版は答えがすべて読める</h4>
-      <p>どちらを公式の公開版にするか未決定。提案は「Vercel 版が公式、静的版は体験版」（<code>docs/decisions.md</code>）。</p></li>
+      <p>公式の公開版は Cloudflare 版（答えはサーバーだけ）。静的版（fourthplace43.com/games/litmus/）は体験版と割り切る（<code>docs/decisions.md</code> 2026-09-28）。静的版にはゾーン全体の Cloudflare Web Analytics のビーコンが入っていて、プライバシーポリシーの「アクセス解析なし」と食い違う（持ち主の判断待ち。<code>docs/DEPLOY.md</code> §3-6）。</p></li>
     <li><span class="sev s3">小</span><h4>Vercel では Jev の「目覚まし」が効かないことがある</h4>
       <p>しばらく誰も遊ばなかった後の1問目が遅れて簡易判定になりうる（ゲームは止まらない）。確実にするには <code>@vercel/functions</code> の追加（依存の追加＝持ち主の判断）。</p></li>
     <li><span class="sev s3">小</span><h4>ヒントがプレイヤーの進み具合に合わせて変わらない</h4>
@@ -590,7 +602,7 @@
     <li><b>人のプレイテスト（3〜5人、PC とスマホ）。</b>詰まった場所、ヒントの使われ方、審問2ラウンド目の泣きつき、同じ意味の質問に違う答えが返ったか、押しにくいボタン。遊ぶ様子を横で見るのがいちばん効きます。</li>
     <li><b>科学解説の専門家確認。</b>c01（酸欠・液体窒素）、c02（心臓震盪・AED）、c03（低体温症・矛盾脱衣）。済んだら <code>reviewStatus</code> を <code>human-reviewed</code> に。</li>
     <li><b>題名の権利者確認。</b>取れたら <code>VITE_OFFICIAL_RELEASE_ENABLED=true</code> と <code>VITE_SITE_URL</code>。取れなければ題名を差し替え。</li>
-    <li><b>Vercel に配備。</b>まずプレビュー配備で友人に試してもらい、本番へ。手順とチェックリストは <code>docs/DEPLOY.md</code>。OpenRouter のキーに上限を付けること。</li>
+    <li><b>配備は済み（2026-09-28）。</b>本番は Cloudflare 版 https://litmus.fourthplace43.com/。ほかのブランチを取り込んだら <code>npm run deploy:cf</code> → <code>npm run smoke:cf</code>。Cloudflare 版専用の OpenRouter キーを作って上限を付け、差し替えること（<code>docs/DEPLOY.md</code> §3-6）。</li>
     <li><b>AI プレイテストをもう一度（約$0.2）。</b>内容の修正（2ラウンド目の別解・判定メモ）の効果を数字で確かめる: <code>npx tsx scripts/playtest.ts --max-usd 0.3</code>。</li>
     <li><b>事件を増やす。</b>フォルダを1つ足して <code>npm run validate</code>（README §6）。1件につき、事件データ＋画像7枚（背景・肖像・コマ5）＋科学の出典。</li>
     <li><b>アプリとして配る（任意）。</b>まずは PWA（ホーム画面に追加。<code>manifest.webmanifest</code> とアイコンは用意済み、オフライン用の仕組みは未実装）。ストアに出すなら Capacitor で包む（依存の追加・ストア審査が必要）。</li>

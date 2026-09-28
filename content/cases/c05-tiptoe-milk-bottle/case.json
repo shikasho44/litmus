@@ -354,9 +354,6 @@
         "無事"
       ],
       "ifAsked": "no",
-      "requires": [
-        "F06"
-      ],
       "related": [
         "F05",
         "F08"
@@ -910,9 +907,6 @@
         "上の部分"
       ],
       "ifAsked": "no",
-      "requires": [
-        "F05"
-      ],
       "related": [
         "F05",
         "F07"

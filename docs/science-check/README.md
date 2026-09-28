@@ -5,7 +5,24 @@
 - 確かめ方: 事件ごとに、3つの目（筋書きが現実に起こりうるか／科学の説明が正しいか／わざと反証を試みる）で別々に調べました。出てきた指摘は、論文・公的機関・大学・学会などの元の資料を開いて一件ずつ確かめ、正しいと確認できたものだけをゲームに反映しました。数字・症例・出典を新しく作ったものはありません。
 - 安全の方針: 致死量、危険になるまでの時間、ボールの速さなど、まねできてしまう数値や手順は、ゲームにもこの報告にも書いていません。
 - 詳しい報告: [c01.md](c01.md)／[c02.md](c02.md)／[c03.md](c03.md)／[c04.md](c04.md)（2026-09-27 追加）／公式シリーズとの重複は [overlap.md](overlap.md)
+- 2026-09-28 から、ゲームの画面の番号は入門の3件が CASE 01〜03、ここで調べた c01〜c04 は CASE 04〜07 です（id はそのまま）。
 - 専門家への質問リスト: [expert-questions.md](expert-questions.md)
+
+## 入門の3件（2026-09-28 追加）— 専門家の確認は不要とした
+
+CASE 01〜03 は、はじめて遊ぶ人のための短い事件で、被害者は人ではなく「もの」です。扱う科学は小中学校の理科や、公的機関・学会の一般向けページに載っている身近なことだけなので、**くられ先生への監修依頼の対象にはしません**（`reviewStatus` は `ai-reviewed` のまま。画面の「専門家確認前」の表示もそのまま）。
+数字は出典にあるものだけを使い、新しく作った数値はありません。致死量・危険な手順のたぐいは出てきません。公式シリーズとの重なり（[overlap.md](overlap.md)）も確かめました：ろうそくの炎（#26）、風船（#28）、閉じた空間の酸欠の型は使っていません。
+
+| 事件（id） | 死因（科学） | 出典（2026-09-28 に開いて確認） |
+|---|---|---|
+| CASE 01「背のびした牛乳びん」（c05） | 凍結膨張。水は凍ると体積が約1割（約9%）ふえ、満タンのびんを内側から押した | NHK for School「液体が固体になった時の体積変化－中学」https://edu.web.nhk/school/watch/clip/?das_id=D0005403224_00000 ／ NHK for School「氷になると体積は？」https://edu.web.nhk/school/watch/clip/?das_id=D0005301337_00000 ／ 中谷宇吉郎 雪の科学館「氷のすき間について」（約9%増）https://yukinokagakukan.kagashi-ss.com/oshiete/ ／ 日本化学会 化学だいすきクラブ「水の不思議な性質」https://kdc.csj.jp/learning/item_3917.html ／ 文部科学省 食品成分データベース（普通牛乳 水分87.4g）https://fooddb.mext.go.jp/details/details.pl?ITEM_NO=13_13003_7 ／ 東京都水道局「水道管の凍結について」https://www.waterworks.metro.tokyo.lg.jp/kurashi/trouble/touketsu ／ 全国清涼飲料連合会 Q&A https://www.j-sda.or.jp/learning/qa/qa01/qa13.php ／ 前川製作所「水道管の凍結メカニズムとその利用」https://rdc.mayekawa.co.jp/column/02-3.shtml |
+| CASE 02「氷点下の雪だるま」（c06） | 日射による融解。気温は日かげの空気の温度で、日なたの黒いマフラーは光を吸って0℃をこえ、首の雪をとかした | 気象庁「観測機器について」https://www.jma.go.jp/jma/kishou/know/faq/faq11.html ／ 気象庁キッズ「なぜ日なたでは気温が測れないの？」https://www.jma.go.jp/jma/kids/kids/faq/b1_06.html ／ 消防研究センター「虫めがねで日光を集めて紙に当てると？」https://nrifd.fdma.go.jp/public_info/kids/p3_science_light/review/index.html ／ EICネット「アルベド」（新雪0.8程度）https://www.eic.or.jp/ecoterm/?act=view&serial=4132 ／ JAXA Earth-graphy（2018-07-18）https://earth.jaxa.jp/ja/earthview/2018/07/18/1379/index.html ／ 国立極地研究所（2021-10-26、札幌の雪の光吸収性粒子で消雪が15日早まる）https://www.nipr.ac.jp/info/notice/20211026-1.html ／ 釧路農業改良普及センター（黒い融雪剤）https://www.kushiro.pref.hokkaido.lg.jp/ss/nkc/gijyutu/R1/200301tou.html ／ 首相官邸「雪害では、どのような災害が起こるのか」https://www.kantei.go.jp/jp/headline/bousai/setsugai.html |
+| CASE 03「うなだれたバラ」（c07） | 水揚げ不良。茎の道管に空気の泡が入り、水を吸い上げられずに花首が曲がった（ベントネック） | 日本植物生理学会 植物Q&A「バラの切花について」（2008）https://jspp.org/hiroba/q_and_a/detail.html?id=1673 ／ 同「切り花の茎を焼く理由」（2017）https://jspp.org/hiroba/q_and_a/detail.html?id=3553 ／ NHK for School「水は葉にどう届く？」https://edu.web.nhk/school/watch/outline/?das_id=D0005110453_00000 ／ NHK for School「植物の蒸散－中学」https://edu.web.nhk/school/watch/clip/?das_id=D0005401272_00000 ／ 農研機構「切り花の品質保持技術の研究」https://www.naro.go.jp/laboratory/nivfs/research/kiribana/contents/hinshitsu.html |
+
+入門の3件で、念のため人の目で見てほしい点（監修ではなく、読み合わせの範囲）:
+- c05: 満タンのガラスびんで、口から氷の柱が押し出されつつ胴にもひびが入る、という描写（口の氷が先に固まって栓になり、残りが胴を押す、という説明にした）。
+- c06: 「気温 −2℃の快晴の日なたで、黒い毛糸のマフラーが0℃をこえ、ふれた雪をとかす」の程度（数値は書いていない。黒い物が雪にしずむ現象と、黒い融雪剤の実用から、起こりうると判断）。
+- c07: 7時間の乾燥と空気中での切り戻しで、ひと晩でベントネックになるか（日本植物生理学会 Q&A の「気泡による導管閉塞」「ベントネックは水の吸い上げ不良がおもな原因」に基づく）。
 
 ## 判定の見方
 

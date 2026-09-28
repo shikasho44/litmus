@@ -1,6 +1,6 @@
 // Screenshots for the ending scenes (Resolution → Science → Quiz → Result).
 //
-//   node scripts/shots-ending.mjs                       all 3 cases × pc + sp
+//   node scripts/shots-ending.mjs                       all 7 cases × pc + sp
 //   node scripts/shots-ending.mjs --case c02            one case (prefix match)
 //   node scripts/shots-ending.mjs --only science        one part: resolution | science | quiz | result | badtoken
 //   node scripts/shots-ending.mjs --size sp             one size: pc | sp | xs (320×640) | hd (1280×720) | fhd (1920×1080) | wd (1680×900)
@@ -31,7 +31,10 @@ const BASE = `http://127.0.0.1:${PORT}/`;
 const out = resolve(root, 'qa', 'ending');
 mkdirSync(out, { recursive: true });
 
-const CASES = ['c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper'].filter((c) => !CASE || c.startsWith(CASE));
+const CASES = [
+  'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-rose-that-bowed', // CASE 01–03 (intro, object souls)
+  'c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper', // CASE 04–07
+].filter((c) => !CASE || c.startsWith(CASE));
 const SIZES = [
   { tag: 'pc', viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },
   { tag: 'sp', viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },

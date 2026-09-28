@@ -578,9 +578,6 @@
         "マフラーはつめた"
       ],
       "ifAsked": "yes",
-      "requires": [
-        "F05"
-      ],
       "related": [
         "F10"
       ],

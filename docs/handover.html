@@ -258,11 +258,22 @@
     <li><b>イラスト依頼の一覧</b>: <code>docs/illustration-commission.md</code>。</li>
   </ul>
 
-  <h3>事件（4件・すべて架空）</h3>
-  <div class="case"><div class="no">01</div><div><h4>息のない部屋</h4><div class="en">THE ROOM WITHOUT BREATH · 難易度1 · 化学／生理学</div><p>窓のない地下の試料保管室で、若い研究者が眠るように亡くなっていた。液体窒素が気化して酸素を押しのける「酸素欠乏」。苦しさで気づけない理由と、酸素濃度計・換気・単独作業の大切さ。</p></div></div>
-  <div class="case"><div class="no">02</div><div><h4>夕暮れの白球</h4><div class="en">THE BALL AT DUSK · 難易度2 · 物理／生理学</div><p>弟とのキャッチボール中、少女が突然倒れた。胸への軽い衝撃が心臓の拍動の「ごく短い瞬間」に重なる「心臓震盪」。AED と胸骨圧迫。弟を責めない「誰のせいでもない」着地。</p></div></div>
-  <div class="case"><div class="no">03</div><div><h4>雪に残されたもの</h4><div class="en">WHAT WAS LEFT IN THE SNOW · 難易度3 · 生理学／法医学</div><p>雪山で、服を脱ぎ捨てた女性が岩の隙間で見つかった。事件が疑われたが、真相は重い低体温症が起こす「矛盾脱衣」と「穴ごもり行動」。冬山だけでなく屋内でも起こる。</p></div></div>
-  <div class="case"><div class="no">04</div><div><h4>白い花の夕餉</h4><div class="en">SUPPER OF WHITE FLOWERS · 殺人事件 · 植物毒／法医学</div><p>山菜の夕食会の夜、植物画家が亡くなった。春によくあるニリンソウとトリカブトの採り違えに見えるが、毒が出たのは彼女の小鉢だけ。見分け方・予防・中毒110番。量や時間など、まねできる情報は載せていない。</p></div></div>
+  <h3>2026-09-28 の追加（入門の3件）</h3>
+  <ul>
+    <li><b>はじめの3件を「もの」の短い事件に</b>: オーナーの「最初が中級以上だと、初心者は難しいとやめてしまう」を受けて、専門家の監修がいらないほど身近な科学の事件を CASE 01〜03 に置き、これまでの4件を CASE 04〜07 に下げた（<code>case.json</code> の <code>number</code> だけを変更。id の c01〜c04 はそのまま）。遊び方の案内（コーチマーク）は CASE 01（番号が1の事件）の初回で出る。</li>
+    <li><b>被害者が「もの」</b>: 破片の肖像の型を事件ごとに持てるようにした（<code>victim.silhouette</code>。人の胸像・型なし・SVG の輪郭）。名前の下の行も事件ごとに（<code>victim.profile</code>。「生まれて 4年」「役目 …」）。科学解剖の「何が身体で起きたのか」の見出しも差し替えられる（<code>science.bodyTitle</code>、因果の鎖の「からだへの影響」）。</li>
+    <li>各事件の制作ノート: <code>content/cases/c05-*/NOTES.md</code> ほか。質問の上限（予算）の目安は 25／25／30問。</li>
+  </ul>
+
+  <h3>事件（7件・すべて架空）</h3>
+  <p class="note">番号は画面の CASE 番号。（ ）内は事件の id。</p>
+  <div class="case"><div class="no">01</div><div><h4>背のびした牛乳びん</h4><div class="en">THE BOTTLE ON TIPTOE · 入門 · 物理（c05）</div><p>夏休みの朝、冷凍庫の中で牛乳びんにひびが入り、口から白い柱がのびていた。水は凍ると体積が約1割ふえる——ほとんどの液体とは反対の性質。となりの半分のびんが無事だった理由。約10分。</p></div></div>
+  <div class="case"><div class="no">02</div><div><h4>氷点下の雪だるま</h4><div class="en">THE SNOWMAN BELOW ZERO · 入門 · 物理／気象（c06）</div><p>一日じゅう氷点下の晴れた日、雪だるまの首だけがとけて頭が落ちた。気温は日かげで測る空気の温度。黒いマフラーが日の光を吸って0℃をこえた。約12分。</p></div></div>
+  <div class="case"><div class="no">03</div><div><h4>うなだれたバラ</h4><div class="en">THE ROSE THAT BOWED · 入門 · 生物（c07）</div><p>きれいな水がたっぷりの花びんで、母の日のバラがうなだれた。茎の水の通り道に空気の泡が入り、水を吸い上げられなかった。水の中で茎を切る「水切り」のわけ。約15分。</p></div></div>
+  <div class="case"><div class="no">04</div><div><h4>息のない部屋</h4><div class="en">THE ROOM WITHOUT BREATH · 難易度1 · 化学／生理学（c01）</div><p>窓のない地下の試料保管室で、若い研究者が眠るように亡くなっていた。液体窒素が気化して酸素を押しのける「酸素欠乏」。苦しさで気づけない理由と、酸素濃度計・換気・単独作業の大切さ。</p></div></div>
+  <div class="case"><div class="no">05</div><div><h4>夕暮れの白球</h4><div class="en">THE BALL AT DUSK · 難易度2 · 物理／生理学（c02）</div><p>弟とのキャッチボール中、少女が突然倒れた。胸への軽い衝撃が心臓の拍動の「ごく短い瞬間」に重なる「心臓震盪」。AED と胸骨圧迫。弟を責めない「誰のせいでもない」着地。</p></div></div>
+  <div class="case"><div class="no">06</div><div><h4>雪に残されたもの</h4><div class="en">WHAT WAS LEFT IN THE SNOW · 難易度3 · 生理学／法医学（c03）</div><p>雪山で、服を脱ぎ捨てた女性が岩の隙間で見つかった。事件が疑われたが、真相は重い低体温症が起こす「矛盾脱衣」と「穴ごもり行動」。冬山だけでなく屋内でも起こる。</p></div></div>
+  <div class="case"><div class="no">07</div><div><h4>白い花の夕餉</h4><div class="en">SUPPER OF WHITE FLOWERS · 殺人事件 · 植物毒／法医学（c04）</div><p>山菜の夕食会の夜、植物画家が亡くなった。春によくあるニリンソウとトリカブトの採り違えに見えるが、毒が出たのは彼女の小鉢だけ。見分け方・予防・中毒110番。量や時間など、まねできる情報は載せていない。</p></div></div>
 </section>
 
 <!-- ============================================================ 02 -->

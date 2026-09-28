@@ -334,9 +334,6 @@
         "しおれなかった"
       ],
       "ifAsked": "no",
-      "requires": [
-        "F06"
-      ],
       "related": [
         "F08",
         "F02"
@@ -370,9 +367,6 @@
         "すぐ水に"
       ],
       "ifAsked": "yes",
-      "requires": [
-        "F06"
-      ],
       "related": [
         "F12",
         "F07"
@@ -564,9 +558,6 @@
         "水の中では切らな"
       ],
       "ifAsked": "no",
-      "requires": [
-        "F12"
-      ],
       "related": [
         "F12",
         "F08"
@@ -673,9 +664,6 @@
         "のどが"
       ],
       "ifAsked": "no",
-      "requires": [
-        "F14"
-      ],
       "related": [
         "F14",
         "F22"

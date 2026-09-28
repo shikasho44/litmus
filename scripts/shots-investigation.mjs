@@ -1,4 +1,5 @@
-// Investigation + Intro QA: plays CASE 01 from the files screen and screenshots every state.
+// Investigation + Intro QA: plays c01「息のない部屋」(CASE 04 since 2026-09-28; its questions are
+// written for that case) from the files screen and screenshots every state.
 //
 //   node scripts/shots-investigation.mjs              uses a dev server on :5191 (starts one if absent, stops it after)
 //   node scripts/shots-investigation.mjs --port 5190  another port

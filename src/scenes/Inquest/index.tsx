@@ -783,7 +783,7 @@ export function InquestScene({ params }: SceneProps) {
           </div>
           <div class="iq__spot" aria-hidden="true" />
           <div class={`iq__jane ${janeFocus ? 'is-focus' : ''}`} aria-hidden="true">
-            <ShardPortrait image={info?.portrait} revealed={revealed} seed={caseId} shardCount={SHARDS} glow={janeFocus} label="ジェーン・ドゥ" />
+            <ShardPortrait image={info?.portrait} silhouette={info?.silhouette} revealed={revealed} seed={caseId} shardCount={SHARDS} glow={janeFocus} label="ジェーン・ドゥ" />
           </div>
           <div class={`iq__holma ${holmaFocus ? 'is-focus' : ''}`} aria-hidden="true">
             <HolmaSprite mood={s.holmaMood.value} talking={s.speaking.value === 'holma'} framing="knee" rim={holmaFocus ? 'rgba(255,46,99,0.32)' : undefined} />
@@ -995,6 +995,7 @@ export function InquestScene({ params }: SceneProps) {
         <GameOverOverlay
           caseId={caseId}
           image={info?.portrait}
+          silhouette={info?.silhouette}
           revealed={revealed}
           difficulty={s.difficulty.value}
           outcome={gameOver.outcome}

@@ -21,6 +21,7 @@ export const GAME_OVER_LINE = '……謎は、謎のまま。彼女は、名前�
 export function GameOverOverlay({
   caseId,
   image,
+  silhouette,
   revealed,
   difficulty,
   outcome,
@@ -29,6 +30,8 @@ export function GameOverOverlay({
 }: {
   caseId: string;
   image?: string;
+  /** The case's shard mask (CaseSummary.silhouette). */
+  silhouette?: string;
   revealed: number;
   difficulty: Difficulty;
   /**
@@ -80,7 +83,7 @@ export function GameOverOverlay({
     <div ref={ref} class="gover" role="alertdialog" aria-modal="true" aria-labelledby="gover-title" aria-describedby="gover-desc" data-gameover={outcome ?? 'pending'}>
       <div class="gover__vignette" aria-hidden="true" />
       <div class="gover__jane" aria-hidden="true">
-        <ShardPortrait image={image} revealed={revealed} seed={caseId} shardCount={34} label="ジェーン・ドゥ" />
+        <ShardPortrait image={image} silhouette={silhouette} revealed={revealed} seed={caseId} shardCount={34} label="ジェーン・ドゥ" />
       </div>
       <h2 id="gover-title" class="gover__title">
         <span class="gover__jp">未解決</span>

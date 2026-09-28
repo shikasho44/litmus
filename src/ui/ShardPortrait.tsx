@@ -18,8 +18,12 @@ export interface ShardPortraitProps {
   onAssembled?: () => void;
   /** Seed for the shard layout (use the case id so each Jane Doe breaks differently). */
   seed?: string;
-  /** Clip to a bust silhouette until solved (default true). */
-  silhouette?: boolean;
+  /**
+   * Clip until solved: true / 'bust' (default) = a person's bust, false / 'none' = no mask (the
+   * whole frame is glass), or an SVG path in the 300×400 box (an object soul's outline, from the
+   * case's victim.silhouette).
+   */
+  silhouette?: boolean | string;
   class?: string;
   label?: string;
   /** Brighter edges & halo (e.g. while Jane is speaking). */
@@ -27,6 +31,13 @@ export interface ShardPortraitProps {
 }
 
 let uid = 0;
+
+/** The mask path for a `silhouette` prop value (null = no mask). */
+export function silhouettePath(s: boolean | string | undefined): string | null {
+  if (s === false || s === 'none') return null;
+  if (s === undefined || s === true || s === 'bust' || !/^[Mm]/.test(s)) return JANE_SILHOUETTE;
+  return s;
+}
 
 /**
  * ジェーン・ドゥの破片の肖像. Unrevealed shards are dark glass with faint cyan edges and a
@@ -37,6 +48,7 @@ export function ShardPortrait({ image, shardCount = 34, revealed = 0, solved = f
   const [u] = useState(() => `sp${++uid}`);
   const url = useImage(image);
   const shards = useMemo(() => makeShards(shardCount, seed), [shardCount, seed]);
+  const silPath = silhouettePath(silhouette);
   const svgRef = useRef<SVGSVGElement>(null);
   const [assembled, setAssembled] = useState(solved);
   const [animating, setAnimating] = useState(false);
@@ -122,15 +134,17 @@ export function ShardPortrait({ image, shardCount = 34, revealed = 0, solved = f
     <use href={`#${u}-fallback`} />
   );
   const showColorLayer = solved || assembled;
-  const clipped = silhouette && !assembled;
+  const clipped = !!silPath && !assembled;
 
   return (
     <div class={`shards ${assembled ? 'is-solved' : ''} ${animating ? 'is-animating' : ''} ${glow ? 'is-glow' : ''} ${cls ?? ''}`} role="img" aria-label={label ?? (solved ? '復元された肖像' : `ジェーン・ドゥの破片（${lit.size}/${shards.length}）`)}>
       <svg ref={svgRef} viewBox={`0 0 ${SHARD_W} ${SHARD_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
         <defs>
-          <clipPath id={`${u}-sil`}>
-            <path d={JANE_SILHOUETTE} />
-          </clipPath>
+          {silPath && (
+            <clipPath id={`${u}-sil`}>
+              <path d={silPath} />
+            </clipPath>
+          )}
           {shards.map((s) => (
             <clipPath key={s.id} id={`${u}-${s.id}`}>
               <polygon points={pointsAttr(s.points)} />
@@ -233,8 +247,8 @@ export function ShardPortrait({ image, shardCount = 34, revealed = 0, solved = f
           )}
           <rect class="shards__burst" width={SHARD_W} height={SHARD_H} fill="#FFFFFF" opacity="0" />
         </g>
-        {silhouette && !assembled && <path class="shards__outline" d={JANE_SILHOUETTE} filter={`url(#${u}-glow)`} />}
-        {silhouette && !assembled && <path class="shards__outline shards__outline--crisp" d={JANE_SILHOUETTE} />}
+        {silPath && !assembled && <path class="shards__outline" d={silPath} filter={`url(#${u}-glow)`} />}
+        {silPath && !assembled && <path class="shards__outline shards__outline--crisp" d={silPath} />}
       </svg>
     </div>
   );

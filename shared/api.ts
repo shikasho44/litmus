@@ -27,6 +27,8 @@ export interface CaseSummary {
   background: string;
   accent: string;
   portrait: string;       // shown only through the shard mask until solved
+  /** Shard mask until solved: 'bust' (default) · 'none' · an SVG path in the 300×400 box (case-schema victim.silhouette). */
+  silhouette?: string;
   contentWarning?: string;
   /** Exact question budgets per play difficulty when the case overrides the default (shared/budget.ts). */
   questionBudget?: Partial<Record<Difficulty, number>>;
@@ -260,7 +262,17 @@ export interface ReconstructionResult {
 /* ------------------------------------------------------------------ */
 
 export interface SolutionResponse {
-  victim: { codename: string; name: string; nameKana: string; age: number; occupation: string; portrait: string; farewell: string[] };
+  victim: {
+    codename: string;
+    name: string;
+    nameKana: string;
+    age: number;
+    occupation: string;
+    portrait: string;
+    farewell: string[];
+    /** Rows under the restored name instead of 年齢／職業 (object souls). */
+    profile?: { label: string; value: string }[];
+  };
   truth: { summary: string; causeOfDeath: string; mechanism: string; timeline: { time: string; event: string }[] };
   allFacts: (PublicFact & { unlocked: boolean })[];
   science: import('./case-schema').Case['science'];

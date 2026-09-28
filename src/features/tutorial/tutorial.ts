@@ -7,6 +7,7 @@
  * 「次へ」 and 「スキップ」, and steps that ask for an action also advance on their own.
  */
 import { computed } from '@preact/signals';
+import { caseList, loadCases } from '../../lib/cases';
 import { saveData, updateMeta } from '../../state/save';
 import type { TutorialState } from '../../state/types';
 
@@ -30,7 +31,11 @@ export const TUT_CHAPTERS = 7;
 const OFF: TutorialState = { state: 'off', step: 0 };
 export const tutorial = computed<TutorialState>(() => saveData.value.meta.tutorial ?? OFF);
 
-const isFirstCase = (caseId: string | undefined) => !!caseId && /^c01(-|$)/.test(caseId);
+/**
+ * The tutorial case is CASE 01 by its display number (case.json `number`), not by its id: since
+ * 2026-09-28 the three short intro cases come first (c05… are CASE 01–03, c01–c04 moved to 04–07).
+ */
+const isFirstCase = (caseId: string | undefined) => !!caseId && caseList.value?.find((c) => c.id === caseId)?.number === 1;
 
 /** The tutorial runs in this case right now. */
 export function tutorialRunsIn(caseId: string | undefined): boolean {
@@ -42,6 +47,11 @@ export function tutorialRunsIn(caseId: string | undefined): boolean {
 export function maybeStartTutorial(caseId: string) {
   const t = saveData.peek().meta.tutorial;
   if (t && t.state !== 'off') return;
+  // the case list is normally loaded by the title / files screens; a direct reload may not have it yet
+  if (!caseList.peek()) {
+    void loadCases().then((list) => list && maybeStartTutorial(caseId));
+    return;
+  }
   if (!isFirstCase(caseId)) return;
   const c = saveData.peek().cases[caseId];
   if (c?.log.some((e) => e.kind === 'question') || c?.inquest) {

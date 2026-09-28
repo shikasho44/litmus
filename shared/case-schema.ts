@@ -193,9 +193,11 @@ export const ScienceSchema = z.object({
   title: z.string(),                         // この事件の科学: 〜
   causeName: z.string(),                     // 今回の死因（正式名）
   lead: z.string(),                          // one-paragraph plain summary
-  /** 原因 → 科学現象 → 人体への影響 → 結果 */
-  chain: z.array(z.object({ stage: z.enum(['原因', '科学現象', '人体への影響', '結果']), title: z.string(), detail: z.string() })).length(4),
+  /** 原因 → 科学現象 → 人体への影響 → 結果 (an object soul: からだへの影響 — its own body, the bottle / the flower …) */
+  chain: z.array(z.object({ stage: z.enum(['原因', '科学現象', '人体への影響', 'からだへの影響', '結果']), title: z.string(), detail: z.string() })).length(4),
   body: z.string(),                          // 何が身体で起きたのか
+  /** Heading of the `body` section when 「何が身体で起きたのか」 does not fit (an object soul: 「びんの中で何が起きたのか」). */
+  bodyTitle: z.string().max(24).optional(),
   whyHere: z.string(),                       // なぜこの状況で起きたのか
   foreshadowing: z.array(z.object({ fact: z.string(), meaning: z.string() })).min(2),
   mechanism: z.array(z.object({ heading: z.string(), text: z.string() })).min(2),
@@ -278,6 +280,17 @@ export const CaseSchema = z.object({
     portrait: z.string(),                    // public path
     lookBrief: z.string(),                   // appearance brief for art (public: silhouette only)
     farewell: z.array(z.string()).min(2),    // her last words once her identity is restored
+    /**
+     * PUBLIC. Shape of the shard portrait until the solve (added 2026-09-28 for the object souls
+     * of the intro cases): 'bust' (default: a person's head and shoulders) · 'none' (no mask, the
+     * whole frame breaks into glass) · an SVG path in the 300×400 portrait box (a bottle, a flower …).
+     */
+    silhouette: z.union([z.enum(['bust', 'none']), z.string().regex(/^[Mm][\d\s.,MmLlHhVvCcSsQqTtAaZz-]+$/)]).optional(),
+    /**
+     * The rows under the restored name, replacing 「年齢 29歳」「職業 …」 — e.g. an object soul's
+     * [{label:'生まれて', value:'4年'}, {label:'役目', value:'宅配の牛乳びん'}]. SECRET until solved.
+     */
+    profile: z.array(z.object({ label: z.string().min(1).max(8), value: z.string().min(1).max(32) })).min(1).max(3).optional(),
   }),
 
   assets: z.object({

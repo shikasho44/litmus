@@ -5,10 +5,13 @@ import case0 from '../../content/cases/c01-room-without-breath/case.json';
 import case1 from '../../content/cases/c02-ball-at-dusk/case.json';
 import case2 from '../../content/cases/c03-shed-in-snow/case.json';
 import case3 from '../../content/cases/c04-white-flower-supper/case.json';
+import case4 from '../../content/cases/c05-tiptoe-milk-bottle/case.json';
+import case5 from '../../content/cases/c06-snowman-below-zero/case.json';
+import case6 from '../../content/cases/c07-rose-that-bowed/case.json';
 import lines from '../../content/holma-lines.json';
 import prologue from '../../content/prologue.json';
 
-export const CASE_DIRS: readonly string[] = ["c01-room-without-breath","c02-ball-at-dusk","c03-shed-in-snow","c04-white-flower-supper"];
+export const CASE_DIRS: readonly string[] = ["c01-room-without-breath","c02-ball-at-dusk","c03-shed-in-snow","c04-white-flower-supper","c05-tiptoe-milk-bottle","c06-snowman-below-zero","c07-rose-that-bowed"];
 
 export function rawContent(): RawContent {
   return {
@@ -17,6 +20,9 @@ export function rawContent(): RawContent {
       { dir: "c02-ball-at-dusk", path: "content/cases/c02-ball-at-dusk/case.json", data: case1 as unknown },
       { dir: "c03-shed-in-snow", path: "content/cases/c03-shed-in-snow/case.json", data: case2 as unknown },
       { dir: "c04-white-flower-supper", path: "content/cases/c04-white-flower-supper/case.json", data: case3 as unknown },
+      { dir: "c05-tiptoe-milk-bottle", path: "content/cases/c05-tiptoe-milk-bottle/case.json", data: case4 as unknown },
+      { dir: "c06-snowman-below-zero", path: "content/cases/c06-snowman-below-zero/case.json", data: case5 as unknown },
+      { dir: "c07-rose-that-bowed", path: "content/cases/c07-rose-that-bowed/case.json", data: case6 as unknown },
     ],
     lines: lines as unknown,
     prologue: prologue as unknown,

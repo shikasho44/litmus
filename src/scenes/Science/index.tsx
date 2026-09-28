@@ -54,7 +54,7 @@ interface Sec {
   deep?: boolean;
 }
 
-const SECTIONS: Sec[] = [
+const ALL_SECTIONS: Sec[] = [
   { id: 'cause', en: 'CAUSE OF DEATH', jp: '今回の死因', short: '今回の死因' },
   { id: 'chain', en: 'CAUSAL CHAIN', jp: '因果の鎖', short: '因果の鎖' },
   { id: 'body', en: 'INSIDE THE BODY', jp: '何が身体で起きたのか', short: '身体で起きたこと', deep: true },
@@ -70,7 +70,7 @@ const SECTIONS: Sec[] = [
 ];
 
 /** Item 13 of the index: the way out to the recall test. */
-const QUIZ_ITEM = { no: pad2(SECTIONS.length + 1), jp: '記憶の定着へ', short: '記憶の定着へ' };
+const QUIZ_ITEM = { no: pad2(ALL_SECTIONS.length + 1), jp: '記憶の定着へ', short: '記憶の定着へ' };
 
 const REVIEW_BADGE: Record<string, string> = {
   'draft-ai': 'AI下書き・専門家確認前',
@@ -81,6 +81,7 @@ const STAGE_TONE: Record<string, { en: string; color: string }> = {
   原因: { en: 'CAUSE', color: 'var(--bone)' },
   科学現象: { en: 'PHENOMENON', color: 'var(--cyan)' },
   人体への影響: { en: 'EFFECT ON THE BODY', color: 'var(--amber)' },
+  からだへの影響: { en: 'EFFECT ON ITS BODY', color: 'var(--amber)' },
   結果: { en: 'OUTCOME', color: 'var(--alarm)' },
 };
 
@@ -95,6 +96,8 @@ const SOURCE_TYPE: Record<string, string> = {
 
 function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionResponse; summary: CaseSummary | null }) {
   const s = sol.science;
+  // an object soul's case names its own 「身体」 (science.bodyTitle): 「びんの中で何が起きたのか」
+  const SECTIONS = useMemo(() => (s.bodyTitle ? ALL_SECTIONS.map((x) => (x.id === 'body' ? { ...x, jp: s.bodyTitle!, short: s.bodyTitle!.replace(/のか$/u, '') } : x)) : ALL_SECTIONS), [s]);
   const progress = useCaseProgress(caseId);
   const bg = useImage(ART.science);
   const scroller = useRef<HTMLDivElement>(null);

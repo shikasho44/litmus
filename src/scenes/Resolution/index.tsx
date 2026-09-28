@@ -86,6 +86,7 @@ function Resolution({ caseId, sol, summary, replay }: { caseId: string; sol: Sol
           caseId={caseId}
           sol={sol}
           num={num}
+          silhouette={summary?.silhouette}
           onDone={() => {
             advanceStage(caseId, 'resolution');
             updateCase(caseId, { resolutionSeen: true });
@@ -112,7 +113,17 @@ function Resolution({ caseId, sol, summary, replay }: { caseId: string; sol: Sol
 /* Ceremony                                                            */
 /* ------------------------------------------------------------------ */
 
-function Ceremony({ caseId, sol, num, onDone }: { caseId: string; sol: SolutionResponse; num: number; onDone: () => void }) {
+/** The rows under the restored name: 年齢・職業, or the case's own profile (object souls). */
+function profileRows(v: SolutionResponse['victim']): { label: string; value: string }[] {
+  return v.profile?.length
+    ? v.profile
+    : [
+        { label: '年齢', value: `${v.age}歳` },
+        { label: '職業', value: v.occupation },
+      ];
+}
+
+function Ceremony({ caseId, sol, num, silhouette, onDone }: { caseId: string; sol: SolutionResponse; num: number; silhouette?: string; onDone: () => void }) {
   const beats = useMemo(() => buildBeats(sol), [sol]);
   const [step, setStep] = useState(0);
   const [solved, setSolved] = useState(false);
@@ -120,7 +131,7 @@ function Ceremony({ caseId, sol, num, onDone }: { caseId: string; sol: SolutionR
   const [warm, setWarm] = useState(false);
   const beat = beats[Math.min(step, beats.length - 1)];
   const v = sol.victim;
-  const meta = [`${v.age}歳`, v.occupation];
+  const meta = v.profile?.length ? v.profile.map((r) => `${r.label}　${r.value}`) : [`${v.age}歳`, v.occupation];
   const janeSpeaking = beat.kind === 'line' && beat.speaker === 'jane';
   const holmaVisible = beat.kind === 'line' && beat.speaker === 'holma';
 
@@ -166,7 +177,7 @@ function Ceremony({ caseId, sol, num, onDone }: { caseId: string; sol: SolutionR
       <div class="res-cer__stage">
         <div class={`res-cer__portrait ${warm ? 'is-warm' : ''} ${janeSpeaking ? 'is-speaking' : ''}`}>
           <span class="res-cer__halo" aria-hidden="true" />
-          <ShardPortrait image={v.portrait} shardCount={SHARDS} revealed={SHARDS} solved={solved} onAssembled={onAssembled} seed={caseId} glow={!warm} label={warm ? `${v.name}の肖像` : `${v.codename}の破片`} />
+          <ShardPortrait image={v.portrait} silhouette={silhouette} shardCount={SHARDS} revealed={SHARDS} solved={solved} onAssembled={onAssembled} seed={caseId} glow={!warm} label={warm ? `${v.name}の肖像` : `${v.codename}の破片`} />
         </div>
         <NamePlate
           codename={v.codename}
@@ -255,14 +266,12 @@ function Record({ caseId, sol, summary, num, onReplay }: { caseId: string; sol: 
               </h1>
               <p class="res-rec__kana">{v.nameKana}</p>
               <dl class="res-rec__meta">
-                <div>
-                  <dt>年齢</dt>
-                  <dd>{v.age}歳</dd>
-                </div>
-                <div>
-                  <dt>職業</dt>
-                  <dd>{v.occupation}</dd>
-                </div>
+                {profileRows(v).map((r) => (
+                  <div key={r.label}>
+                    <dt>{r.label}</dt>
+                    <dd>{r.value}</dd>
+                  </div>
+                ))}
               </dl>
             </div>
           </aside>

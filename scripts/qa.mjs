@@ -1,14 +1,15 @@
 // End-to-end flow QA — plays a case from the title screen to the rank on the files screen,
 // in a real browser, against the dev API in rules mode.
 //
-//   npm run qa                      c01 full flow at 1440x900 + mint-token smoke of the other cases
+//   npm run qa                      CASE 01 full flow at 1440x900 + mint-token smoke of the other cases
+//                                   (CASE 01 = the case whose `number` is 1: c05 since 2026-09-28; c01 is CASE 04)
 //   npm run qa:mobile               the same at 390x844 (touch, DPR 2)
-//   node scripts/qa.mjs --case c02  full flow for another case (id or prefix; 'all' = every case)
+//   node scripts/qa.mjs --case c02  full flow for another case (id or prefix; 'all' = every case, in number order)
 //   node scripts/qa.mjs --no-smoke  full flow only          --smoke-only   smoke runs only
 //   node scripts/qa.mjs --port 5198 (default; a dev server already answering there is reused if it runs in rules mode)
 //
 // Full flow: title (gate → 審問を始める) → prologue (skip) → files → difficulty chooser → intro
-// (title card, narration, skip → catch cut-in) → investigation (coach-mark tutorial on CASE 01,
+// (title card, narration, skip → catch cut-in) → investigation (coach-mark tutorial on CASE 01 = number 1,
 // starter chip, then case probes until the findings the debate needs are unlocked, one hint,
 // notebook) → 審問を開く → inquest (one miss, every round, an incomplete verdict in the
 // difficulty's format, the right one, reconstruction with one wrong pick, finale) → resolution
@@ -19,6 +20,7 @@
 // Smoke (other cases): files → difficulty → intro (skip) → 3 questions, then a dev-minted
 // 'investigated' token (POST /api/admin/mint-token) → inquest → endings → files rank.
 // Difficulty per case (every verdict format runs in the default `npm run qa`):
+//   c05 審問官 (cloze) · c06 見習い (choice) · c07 教授 (free) — the intro cases CASE 01–03 —
 //   c01 審問官 (cloze) · c02 見習い (choice, noise break skipped after round 1) · c03 教授 (free) · c04 審問官 (cloze).
 // Game over: 審問官 on the last light → the case restarts (new token, other cases untouched);
 // 見習い on the last light → back to the start of the inquest with the lights refilled.
@@ -57,9 +59,12 @@ for (const f of readdirSync(out)) if (f.startsWith(`${SIZE.tag}-`) && f.endsWith
 const CASES = readdirSync(resolve(root, 'content', 'cases'))
   .filter((d) => /^c\d\d/.test(d))
   .sort()
-  .map((d) => JSON.parse(readFileSync(resolve(root, 'content', 'cases', d, 'case.json'), 'utf8')));
+  .map((d) => JSON.parse(readFileSync(resolve(root, 'content', 'cases', d, 'case.json'), 'utf8')))
+  .sort((a, b) => a.number - b.number);
 const findCase = (k) => CASES.find((c) => c.id === k || c.id.startsWith(k));
-const caseArg = arg('--case', 'c01');
+/** CASE 01 by its display number (the tutorial case), whatever its id. */
+const FIRST = CASES.find((c) => c.number === 1) ?? CASES[0];
+const caseArg = arg('--case', FIRST.id);
 const FULL = SMOKE_ONLY ? [] : caseArg === 'all' ? CASES : [findCase(caseArg)].filter(Boolean);
 if (!SMOKE_ONLY && !FULL.length) {
   console.error(`[qa] unknown case "${caseArg}" (have: ${CASES.map((c) => c.id).join(', ')})`);
@@ -68,7 +73,7 @@ if (!SMOKE_ONLY && !FULL.length) {
 const SMOKES = SMOKE ? CASES.filter((c) => !FULL.includes(c)) : [];
 
 /** Difficulty per case (VERDICT_MODE_BY_DIFFICULTY: easy choice · normal cloze · hard free). */
-const LEVEL = { c01: 'normal', c02: 'easy', c03: 'hard', c04: 'normal' };
+const LEVEL = { c01: 'normal', c02: 'easy', c03: 'hard', c04: 'normal', c05: 'normal', c06: 'easy', c07: 'hard' };
 const MODE = { easy: 'choice', normal: 'cloze', hard: 'free' };
 const LIVES = { easy: 10, normal: 3, hard: 3 };
 /** Smoke runs that skip the rest of the noise break after this many rounds. */
@@ -81,6 +86,9 @@ const INCOMPLETE = {
   c02: 'ボールが胸に当たって、心室細動が起きた。',
   c03: '寒さで体が冷えて亡くなった。',
   c04: 'トリカブトの毒で亡くなった。',
+  c05: '牛乳が凍ったから割れた。',
+  c06: '日光で雪だるまがとけた。',
+  c07: '水が足りなくてしおれた。',
 };
 
 /**
@@ -247,7 +255,8 @@ async function shot(page, name) {
   await sleep(200); // CSS-only transitions run on real time
   await overflow(page, name);
   await brokenImages(page, name);
-  await page.screenshot({ path: resolve(out, `${name}.png`) });
+  // generous timeout: SwiftShader screenshots crawl when other browsers share the CPU
+  await page.screenshot({ path: resolve(out, `${name}.png`), timeout: 120000 });
   console.log(`  📷 ${name}.png`);
 }
 
@@ -294,8 +303,8 @@ async function drainRoutes(page, into) {
 async function boot(page, { url = `${BASE}?mute=1`, reload = false } = {}) {
   if (reload) {
     await page.evaluate(() => window.__JD?.flushSave?.());
-    await page.reload({ waitUntil: 'load' });
-  } else await page.goto(url, { waitUntil: 'load' });
+    await page.reload({ waitUntil: 'load', timeout: 120000 });
+  } else await page.goto(url, { waitUntil: 'load', timeout: 120000 });
   for (let i = 0; i < 600; i++) {
     if (await page.evaluate(() => !!window.__JD && document.documentElement.classList.contains('app-ready'))) break;
     await tick(page, 100);
@@ -447,8 +456,8 @@ async function investigation(page, c, name, { questions, full }) {
   const { plan, probeFor, used } = questionPlan(c);
   const list = questions ? plan.slice(0, questions) : plan;
 
-  // 0) CASE 01's first play runs the coach-mark tutorial
-  const tutorial = full && c.id.startsWith('c01');
+  // 0) CASE 01's first play runs the coach-mark tutorial (CASE 01 = number 1, not the id prefix)
+  const tutorial = full && c.number === 1;
   if (tutorial) {
     await waitSel(page, '.coach[data-coach-step="ask"]', { label: 'tutorial: ask' });
     await tick(page, 600);

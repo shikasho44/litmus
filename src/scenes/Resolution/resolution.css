@@ -481,21 +481,23 @@
   letter-spacing: 0.5em;
   color: var(--bone-2);
 }
+/* one grid for all rows, so longer labels of an object soul (「生まれて」) stay on one line and aligned */
 .res-rec__meta {
   display: grid;
-  gap: 5px;
+  grid-template-columns: minmax(3.4em, max-content) minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 5px;
+  align-items: baseline;
   margin: 14px 0 0;
 }
 .res-rec__meta div {
-  display: grid;
-  grid-template-columns: 3.4em minmax(0, 1fr);
-  gap: 10px;
-  align-items: baseline;
+  display: contents;
 }
 .res-rec__meta dt {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   letter-spacing: 0.2em;
+  white-space: nowrap;
   color: var(--mute);
 }
 .res-rec__meta dd {
@@ -885,9 +887,9 @@
 [data-layout='narrow'] .res-rec__meta {
   margin-top: 10px;
 }
-[data-layout='narrow'] .res-rec__meta div {
-  grid-template-columns: 2.8em minmax(0, 1fr);
-  gap: 6px;
+[data-layout='narrow'] .res-rec__meta {
+  grid-template-columns: minmax(2.8em, max-content) minmax(0, 1fr);
+  column-gap: 6px;
 }
 [data-layout='narrow'] .res-rec__meta dd {
   font-size: 0.86rem;

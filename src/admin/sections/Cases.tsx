@@ -555,7 +555,7 @@ function AnswersTab({ c }: { c: AdminCase }) {
             ['死因', <b>{d.truth.causeOfDeath}</b>],
             ['要約', d.truth.summary],
             ['仕組み', d.truth.mechanism],
-            ['被害者', <span>{d.victim.name}（{d.victim.nameKana}）{d.victim.age}歳・{d.victim.occupation} <span class="adm-dim">/ {d.victim.codename}</span></span>],
+            ['被害者', <span>{d.victim.name}（{d.victim.nameKana}）{d.victim.profile?.length ? d.victim.profile.map((r) => `${r.label} ${r.value}`).join('・') : `${d.victim.age}歳・${d.victim.occupation}`} <span class="adm-dim">/ {d.victim.codename}</span></span>],
           ]}
         />
         <table class="adm-table adm-table--tight">

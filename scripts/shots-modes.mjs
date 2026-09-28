@@ -33,6 +33,8 @@ const CASES = Object.fromEntries(
     .filter((d) => /^c\d\d/.test(d))
     .map((dir) => [dir.slice(0, 3), JSON.parse(readFileSync(resolve(root, 'content', 'cases', dir, 'case.json'), 'utf8'))]),
 );
+/** The tutorial case: CASE 01 by its display number (c05 since 2026-09-28), whatever its id. */
+const FIRST_ID = Object.values(CASES).find((c) => c.number === 1)?.id;
 const SIZES = {
   pc: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },
   sp: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
@@ -236,7 +238,7 @@ async function runSize(browser, size) {
     await page.evaluate(() => window.__JD.goto('files'));
     await page.waitForSelector('.tag__open', { timeout: 30000 });
     await wait(1200);
-    await page.locator('article.tag:has(#case-c01-room-without-breath-title) .tag__open').click();
+    await page.locator(`article.tag:has(#case-${FIRST_ID}-title) .tag__open`).click();
     await page.waitForSelector('.dfc .dcard.is-selected', { timeout: 20000 });
     await shot(page, 'chooser', 1100);
     check((await page.getAttribute('.dcard.is-selected', 'data-difficulty')) === 'normal', `${size}: the chooser preselects 審問官 (normal)`);
@@ -247,7 +249,7 @@ async function runSize(browser, size) {
     await wait(200);
     await page.click('[data-difficulty-confirm]');
     await page.waitForSelector('.intro', { timeout: 30000 });
-    check((await page.evaluate(() => window.__JD.getState().save.cases['c01-room-without-breath']?.difficulty)) === 'normal', `${size}: the chosen difficulty is saved`);
+    check((await page.evaluate((id) => window.__JD.getState().save.cases[id]?.difficulty, FIRST_ID)) === 'normal', `${size}: the chosen difficulty is saved`);
     await page.waitForSelector('.intro__skip', { timeout: 30000 });
     await wait(600);
     await page.click('.intro__skip');
@@ -285,7 +287,7 @@ async function runSize(browser, size) {
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => !document.querySelector('.dfc'));
     // into the inquest with every finding (the tutorial continues there)
-    await seedInquest(page, 'c01-room-without-breath', 'investigated', 'normal');
+    await seedInquest(page, FIRST_ID, 'investigated', 'normal');
     await untilIq(page, (s) => s.phase === 'debate' && s.step === 'play' && s.dlg === 'off' && s.card === 'off' && !s.cut, 'debate');
     await page.waitForSelector('.coach[data-coach-step="noise-target"]', { timeout: 15000 });
     await shot(page, 'tut-6-noise-target', 800);
@@ -309,7 +311,7 @@ async function runSize(browser, size) {
     await wait(400);
     check((await page.evaluate(() => window.__JD.getState().save.meta.tutorial?.state)) === 'done', `${size}: the tutorial ends after the verdict step`);
     check(await has(page, '.vcloze'), `${size}: 審問官 declares with the cloze sheet`);
-    const skipped = await page.evaluate(() => window.__JD.getState().save.cases['c01-room-without-breath'].inquest);
+    const skipped = await page.evaluate((id) => window.__JD.getState().save.cases[id].inquest, FIRST_ID);
     check(skipped?.debateSkipped === true && skipped?.phase === 'verdict', `${size}: the skip is saved (verdict, debateSkipped)`);
     await shot(page, 'verdict-cloze-noassist', 300);
     // reload keeps the skip → verdict

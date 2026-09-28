@@ -1,5 +1,6 @@
+import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, loadEnv, searchForWorkspaceRoot } from 'vite';
 import preact from '@preact/preset-vite';
 import { janedoeApi } from './server/node/vite-plugin.js';
 import { htmlEnvDefaults } from './src/build/html-env.js';
@@ -22,6 +23,16 @@ export default defineConfig(({ mode }) => {
   const includeAdmin =
     !embedded && (adminFlag ? adminFlag === 'true' || adminFlag === '1' : !!loadEnv(mode, root, 'ADMIN_TOKEN').ADMIN_TOKEN?.trim());
   const input: Record<string, string> = { index: resolve(root, 'index.html') };
+  // A git worktree may link node_modules from the main checkout (a junction / symlink). Vite serves
+  // files by their real path, which then lies outside the project and would be refused (403 for the
+  // @fontsource fonts): allow the real node_modules folder as well.
+  const fsAllow = [searchForWorkspaceRoot(root)];
+  try {
+    const nm = realpathSync(resolve(root, 'node_modules'));
+    if (!nm.startsWith(root)) fsAllow.push(nm);
+  } catch {
+    /* no node_modules yet */
+  }
   if (includeAdmin) input.admin = resolve(root, 'admin.html');
 
   return {
@@ -34,6 +45,7 @@ export default defineConfig(({ mode }) => {
       // Generated output is served on request but never watched (bench writes HTML reports
       // under the root, which would otherwise trigger page reloads while the game is open).
       watch: { ignored: ['**/bench/reports/**', '**/logs/**', '**/qa/**', '**/dist/**', '**/dist-*/**'] },
+      fs: { allow: fsAllow },
     },
     // 4190 is on the browsers' blocked-port list (Chromium refuses it) → 4191.
     preview: { port: 4191 },

@@ -112,3 +112,50 @@ as hands).
 | c04 p5 | Next day, public-health lab bench: sealed bags of food remains, a container of leftover greens, garden scissors in a bag, the violet-patterned bowl in a bag; microscope and test tubes. No people, no labels. |
 
 Generation count (whole project): batch 1 = 12, batch 2 = 17, batch 3 = 7 (no retakes). Total 36.
+
+## Intro cases CASE 01–03 (batch 4, 2026-09-28)
+
+Eighteen images for the three intro cases (c05「背のびした牛乳びん」, c06「氷点下の雪だるま」,
+c07「うなだれたバラ」), generated with the codex-imagegen skill's `batch_imagegen.py` in **one run**
+(`--per-exec 9`: the 18 prompts in a single launch exceed the Windows command-line length, so the run
+used two launches; codex-cli sessions `01a0e5ff-0aa0-7cf3-971b-0f042e18d4f5` and
+`01a0e605-b9f5-7860-928f-9913eabcd8d1`, 10 + 15 round trips, weekly quota 6.0% → 6.0%). Prompts:
+`scripts/art/jobs_batch4.py` (its own gentler `STYLE_INTRO` / `panel_style_intro()` on the shared
+`NEGATIVE` / `PANEL_NEGATIVE` of `style.py`); jobs `art-src/jobs/batch4-intro.json`; full prompts and
+validation in `art-src/manifest.json`. Spot colours: c05 cornflower blue #6FA8FF, c06 sunlight yellow
+#FFD84A, c07 rose red #E8435A. The victims are objects, so each "portrait" is a still life on the dark
+navy ground, and the shard mask (`victim.silhouette`) is traced from it by `scripts/art/trace_silhouette.py`.
+No existing works or artists are named; no reference images were used; Holma does not appear.
+
+Checked by eye; nine takes broke the rules and were regenerated (originals in `art-src/rejected/*.take1|2.png`):
+c05 p1 (orange sky and skin tones: more than one colour), c06 bg take 1 (the surviving snowman wore a
+yellow scarf, carrot noses), c06 p2 and p3 (carrot noses and a hat in colour), c06 p4 (the children's
+faces shown), c07 p2 (blue sky), c07 p3 (a child's face and green stems), then c06 bg and p3 take 2
+(footprints that read as animal paw prints — the case says there are none). The retakes: one launch of
+7 (session `01a0e60f-3a17-79e2-a142-bbcbccc6c258`) and one of 2 (session
+`01a0e616-cd8c-7b90-ab02-d6a733a64682`; Codex generated both but saved neither to its path, so they were
+taken from its `generated_images` folder — one 16:9 background and one 3:2 panel, unambiguous — and
+checked by eye).
+
+| File | Prompt summary |
+|---|---|
+| `cases/c05/bg.webp` | A Japanese home kitchen on a summer night: the fridge's top freezer door ajar with cold blue light and mist, barley tea, an empty jar, a wind chime in the dark window. No person. |
+| `cases/c05/portrait.webp` | Still life: a glass milk bottle full of milk with a round blank paper cap, condensation beads; dark navy ground, blue rim light. |
+| c05 p1 | A small boy from behind, on tiptoe, puts a full milk bottle (blue milk) into the freezer beside a half-full one. |
+| c05 p2 | Inside the dark freezer: two bottles, ice (blue) growing inward from the glass and the surface. |
+| c05 p3 | Close-up: a blue column of frozen milk rises from the neck and lifts the cap; cracks on the shoulder. |
+| c05 p4 | Morning: a hand holds the freezer door; the cracked bottle with its white column, the half bottle intact with a domed surface. |
+| `cases/c06/bg.webp` | A snowy garden of a Japanese house on a clear afternoon: a headless snowman beside its fallen head and a dark scarf, a whole snowman without a scarf, children's boot prints, two shovels, a thermometer (blank) under the eaves. |
+| `cases/c06/portrait.webp` | Still life: a two-ball snowman with charcoal eyes and buttons, twig arms and a dark knitted scarf; no nose; yellow rim light. |
+| c06 p1 | Two children from behind building two snowmen; the girl wraps her dark scarf on hers. |
+| c06 p2 | Close-up: yellow sunlight on the dark scarf, drops of melt water under it, sunken charcoal eyes, icicles behind. |
+| c06 p3 | The thin-necked snowman's head fallen beside its body and scarf; the other snowman standing; only boot prints. |
+| c06 p4 | Gloved hands only: a black cloth sunk into the sunny snow, a white cloth still on the surface. |
+| `cases/c07/bg.webp` | A dining table at dawn: a red rose bowing its head in a vase full of water, a blank folded card, next door a rose upright on a windowsill. |
+| `cases/c07/portrait.webp` | Still life: a long-stemmed red rose in full bloom with leaves and thorns; red rim light. |
+| c07 p1 | A flower shop: a girl from behind receives two paper-wrapped roses; the florist's hands show cutting a stem inside a bucket of water. |
+| c07 p2 | A child's room: the paper-wrapped rose hidden on a sunny windowsill, no water. |
+| c07 p3 | A woman's hands cut the stem with kitchen scissors in the air over the sink; a small magnified circle of a tube with an air bubble; a vase of water. |
+| c07 p4 | Next morning: the rose bowed in the full vase; through the window, the other rose upright next door. |
+
+Generation count (whole project): batch 1 = 12, batch 2 = 17, batch 3 = 7, batch 4 = 18 + 9 retakes. Total 63.

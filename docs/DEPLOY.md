@@ -159,7 +159,7 @@ Cron（毎時17分）: 期限切れの部屋と62日より古い費用の行を�
 ### 3-2. 配備・更新（ほかのブランチを取り込んだあとも同じ）
 
 ```bash
-git checkout master && git pull          # 取り込んだ状態にする（この作業ツリーで）
+cd /c/coding/workspace/GameCreate/projects/janedoe   # master（ブランチを取り込んだあと）の作業ツリー。リモートは無い
 npm ci                                    # 依存が変わったとき
 npm run deploy:cf                         # 事件データの埋め込み → http ビルド → _headers → D1 マイグレーション → wrangler deploy
 npm run smoke:cf                          # 確認（無料）: 画面・ヘッダー・API・対戦を2クライアントで一通り

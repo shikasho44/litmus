@@ -305,8 +305,9 @@ describe('deriveProgress', () => {
   const c = fixtureCase();
   const base = (): GameState => initialState(c, 0);
   it('maps the token to stage / progress / questions', () => {
-    expect(deriveProgress(c, base())).toEqual({ p: expect.any(Number), st: 'investigation', q: 0 });
+    expect(deriveProgress(c, base())).toEqual({ p: expect.any(Number), st: 'investigation', q: 0, b: 0 });
     expect(deriveProgress(c, { ...base(), asked: 7 }).q).toBe(7);
+    expect(deriveProgress(c, { ...base(), asked: 7, spent: 5 }).b).toBe(5);
     expect(deriveProgress(c, { ...base(), cleared: ['R1'] }).st).toBe('inquest');
     expect(deriveProgress(c, { ...base(), debateMisses: 1 }).st).toBe('inquest');
     expect(deriveProgress(c, { ...base(), verdictAttempts: 1 }).st).toBe('inquest');

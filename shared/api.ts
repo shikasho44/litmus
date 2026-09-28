@@ -28,6 +28,8 @@ export interface CaseSummary {
   accent: string;
   portrait: string;       // shown only through the shard mask until solved
   contentWarning?: string;
+  /** Exact question budgets per play difficulty when the case overrides the default (shared/budget.ts). */
+  questionBudget?: Partial<Record<Difficulty, number>>;
 }
 
 export interface PublicFact {
@@ -54,6 +56,8 @@ export interface CasePublic extends CaseSummary {
   hintCount: number;
   /** Case-specific Holma flavour lines the investigation UI may use (idle nudges, nearCore detection). No case facts. */
   holmaLines?: { idle: string[]; nearCore: string[] };
+  /** Case-authored free nudges (Holma's 「ひとりごと」, shared/budget.ts). Absent = fall back to holmaLines.idle / starters. */
+  nudges?: string[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -66,7 +70,13 @@ export type ProgressToken = string;
 export interface ProgressSnapshot {
   unlocked: string[];          // fact ids
   memos: string[];             // science memo ids
-  asked: number;               // question count
+  asked: number;               // question count (every answered part except empty / over-long input)
+  /**
+   * Questions counted against the question budget (shared/budget.ts: parts answered yes / no /
+   * partial / irrelevant that are not small talk). ≤ asked. Optional: saves from before
+   * 2026-09-28 lack it → read it as `asked`.
+   */
+  spent?: number;
   hintsUsed: number;
   debateCleared: string[];     // round ids
   debateMisses: number;
@@ -81,7 +91,17 @@ export interface ProgressSnapshot {
 /* Ask                                                                 */
 /* ------------------------------------------------------------------ */
 
-export interface AskRequest { caseId: string; question: string; token?: ProgressToken }
+export interface AskRequest {
+  caseId: string;
+  question: string;
+  token?: ProgressToken;
+  /**
+   * The hard question budget the client plays under (教授). The server then answers only as many
+   * counted parts as are left under it (later parts of a multi-question message are dropped) and
+   * refuses once it is used up. A room-bound versus run uses its room's budget whatever is sent.
+   */
+  limit?: number;
+}
 
 export type HolmaMood = 'normal' | 'laugh' | 'surprised' | 'serious';
 
@@ -104,6 +124,8 @@ export interface AskAnswer {
   notice?: 'support' | 'degraded';
   /** True when this answer shows the player is circling the core truth (drives Holma's reaction). */
   nearCore?: boolean;
+  /** This part did not count against the question budget (「具体的に」, small talk, hint requests…). */
+  free?: boolean;
 }
 
 export interface AskResponse {

@@ -43,6 +43,7 @@ export function toSummary(c: Case): CaseSummary {
     portrait: c.victim.portrait,
   };
   if (c.contentWarning) s.contentWarning = c.contentWarning;
+  if (c.questionBudget && Object.keys(c.questionBudget).length > 0) s.questionBudget = { ...c.questionBudget };
   return s;
 }
 
@@ -60,6 +61,7 @@ export function toPublic(c: Case): CasePublic {
     shardWeights: shardWeights(c),
     hintCount: c.hints.length,
     holmaLines: { idle: [...c.holmaLines.idle], nearCore: [...c.holmaLines.nearCore] },
+    ...(c.nudges && c.nudges.length > 0 ? { nudges: [...c.nudges] } : {}),
   };
 }
 

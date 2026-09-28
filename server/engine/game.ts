@@ -24,12 +24,15 @@ import { memoIdForFact, initialState, sanitizeState, snapshot, type GameState } 
 import { roomDifficulty } from './room-binding.js';
 import { signToken, verifyToken } from './token.js';
 import { VERDICT_MODE_BY_DIFFICULTY } from '../../shared/api.js';
+import { budgetRule, questionBudget } from '../../shared/budget.js';
 import { optionOrder, parseSegments, publicFact, reconstructionView, roundViews, solutionView, toPublic, toSummary, verdictSetupView } from './public-view.js';
 import { evaluateVerdict } from './verdict.js';
 import { judgeChoice, judgeCloze, parseVerdictMode, type PickVerdict } from './verdict-modes.js';
 import { StageTimer, traceId, type EngineTrace, type TraceSink } from './trace.js';
 
 export const MAX_VERDICT_CHARS = 600;
+/** Holma's line when a question arrives after the hard question budget is used up (not counted). */
+export const BUDGET_CLOSED_LINE = '……質問は、もう締め切りましたよ。あとは集めた所見で、審問に臨みなさい。';
 export const DEFAULT_QUESTION_CAP = 400;
 /** At most one judge wake-up call per this interval (per server instance). */
 export const WARM_INTERVAL_MS = 120_000;
@@ -116,6 +119,18 @@ export class GameService {
     if (mode !== want) throw badRequest(`this room-bound run declares its verdict as ${want}`);
   }
 
+  /**
+   * The hard question budget this ask runs under (shared/budget.ts), or undefined for none.
+   * A room-bound versus run: its room difficulty's budget when that is a hard one (教授), whatever
+   * the client sends. Otherwise the client's own declared limit (single player enforces its
+   * budget in the browser; declaring it lets the server cut a multi-question message exactly).
+   */
+  private questionLimit(c: LoadedCase, s: GameState, requested: unknown): number | undefined {
+    const d = roomDifficulty(s.room);
+    if (d) return budgetRule(d).kind === 'hard' ? questionBudget(c.data.difficulty, d, c.data.questionBudget) : undefined;
+    return typeof requested === 'number' && Number.isInteger(requested) && requested > 0 && requested <= 10_000 ? requested : undefined;
+  }
+
   /* ---------------------------------------------------------------- */
 
   async listCases(o?: CallOptions): Promise<CaseSummary[]> {
@@ -156,7 +171,13 @@ export class GameService {
    *   stage 'solved'       → debated + verdict accepted
    *   stage 'reconstructed'→ solved + reconstruction complete
    */
-  async mintToken(caseId: string, stage: 'fresh' | 'investigated' | 'debated' | 'solved' | 'reconstructed', o?: CallOptions): Promise<{ token: ProgressToken; progress: ProgressSnapshot }> {
+  async mintToken(
+    caseId: string,
+    stage: 'fresh' | 'investigated' | 'debated' | 'solved' | 'reconstructed',
+    o?: CallOptions,
+    /** QA: start with this many questions already asked (all counted against the budget). */
+    asked?: number,
+  ): Promise<{ token: ProgressToken; progress: ProgressSnapshot }> {
     const c = await this.loaded(caseId, o);
     const s = initialState(c.data, this.clock());
     const order = ['fresh', 'investigated', 'debated', 'solved', 'reconstructed'];
@@ -167,6 +188,11 @@ export class GameService {
         if (f.spoilerLevel <= 3 && f.scienceMemo && !s.memos.includes(f.scienceMemo)) s.memos.push(f.scienceMemo);
       }
       s.asked = Math.max(s.asked, 20);
+      s.spent = s.asked;
+    }
+    if (typeof asked === 'number' && Number.isInteger(asked) && asked >= 0 && asked <= this.questionCap) {
+      s.asked = asked;
+      s.spent = asked;
     }
     if (at >= 2) s.cleared = c.data.debate.map((r) => r.id);
     if (at >= 3) { s.solved = true; s.verdictAttempts = Math.max(1, s.verdictAttempts); s.nearCore = true; }
@@ -182,6 +208,16 @@ export class GameService {
     if (state.asked >= this.questionCap) throw rateLimited(`question cap reached (${this.questionCap}) for this progress token`, false);
     const reg = await this.registry();
 
+    // The hard question budget is used up: Holma declines, nothing is judged or counted.
+    const limit = this.questionLimit(c, state, req.limit);
+    if (limit !== undefined && state.spent >= limit) {
+      const closed: AskResponse = {
+        answers: [{ question: question.slice(0, MAX_QUESTION_CHARS), answerClass: 'cannot', line: BUDGET_CLOSED_LINE, mood: 'serious', unlocked: [], memos: [], free: true }],
+        ...(await this.issue(c, state)),
+      };
+      return closed;
+    }
+
     const components = o?.mode && o.admin && this.opts.componentsFor ? this.opts.componentsFor(o.mode) : this.opts.components;
     const outcome = await runAsk({
       loaded: c,
@@ -191,6 +227,7 @@ export class GameService {
       components,
       budget: this.opts.budget,
       deadlineMs: TURN_DEADLINE_MS,
+      limit,
     });
     this.opts.traces?.write({
       id: traceId(),

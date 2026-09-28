@@ -22,7 +22,7 @@
  *   wrong tokens are rate-limited per IP — over the limit every token attempt is 429):
  *   GET  /api/admin/status | /api/admin/cases | /api/admin/traces | /api/admin/bench
  *   POST /api/admin/ask-debug           {caseId, question, token?, mode?}
- *   POST /api/admin/mint-token          {caseId, stage: fresh|investigated|debated|solved|reconstructed}  (QA shortcut)
+ *   POST /api/admin/mint-token          {caseId, stage: fresh|investigated|debated|solved|reconstructed, asked?}  (QA shortcut)
  *   POST /api/admin/versus-bind         {seat, token} dev server only: binds a minted token to a versus run (QA)
  *   Online versus: GET /api/versus/config · POST /api/versus/{create,join,start,state,run,progress,leave}
  *   (server/http/versus-routes.ts; every verdict is also shown to the versus service — observeVerdict)
@@ -194,7 +194,8 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
       if (typeof b.question !== 'string') throw new EngineError('bad_request', 'question is required', 400);
       // Over-long is refused — except a message the safety filter answers (support notice first).
       if ([...b.question].length > MAX_QUESTION_CHARS && !detectSafety(b.question)) throw new EngineError('bad_request', `question is too long (max ${MAX_QUESTION_CHARS})`, 400);
-      return json(200, await svc.ask({ caseId: b.caseId as string, question: b.question, token: b.token as string | undefined }, { admin, withTrace: dev || admin }));
+      const questionLimit = typeof b.limit === 'number' ? b.limit : undefined;
+      return json(200, await svc.ask({ caseId: b.caseId as string, question: b.question, token: b.token as string | undefined, limit: questionLimit }, { admin, withTrace: dev || admin }));
     },
     hint: async ({ body, admin, ip }) => {
       limit('write', ip);
@@ -297,7 +298,7 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
     'mint-token': async ({ body }) => {
       const b = await body();
       const stage = (['fresh', 'investigated', 'debated', 'solved', 'reconstructed'] as const).find((x) => x === b.stage) ?? 'investigated';
-      return json(200, await svc.mintToken(b.caseId as string, stage, { admin: true }));
+      return json(200, await svc.mintToken(b.caseId as string, stage, { admin: true }, typeof b.asked === 'number' ? b.asked : undefined));
     },
     'versus-bind': (ctx) => versus.devBind(ctx),
     'ask-debug': async ({ body }) => {

@@ -241,6 +241,8 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
     // sent with the public case view (idle / near-core flavour during the investigation)
     ...c.holmaLines.idle.map((t, i) => [`holmaLines.idle[${i}]`, t] as [string, string]),
     ...c.holmaLines.nearCore.map((t, i) => [`holmaLines.nearCore[${i}]`, t] as [string, string]),
+    // Holma's free nudges (shared/budget.ts), also sent with the public case view
+    ...(c.nudges ?? []).map((t, i) => [`nudges[${i}]`, t] as [string, string]),
     ...c.scienceMemos.map((m) => [`scienceMemos.${m.id}`, `${m.title} ${m.text}`] as [string, string]),
     ...c.facts.filter((f) => f.spoilerLevel <= 2).flatMap((f) => [[`${f.id}.text`, f.text], [`${f.id}.cardTitle`, f.cardTitle ?? '']] as [string, string][]),
   ];
@@ -249,6 +251,14 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
     const n = normalize(text);
     for (const [t, nt] of leak) if (n.includes(nt)) errors.push(`leak term "${t}" appears in public field ${where}`);
   }
+
+  // ── question budget override / nudges (shared/budget.ts) ──────
+  const qb = c.questionBudget;
+  if (qb) {
+    if (qb.easy !== undefined && qb.normal !== undefined && qb.easy < qb.normal) warnings.push(`questionBudget: easy (${qb.easy}) is smaller than normal (${qb.normal})`);
+    if (qb.normal !== undefined && qb.hard !== undefined && qb.normal < qb.hard) warnings.push(`questionBudget: normal (${qb.normal}) is smaller than hard (${qb.hard})`);
+  }
+  if (c.nudges && new Set(c.nudges).size !== c.nudges.length) warnings.push('nudges: duplicate lines (each is said at most once per run)');
 
   // ── probe kinds ───────────────────────────────────────────────
   const kinds: Partial<Record<ProbeKind, number>> = {};

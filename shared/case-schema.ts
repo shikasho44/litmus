@@ -311,6 +311,24 @@ export const CaseSchema = z.object({
     idle: z.array(z.string()).min(1),        // player idle / stuck
     solved: z.array(z.string()).min(1),
   }),
+  /**
+   * PUBLIC, optional (2026-09-28). Holma's free nudges ("ひとりごと") when the player is stuck or
+   * the question budget runs low (shared/budget.ts). Directions, never answers; each is said at
+   * most once per run. Absent → the investigation falls back to holmaLines.idle and the unasked
+   * starter questions. Checked for leakTerms like every public line.
+   */
+  nudges: z.array(z.string().min(1)).optional(),
+  /**
+   * PUBLIC, optional (2026-09-28). Exact question budgets per play difficulty, overriding the
+   * default round(par × factor) of shared/budget.ts (e.g. a short intro case with a small one).
+   */
+  questionBudget: z
+    .object({
+      easy: z.number().int().min(1).max(400).optional(),
+      normal: z.number().int().min(1).max(400).optional(),
+      hard: z.number().int().min(1).max(400).optional(),
+    })
+    .optional(),
   /** SECRET. Terms that must never appear in model-written replies before the solution. */
   leakTerms: z.array(z.string()).min(1),
   /** Verdict formats per difficulty (optional for older cases; validator warns when missing). */

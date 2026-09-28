@@ -391,7 +391,21 @@
     {"q": "誰かが酸素濃度計の電池を切った？", "expect": ["no"], "noNearCore": true, "manner": true, "critical": true, "group": "red herring manner", "note": "死の種類（2026-09-28〜 答える）: F12"},
     {"q": "わざとストッパーを外したの？", "expect": ["no", "partial"], "noNearCore": true, "manner": true, "critical": true, "group": "red herring manner", "note": "死の種類（2026-09-28〜 答える）: F47"},
     {"q": "閉じ込めて殺したの？", "expect": ["no"], "noNearCore": true, "manner": true, "group": "red herring manner", "note": "死の種類（2026-09-28〜 答える）: F47・F28"},
-    {"q": "もう一人の人のせい？", "expect": ["no"], "noNearCore": true, "manner": true, "group": "red herring manner", "note": "死の種類（2026-09-28〜 答える）: F43"}
+    {"q": "もう一人の人のせい？", "expect": ["no"], "noNearCore": true, "manner": true, "group": "red herring manner", "note": "死の種類（2026-09-28〜 答える）: F43"},
+    {"q":  "警報は鳴りましたか？", "expect":  ["partial"], "fact":  "F31", "group":  "inquest reachability (2026-09-28)", "note":  "審問②（けたたましく鳴りだした）の所見 F31 に届く。スマホの警報は鳴り、部屋の酸素濃度計は鳴らなかった。"},
+    {"q":  "アラームは鳴った？", "expect":  ["partial"], "fact":  "F31", "group":  "inquest reachability (2026-09-28)"},
+    {"q":  "ブザーは鳴った？", "expect":  ["no"], "fact":  "F31", "group":  "inquest reachability (2026-09-28)"},
+    {"q":  "部屋で何か音は鳴りましたか？", "expect":  ["no"], "fact":  "F31", "group":  "inquest reachability (2026-09-28)"},
+    {"q":  "壁の機械はけたたましく鳴った？", "expect":  ["no"], "fact":  "F31", "critical":  true, "group":  "inquest reachability (2026-09-28)"},
+    {"q":  "酸素濃度計は動いていましたか？", "expect":  ["no"], "fact":  "F31", "critical":  true, "group":  "inquest reachability (2026-09-28)"},
+    {"q":  "電池は切れていましたか？", "expect":  ["yes"], "fact":  "F31", "group":  "inquest reachability (2026-09-28)"},
+    {"q":  "危険を知らせるものはありましたか？", "expect":  ["partial"], "fact":  "F31", "group":  "inquest reachability (2026-09-28)"},
+    {"q":  "酸素濃度計に異常はありましたか？", "expect":  ["yes"], "fact":  "F31", "group":  "inquest reachability (2026-09-28)"},
+    {"q":  "警報器は作動しましたか？", "expect":  ["no"], "fact":  "F31", "group":  "inquest reachability (2026-09-28)"},
+    {"q":  "電池は前から切れていたのですか？", "expect":  ["yes"], "fact":  "F46", "group":  "inquest reachability (2026-09-28)"},
+    {"q":  "助けを呼びましたか？", "expect":  ["no"], "fact":  "F33", "group":  "inquest reachability (2026-09-28)"},
+    {"q":  "スマホは鳴りましたか？", "expect":  ["yes"], "fact":  "F08", "group":  "inquest reachability (2026-09-28)", "note":  "0時52分の液面低下の警報（F08）。部屋の酸素濃度計とは別物。"},
+    {"q":  "警報が鳴ったから来たのですか？", "expect":  ["yes"], "fact":  "F08", "group":  "inquest reachability (2026-09-28)"}
   ],
   "verdicts": [
     {"text": "見えない窒素が、彼女を殺した。液体窒素があふれて気化し、部屋の空気を押しのけて酸欠になった", "expect": ["correct"]},

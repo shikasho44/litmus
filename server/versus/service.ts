@@ -77,6 +77,8 @@ interface GameRec {
   p: number;
   st: VersusStage;
   q: number;
+  /** questions counted against the budget (a re-issued run token keeps them; absent in older records → q) */
+  b?: number;
   /** server time of the write */
   at: number;
   /** issue time of the token it was derived from (older tokens never overwrite newer ones) */
@@ -130,7 +132,7 @@ export function parseRoom(h: Record<string, string> | null): Room | null {
     const g = obj(h[`g:${i}`]);
     const game: GameRec | undefined =
       g && typeof g.p === 'number' && typeof g.q === 'number' && STAGES.includes(g.st as VersusStage) && typeof g.at === 'number'
-        ? { p: g.p, st: g.st as VersusStage, q: g.q, at: g.at, t: typeof g.t === 'number' ? g.t : 0 }
+        ? { p: g.p, st: g.st as VersusStage, q: g.q, ...(typeof g.b === 'number' ? { b: g.b } : {}), at: g.at, t: typeof g.t === 'number' ? g.t : 0 }
         : undefined;
     slots.push({
       slot: i,
@@ -155,9 +157,9 @@ export function parseRoom(h: Record<string, string> | null): Room | null {
 }
 
 /** What the room may know about a run: aggregate progress, never which findings. */
-export function deriveProgress(c: Case, s: GameState): { p: number; st: VersusStage; q: number } {
+export function deriveProgress(c: Case, s: GameState): { p: number; st: VersusStage; q: number; b: number } {
   const st: VersusStage = s.solved ? 'solved' : s.cleared.length > 0 || s.debateMisses > 0 || s.verdictAttempts > 0 || s.grants > 0 ? 'inquest' : 'investigation';
-  return { p: Math.round(snapshot(c, s).progress * 1000) / 1000, st, q: s.asked };
+  return { p: Math.round(snapshot(c, s).progress * 1000) / 1000, st, q: s.asked, b: s.spent };
 }
 
 /** "Name" taken → "Name2" (still within the length limit). */
@@ -424,6 +426,8 @@ export class VersusService {
       ...initialState(c.data, now),
       room: this.binding(room.meta, slot.player.id),
       asked: slot.game?.q ?? 0,
+      // the question budget already used is kept too (教授 rooms enforce it on the server)
+      spent: Math.min(slot.game?.q ?? 0, slot.game?.b ?? slot.game?.q ?? 0),
       verdictAttempts: slot.attempts,
     };
     const token = await signToken(s, this.o.secret, now);

@@ -9,6 +9,7 @@ import { DIFFICULTY_META } from '../features/difficulty/meta';
 import { DetectiveBadge, PenaltyTag } from '../features/rank/Badge';
 import { DETECTIVE_LEVELS, DIFFICULTY_MULTIPLIER, SPLUS_BONUS } from '../features/rank/points';
 import { replayTutorial } from '../features/tutorial/tutorial';
+import { BudgetHowToArt } from '../features/budget/HowToArt';
 import { toast } from '../ui/Toast';
 import { Button } from '../ui/Button';
 import { EvidenceCard } from '../ui/EvidenceCard';
@@ -289,6 +290,21 @@ const STEPS: Step[] = [
         </p>
         <p class="t-sm t-bone2">
           外すと彼女の<strong>灯</strong>（やり直し）がひとつ消え、尽きるとゲームオーバー。見習いは審問の最初から、審問官・教授は事件の最初からやり直しです。通れば真相を漫画のコマで組み直し、彼女の名前が戻ります。
+        </p>
+      </>
+    ),
+  },
+  {
+    en: 'QUESTIONS',
+    title: '質問枠と、ホルマのひとりごと',
+    art: () => <BudgetHowToArt />,
+    body: (
+      <>
+        <p>
+          質問できる数には、事件と難易度ごとの<strong>質問枠</strong>があります。入力欄の上の札が残りの数です。<strong>見習い</strong>は目安だけ、<strong>審問官</strong>は枠を超えると1問ごとに減点、<strong>教授</strong>は枠を使い切ると質問が締め切られ、審問へ進みます。
+        </p>
+        <p class="t-sm t-bone2">
+          数えるのは「はい」「いいえ」「一部そう」「関係ない」が返った質問だけ。「具体的に」「答えられない」や雑談・遊び方の相談は<strong>ノーカウント</strong>です。行き詰まると、ホルマが<strong>ひとりごと</strong>で方角をこぼすことがあります（減点なし・答えは言いません）。
         </p>
       </>
     ),

@@ -30,6 +30,7 @@ import type { GameState } from './state.js';
 import type { BudgetGuard } from './budget.js';
 import { StageTimer, type EngineTrace, type PartTrace } from './trace.js';
 import { detectSafety, flaggedByModel, safetyLine, type SafetyHit } from './safety.js';
+import { isCharged } from '../../shared/budget.js';
 
 export const TURN_DEADLINE_MS = 9000;
 export const STAGE_TIMEOUT_MS = { judge: 4500, render: 4000, check: 3000 } as const;
@@ -46,6 +47,12 @@ export interface AskContext {
   components: PipelineComponents;
   budget?: BudgetGuard;
   deadlineMs?: number;
+  /**
+   * Hard question budget (shared/budget.ts): at most `limit − state.spent` counted parts are
+   * answered; later parts of the message are dropped (trace `budget-dropped:n`). The caller
+   * refuses a turn with nothing left (game.ts), so at least the first counted part fits.
+   */
+  limit?: number;
 }
 
 export interface AskOutcome {
@@ -60,9 +67,15 @@ export interface AskOutcome {
 /** Placeholder written to traces instead of a question the safety filter answered. */
 export const REDACTED = '[safety]';
 
+/** Does this judged part count against the question budget? (shared/budget.ts) */
+export function chargedDecision(d: Pick<JudgeDecision, 'answerClass' | 'meta'>): boolean {
+  return isCharged(d.answerClass, d.meta);
+}
+
 /**
  * The whole turn answered by the safety filter: one serious fixed line, 'cannot', notice
- * 'support', nothing unlocked. Counts as one question. The question text is not traced.
+ * 'support', nothing unlocked. Counts as one question (never against the budget). The question
+ * text is not traced.
  */
 function safetyOutcome(ctx: AskContext, hit: SafetyHit, timer: StageTimer, usage: Usage, mode: PipelineMode, budgetExceeded: boolean): AskOutcome {
   const line = safetyLine(hit);
@@ -74,6 +87,7 @@ function safetyOutcome(ctx: AskContext, hit: SafetyHit, timer: StageTimer, usage
     unlocked: [],
     memos: [],
     notice: 'support',
+    free: true,
   };
   const judge = { source: 'safety', kind: hit.kind, rule: hit.rule };
   const part: PartTrace = {
@@ -272,6 +286,25 @@ export async function runAsk(ctx: AskContext): Promise<AskOutcome> {
     return safetyOutcome(ctx, { kind: 'model', rule: 'judge-flag' }, timer, usage, components.mode, budgetExceeded);
   }
 
+  // 2b. hard question budget: keep the parts that fit (free parts always fit until the cut)
+  let budgetDropped = 0;
+  if (ctx.limit !== undefined) {
+    let left = ctx.limit - ctx.state.spent;
+    let keep = work.length;
+    for (let i = 0; i < work.length; i++) {
+      if (!chargedDecision(work[i].decision)) continue;
+      if (left <= 0) {
+        keep = i;
+        break;
+      }
+      left--;
+    }
+    if (keep > 0 && keep < work.length) {
+      budgetDropped = work.length - keep;
+      work.splice(keep);
+    }
+  }
+
   // 3. policy + canned line (sequential: a later part sees earlier unlocks)
   let state: GameState = ctx.state;
   const partTraces: PartTrace[] = [];
@@ -298,8 +331,12 @@ export async function runAsk(ctx: AskContext): Promise<AskOutcome> {
     );
     composed.push({ policy, text: line.text, mood: line.mood, stateAfter: state });
   });
-  // Empty / over-long input does not count as a question.
-  state = { ...state, asked: state.asked + work.filter((w) => w.decision.meta !== 'empty' && w.decision.meta !== 'tooLong').length };
+  // Empty / over-long input does not count as a question; only charged parts count against the budget.
+  state = {
+    ...state,
+    asked: state.asked + work.filter((w) => w.decision.meta !== 'empty' && w.decision.meta !== 'tooLong').length,
+    spent: state.spent + work.filter((w) => chargedDecision(w.decision)).length,
+  };
 
   // 4. model phrasing (+ post-check), parts in parallel; canned stays the fallback
   const finalLines = composed.map((x) => ({ text: x.text, mood: x.mood, canned: true }));
@@ -405,6 +442,7 @@ export async function runAsk(ctx: AskContext): Promise<AskOutcome> {
     };
     if (w.degraded) a.notice = 'degraded';
     if (nearCoreOf(policy)) a.nearCore = true;
+    if (!chargedDecision(w.decision)) a.free = true;
     return a;
   });
 
@@ -441,7 +479,12 @@ export async function runAsk(ctx: AskContext): Promise<AskOutcome> {
     .sort((a, b) => b.score - a.score)[0];
   const candMap = new Map<string, number>();
   for (const w of work) for (const f of w.cand.facts) candMap.set(f.id, Math.max(candMap.get(f.id) ?? 0, f.score));
-  const fallbacks = [budgetExceeded ? 'budget' : undefined, split.dropped > 0 ? `dropped:${split.dropped}` : undefined, ...work.map((w) => w.fallback)].filter(Boolean);
+  const fallbacks = [
+    budgetExceeded ? 'budget' : undefined,
+    split.dropped > 0 ? `dropped:${split.dropped}` : undefined,
+    budgetDropped > 0 ? `budget-dropped:${budgetDropped}` : undefined,
+    ...work.map((w) => w.fallback),
+  ].filter(Boolean);
   const firstRendered = renderTrace.find((r) => r.prompt || r.output);
   const trace: EngineTrace = {
     mode: effectiveMode,

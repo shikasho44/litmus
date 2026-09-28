@@ -10,12 +10,15 @@ import { Icon } from '../../ui/Icon';
 import { DifficultyBadge } from '../difficulty/Badge';
 import { caseNo } from './caseData';
 import type { Controller } from './controller';
+import type { BudgetView } from '../budget/budget';
 
 export interface TopBarProps {
   ctl: Controller;
   pub?: CasePublic;
   progress?: CaseProgress;
   elapsed: number;
+  /** 質問枠: QUESTIONS shows the counted questions against it. */
+  budget?: BudgetView | null;
   newFacts: number;
   notebookOpen: boolean;
   onMenu: () => void;
@@ -24,14 +27,14 @@ export interface TopBarProps {
   onInquest: () => void;
 }
 
-export function TopBar({ ctl, pub, progress, elapsed, newFacts, notebookOpen, onMenu, onHint, onNotebook, onInquest }: TopBarProps) {
+export function TopBar({ ctl, pub, progress, elapsed, budget, newFacts, notebookOpen, onMenu, onHint, onNotebook, onInquest }: TopBarProps) {
   const narrow = layout.value === 'narrow';
   const nbRef = useRef<HTMLButtonElement>(null);
   const bump = ctl.bumpTick.value;
   const hintsUsed = progress?.snapshot?.hintsUsed ?? progress?.hints.length ?? 0;
   const hintTotal = pub?.hintCount ?? 3;
   const hintsLeft = Math.max(0, hintTotal - hintsUsed);
-  const asked = progress?.snapshot?.asked ?? 0;
+  const asked = budget?.spent ?? progress?.snapshot?.asked ?? 0;
   const facts = progress?.factOrder.length ?? 0;
   const busy = ctl.asking.value || ctl.presenting.value;
 
@@ -58,7 +61,10 @@ export function TopBar({ ctl, pub, progress, elapsed, newFacts, notebookOpen, on
         <dl class="ivtop__stats t-mono" aria-label="捜査の記録">
           <div>
             <dt>QUESTIONS</dt>
-            <dd>{String(asked).padStart(2, '0')}</dd>
+            <dd>
+              {String(asked).padStart(2, '0')}
+              {budget && <small>/{budget.budget}</small>}
+            </dd>
           </div>
           <div>
             <dt>FINDINGS</dt>

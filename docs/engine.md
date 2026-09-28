@@ -61,8 +61,16 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
  → 判定（mode に応じて rules / Jev / LLM。モデル失敗は1回再試行 → rules に退避）
  → 規則 policy.ts（開示してよいか: 回答種別・確信度・spoilerLevel・requires・1回2枚まで）
  → 返答（定型文 FAST PATH / LLM 言い換え → 漏洩語チェック → mode C は Jev 検査・NG なら1回作り直し → 定型文）
- → 状態更新（所見・科学メモ・nearCore・質問数）→ 新しいトークン → TurnTrace
+ → 状態更新（所見・科学メモ・nearCore・質問数・質問枠の消費）→ 新しいトークン → TurnTrace
 ```
+
+### 質問枠（2026-09-28、`shared/budget.ts`）
+- **数え方**: `asked`（質問数）はこれまでどおり空・長すぎ以外の全パート。別に `spent`（質問枠に数える数）を持つ。
+  数えるのは「はい／いいえ／一部そう／関係ない」で、判定に meta（askAnswer・askHint・offtopic・aboutHolma・rude・manner・open・empty・tooLong）が付いていないパートだけ（`isCharged`・pipeline の `chargedDecision`）。
+  安全フィルターの返答も数えない。数えないパートの `AskAnswer` には `free: true`。**数えないパートは所見を開けない**（開示は はい／いいえ／一部そう だけ。全事件の全想定質問で `tests/engine/budget.test.ts` が確認）。
+- **締切**（教授）: `AskRequest.limit` が来たら（または部屋に結びついたトークンで部屋の難易度が教授なら、`limit` を無視して部屋の枠で）、
+  判定のあと「数えるパート」を残りの枠の分だけ残し、後ろのパートは捨てる（trace `budget-dropped:n`）。無料のパートは切れ目までは答える。
+  すでに `spent ≥ limit` なら判定もモデルも呼ばず、数えずに `cannot`（`BUDGET_CLOSED_LINE`、`free: true`）を返す。見習い・審問官の枠は締め切らない（減点はブラウザのランク計算）。
 
 ### 安全フィルター（safety.ts・公開の必須条件）
 - **判定より前に**走る（想定質問・rules・Jev・LLM のどれよりも先）。当たった質問は**モデルに一切送らない**。
@@ -271,7 +279,7 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 | GET | `/api/cases` | `CaseSummary[]` |
 | GET | `/api/cases/:id` | `CasePublic` |
 | POST | `/api/token` | `{caseId}` → `{token, progress}` |
-| POST | `/api/ask` | `AskRequest` → `AskResponse`（token 省略可 = 新規） |
+| POST | `/api/ask` | `AskRequest` → `AskResponse`（token 省略可 = 新規。`limit` は教授の質問枠、§2 質問枠） |
 | POST | `/api/hint` | `HintRequest` → `HintResponse`（1→2→3、以後3） |
 | POST | `/api/inquest/start` | → `InquestStartResponse`（証拠 = 開示済み importance ≥1） |
 | POST | `/api/inquest/shot` | `ShotRequest` → `ShotResponse`（同ラウンド2回外すと `hint`） |
@@ -285,7 +293,7 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 | GET | `/api/admin/cases` | 全データ＋検査結果＋読込エラー |
 | GET | `/api/admin/traces?limit=&caseId=` | 直近 300 ターン |
 | POST | `/api/admin/ask-debug` | `{caseId, question, token?, mode?}` → trace 付き（mode を一時上書き） |
-| POST | `/api/admin/mint-token` | `{caseId, stage}` → `{token, progress}`。QA・画面作りの近道。stage: `fresh`（初期）/ `investigated`（spoilerLevel ≤3 の所見とメモを全部・質問数20）/ `debated`（＋全ラウンド突破）/ `solved`（＋宣告正解）/ `reconstructed`（＋再構成完了）。不明な stage は `investigated`。管理 API と同じく dev か `x-admin-token` のときだけ（本番の通常利用者には 404） |
+| POST | `/api/admin/mint-token` | `{caseId, stage, asked?}` → `{token, progress}`（`asked` を渡すと質問数と質問枠の消費をその数にする。QA 用）。QA・画面作りの近道。stage: `fresh`（初期）/ `investigated`（spoilerLevel ≤3 の所見とメモを全部・質問数20）/ `debated`（＋全ラウンド突破）/ `solved`（＋宣告正解）/ `reconstructed`（＋再構成完了）。不明な stage は `investigated`。管理 API と同じく dev か `x-admin-token` のときだけ（本番の通常利用者には 404） |
 | GET | `/api/admin/bench` | `bench/reports/*.json` の一覧（無ければ `[]`） |
 | GET / POST | `/api/versus/config` ・ `/api/versus/{create,join,start,state,run,progress,leave}` | オンライン対戦（2026-09-27）。部屋・席・部屋に結びついたトークン・勝敗。詳細は **`docs/versus.md` §3**。`/api/inquest/verdict` の応答は対戦の部屋にも記録される（`observeVerdict`） |
 | POST | `/api/admin/versus-bind` | `{seat, token}` → 部屋に結びつけたトークン。**dev サーバーだけ**（QA 用。本番は管理トークンがあっても 404） |
@@ -324,6 +332,7 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 - 形式 `j1.<payload base64url>.<HMAC-SHA256 base64url>`。payload は
   `{v, c: 事件id, u: 開示所見, m: 科学メモ, n: [質問数, ヒント, 論破ミス, 泣きつき, 宣告回数], rm: ラウンド別ミス, r: 突破ラウンド, f: 解決1|再構成2|nearCore4, k?: 確認済みの spoilerLevel 4 所見, t: 発行秒}`。
   `k` は空なら省く（旧トークンは `[]` として読む）。
+  `q`（省略可能、2026-09-28）: 質問枠に数えた数 `spent`。`asked` と同じなら省く（旧トークンは `spent = asked`）。`asked` より大きいと不正なトークン。
   `vs`（省略可能、2026-09-27）: オンライン対戦の部屋の結びつけ `<部屋コード>.<nonce>.<プレイヤーid>.<e|n|h>`（`server/engine/room-binding.ts`）。
   対戦の開始時にだけサーバーが付け、以後の操作は状態を引き継ぐので残る。付いたトークンは部屋の難易度の宣告形式でしか宣告できない（`game.ts` `checkRoomMode`）。無いトークンは従来どおり。`docs/versus.md` §6。
 - 毎回の呼び出しで検証（改ざん・別事件・形式違い・未来/期限切れ 120日 → 401 `bad_token`）し、毎回新しいトークンを返す（使っている限り期限は延びる）。
@@ -392,7 +401,7 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 - `SolutionResponse.reviewStatus`: 事件の `reviewStatus`。`human-reviewed` 以外なら科学解説に「専門家確認前の下書き」を出す。
 - `AskAnswer.notice`: `'support'`（安全フィルター。真剣な台詞の横に相談窓口カード https://www.mhlw.go.jp/mamorouyokokoro/ を出す。スタンプや茶化し演出は出さない）/ `'degraded'`（簡易判定で答えた。控えめな印）。安全フィルターの返答は `answers` が1つだけ（質問文はメッセージ全体）。
 - 複数質問は `answers[]` に分割された順で返る。`question` は分割後の原文（先頭の「それと」「あと」は除去済み）。
-- 質問数（`progress.asked`）は空入力・長すぎを数えない。
+- 質問数（`progress.asked`）は空入力・長すぎを数えない。質問枠の消費は `progress.spent`（省略されていれば `asked`）、数えないパートは `AskAnswer.free`。
 - 集中力（5）とラウンド中の演出は UI 側で管理（サーバーは `correct` と `hint` を返すだけ）。泣きつき回数は `ProgressSnapshot` に無いので UI 側で数える（トークン内部には記録）。
 - 再構成の `picks` は**表示された順番の番号**。完了後に `reconstruction()` を呼び直すと空白コマの caption / image も返る。
 - 死因宣告が `correct` になるまで `reconstruction` / `solution` は 403（`bad_request`）。

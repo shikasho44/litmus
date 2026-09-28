@@ -12,6 +12,8 @@
  *   rm misses per debate round      r  cleared debate rounds
  *   f  flags bitmask: 1 solved · 2 reconstructed · 4 nearCore
  *   k  spoilerLevel-4 fact ids already confirmed (optional; omitted when empty)
+ *   q  questions counted against the question budget (optional, 2026-09-28; omitted when equal
+ *      to asked — tokens from before read it as asked)
  *   vs online versus room binding (optional; only on run tokens the versus service issues —
  *      server/engine/room-binding.ts). Tokens without it are ordinary runs, as before.
  *   t  issuedAt (epoch seconds)
@@ -38,6 +40,7 @@ interface Payload {
   r: string[];
   f: number;
   k?: string[];
+  q?: number;
   vs?: string;
   t: number;
 }
@@ -104,6 +107,7 @@ function toPayload(s: GameState): Payload {
     t: Math.floor(s.issuedAt / 1000),
   };
   if (s.coreSeen && s.coreSeen.length > 0) p.k = s.coreSeen;
+  if (s.spent !== s.asked) p.q = s.spent;
   if (s.room) p.vs = s.room;
   return p;
 }
@@ -120,6 +124,7 @@ function fromPayload(p: unknown): GameState {
   if (!isCount(o.f)) throw new Error('flags');
   if (typeof o.t !== 'number' || !Number.isInteger(o.t) || o.t < 0 || o.t > 1e11) throw new Error('time');
   if (o.vs !== undefined && !isRoomBinding(o.vs)) throw new Error('room');
+  if (o.q !== undefined && (!isCount(o.q) || o.q > o.n[0])) throw new Error('spent');
   const rm: Record<string, number> = {};
   if (o.rm && typeof o.rm === 'object') {
     for (const [k, v] of Object.entries(o.rm)) if (isCount(v) && k.length <= 64) rm[k] = v;
@@ -129,6 +134,7 @@ function fromPayload(p: unknown): GameState {
     unlocked: o.u,
     memos: o.m,
     asked: o.n[0],
+    spent: o.q ?? o.n[0],
     hintsUsed: o.n[1],
     debateMisses: o.n[2],
     grants: o.n[3],

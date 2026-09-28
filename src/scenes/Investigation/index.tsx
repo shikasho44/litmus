@@ -29,6 +29,7 @@ import { Notebook, unseenFacts } from '../../features/notebook/Notebook';
 import { canChangeDifficulty, DIFFICULTY_META } from '../../features/difficulty/meta';
 import { maybeStartTutorial, replayTutorial } from '../../features/tutorial/tutorial';
 import { caseDifficulty } from '../../state/save';
+import { caseBudget } from '../../features/budget/budget';
 import '../../features/investigation/investigation.css';
 
 const SIDE_PREF = 'janedoe:notebook-side';
@@ -182,6 +183,9 @@ export function InvestigationScene({ params }: SceneProps) {
   };
   const hintsUsed = progress?.snapshot?.hintsUsed ?? progress?.hints.length ?? 0;
   const hintTotal = pub?.hintCount ?? 3;
+  /** 質問枠 of this run (shared/budget.ts); 'closed' (教授, used up) replaces the input with the way to the inquest. */
+  const budget = caseBudget(pub, progress);
+  const closed = budget?.state === 'closed';
 
   /* ---------- keyboard ---------- */
   useEffect(() => {
@@ -225,9 +229,9 @@ export function InvestigationScene({ params }: SceneProps) {
 
   /* ---------- idle ---------- */
   useEffect(() => {
-    const iv = setInterval(() => ctl.idleCheck(dialogOpenCount() > 0 || !!overlay.peek() || menuOpen || hintOpen || !!inquest), 3000);
+    const iv = setInterval(() => ctl.idleCheck(dialogOpenCount() > 0 || !!overlay.peek() || menuOpen || hintOpen || !!inquest || closed), 3000);
     return () => clearInterval(iv);
-  }, [ctl, menuOpen, hintOpen, inquest]);
+  }, [ctl, menuOpen, hintOpen, inquest, closed]);
 
   const log = progress?.log ?? [];
   const empty = !log.some((e) => e.kind === 'question');
@@ -269,6 +273,7 @@ export function InvestigationScene({ params }: SceneProps) {
             pub={pub}
             progress={progress}
             elapsed={elapsed}
+            budget={budget}
             newFacts={newFacts}
             notebookOpen={notebookOpen}
             onMenu={() => setMenuOpen(true)}
@@ -279,7 +284,19 @@ export function InvestigationScene({ params }: SceneProps) {
         }
         stage={stageNode}
         bottom={<ChatLog ctl={ctl} progress={progress} pub={pub} />}
-        dock={<InputDock ctl={ctl} starters={pub?.starterQuestions ?? []} empty={empty} disabled={!pub} inputId={inputId} />}
+        dock={
+          <InputDock
+            ctl={ctl}
+            starters={pub?.starterQuestions ?? []}
+            empty={empty}
+            disabled={!pub}
+            inputId={inputId}
+            budget={budget}
+            onOpenInquest={() => {
+              if (!ctl.asking.peek() && !ctl.presenting.peek()) startInquest();
+            }}
+          />
+        }
       />
       <WhisperOverlay ctl={ctl} />
       <FindingFlight ctl={ctl} />

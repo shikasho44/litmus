@@ -13,6 +13,11 @@
  * Everything the player earned is saved BEFORE the presentation runs, so a reload in the
  * middle of an animation never loses anything. The presentation only controls what is
  * revealed when (hidden answer ids, facts still "in flight", the shard count on stage).
+ *
+ * 質問枠 (src/features/budget): after the presentation, the turn's cost beyond a 審問官 budget
+ * floats as 「減点 −n」 by the counter, and Holma may speak up unasked (budget remarks, free
+ * nudges) — saved as 'nudge' log entries. 教授: the declared limit goes with every question and
+ * a used-up budget refuses to send.
  */
 import { batch, signal } from '@preact/signals';
 import type { AnswerClass } from '../../../shared/case-schema';
@@ -29,6 +34,7 @@ import type { LogEntry } from '../../state/types';
 import { STAMP_META } from '../../ui/Stamp';
 import { toast } from '../../ui/Toast';
 import { ensureToken, restartCaseAfterBadToken, shardProgress } from './caseData';
+import { caseBudget, planRemarks, turnPenalty, type BudgetView, type RemarkLineKey } from '../budget/budget';
 
 export interface PendingQuestion {
   id: string;
@@ -189,6 +195,8 @@ export function createController(caseId: string) {
 
   /* ---------------- helpers ---------------- */
   const progress = () => getCaseProgress(caseId);
+  /** The run's question budget right now (null until the case data is known). */
+  const budgetNow = (): BudgetView | null => caseBudget(pub.peek(), progress());
 
   function syncFromSave() {
     const c = progress();
@@ -437,6 +445,12 @@ export function createController(caseId: string) {
       toast('少し待ってから、もう一度どうぞ。', { tone: 'warn', icon: 'time' });
       return false;
     }
+    const budgetBefore = budgetNow();
+    if (budgetBefore?.state === 'closed') {
+      audio.sfx('error');
+      toast('質問はもう締め切られています。審問を開きましょう。', { tone: 'warn', icon: 'gavel' });
+      return false;
+    }
 
     const qid = newLogId();
     batch(() => {
@@ -458,7 +472,8 @@ export function createController(caseId: string) {
     let res: AskResponse;
     try {
       if (!token) throw new ApiError('network', 'no token');
-      res = await api.ask({ caseId, question: text, token });
+      // 教授: declare the hard budget so the server cuts a multi-question message exactly
+      res = await api.ask({ caseId, question: text, token, ...(budgetBefore?.kind === 'hard' ? { limit: budgetBefore.budget } : {}) });
     } catch (e) {
       if (disposed) return false;
       await handleError(e, text);
@@ -480,6 +495,7 @@ export function createController(caseId: string) {
         memos: a.memos.map((m) => m.id),
         ...(a.notice ? { notice: a.notice, degraded: a.notice === 'degraded' } : {}),
         ...(near[i] ? { nearCore: true } : {}),
+        ...(a.free ? { free: true } : {}),
       }),
     );
     const facts = res.answers.flatMap((a) => a.unlocked);
@@ -500,6 +516,8 @@ export function createController(caseId: string) {
       asking.value = false;
     });
     await present(res.answers, entries, res, near);
+    if (disposed) return true;
+    afterTurn(budgetBefore);
     touch();
     if (queued.peek() && !disposed) {
       queued.value = false;
@@ -507,6 +525,37 @@ export function createController(caseId: string) {
       if (next) void ask(next);
     }
     return true;
+  }
+
+  /**
+   * The turn is over (presentation done): what it cost beyond the budget (「減点 −n」 by the
+   * counter, 審問官) and whatever Holma says unasked (src/features/budget planRemarks).
+   */
+  function afterTurn(before: BudgetView | null) {
+    const p = pub.peek();
+    const c = progress();
+    const after = budgetNow();
+    if (!p || !c || !before || !after) return;
+    const cost = turnPenalty(before, after);
+    if (cost > 0) fx.penalty(cost, '.qbudget', 'left');
+    const remarks = planRemarks({
+      before,
+      after,
+      log: c.log,
+      progress: c.snapshot?.progress ?? 0,
+      solved: !!c.snapshot?.solved,
+      pool: { nudges: p.nudges, starters: p.starterQuestions, idle: p.holmaLines?.idle },
+      line: (key: RemarkLineKey) => pickLine(`investigation.${key}`),
+    });
+    if (!remarks.length) return;
+    appendLog(
+      caseId,
+      remarks.map((r) => ({ kind: 'nudge' as const, reason: r.reason, text: r.text, mood: r.mood, ...(r.nudge ? { nudge: r.nudge } : {}) })),
+    );
+    const last = remarks[remarks.length - 1];
+    mood.value = last.mood;
+    audio.blip('holma');
+    announce.value = `ホルマ：${remarks.map((r) => r.text.replace(/\n/g, ' ')).join(' ')}`;
   }
 
   async function handleError(e: unknown, text: string) {

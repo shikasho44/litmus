@@ -21,6 +21,8 @@ import { portalRoot, useDialog } from '../../ui/dialog';
 import { HolmaSprite } from '../../ui/HolmaSprite';
 import { toast } from '../../ui/Toast';
 import { LightsRow } from './Lights';
+import { budgetFor, chooserText, spentOf } from '../budget/budget';
+import { Icon } from '../../ui/Icon';
 import { canChangeDifficulty, DIFFICULTY_META, DIFFICULTY_ORDER } from './meta';
 import './difficulty.css';
 
@@ -61,6 +63,13 @@ function Chooser({ p, closing, active, onClose }: { p: DifficultyOverlayProps; c
   const current = progress?.difficulty;
   const meta = DIFFICULTY_META[sel];
   const cardsRef = useRef<HTMLDivElement>(null);
+  // 質問枠 per mode (shared/budget.ts); while changing mid-investigation, a hard budget already used up is not offered
+  const spent = p.mode === 'change' ? spentOf(progress?.snapshot) : 0;
+  const budgetOf = (d: Difficulty) => (summary ? budgetFor(summary, d, spent) : null);
+  const usedUp = (d: Difficulty) => {
+    const b = budgetOf(d);
+    return !!b && p.mode === 'change' && b.state === 'closed' && current !== d;
+  };
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -84,7 +93,7 @@ function Chooser({ p, closing, active, onClose }: { p: DifficultyOverlayProps; c
   };
 
   const confirm = () => {
-    if (busy || locked) return;
+    if (busy || locked || usedUp(sel)) return;
     setBusy(true);
     audio.sfx('gavel');
     if (p.mode === 'start') {
@@ -141,12 +150,14 @@ function Chooser({ p, closing, active, onClose }: { p: DifficultyOverlayProps; c
         </header>
 
         <p id="dfc-desc" class="sr-only">
-          難易度によって、死因宣告の答え方と、やり直しできる回数が変わります。
+          難易度によって、死因宣告の答え方と、やり直しできる回数と、質問の数（質問枠）が変わります。
         </p>
         <div ref={cardsRef} class="dfc__cards" role="radiogroup" aria-label="難易度" onKeyDown={onKey}>
           {DIFFICULTY_ORDER.map((d) => {
             const m = DIFFICULTY_META[d];
             const on = d === sel;
+            const b = budgetOf(d);
+            const bt = b && chooserText(b);
             return (
               <button
                 key={d}
@@ -174,6 +185,13 @@ function Chooser({ p, closing, active, onClose }: { p: DifficultyOverlayProps; c
                     ×{m.lives}
                   </b>
                 </span>
+                {bt && (
+                  <span class={`dcard__budget ${usedUp(d) ? 'is-used' : ''}`} data-budget-kind={b!.kind}>
+                    <Icon name="send" size={13} />
+                    <b>{bt.head}</b>
+                    <small>{usedUp(d) ? `もう${spent}問使っています` : bt.sub}</small>
+                  </span>
+                )}
                 <span class="dcard__rule">{m.rule}</span>
                 <span class="dcard__check" aria-hidden="true">
                   ✔
@@ -197,7 +215,9 @@ function Chooser({ p, closing, active, onClose }: { p: DifficultyOverlayProps; c
             <p class="dfc__note">
               {locked
                 ? '審問が始まったあとは、難易度を変えられません。'
-                : p.mode === 'change'
+                : usedUp(sel)
+                  ? `この捜査ではもう${spent}問訊いているので、${meta.jp}の質問枠（${budgetOf(sel)?.budget ?? ''}問）には収まりません。`
+                  : p.mode === 'change'
                   ? `やり直しの灯は審問の開始時に${meta.lives}つ灯ります。${meta.gameOverRule}`
                   : `${meta.gameOverRule}${narrow ? '' : ' 難易度は、審問が始まる前なら捜査中のメニューから変えられます。'}`}
             </p>
@@ -205,7 +225,7 @@ function Chooser({ p, closing, active, onClose }: { p: DifficultyOverlayProps; c
               <Button variant="ghost" sfx="cancel" onClick={onClose} icon="back">
                 戻る
               </Button>
-              <Button variant="big-cta" size="lg" en={`${meta.en}`} iconRight="chevronRight" onClick={confirm} disabled={busy || locked} sfx={false} data-difficulty-confirm>
+              <Button variant="big-cta" size="lg" en={`${meta.en}`} iconRight="chevronRight" onClick={confirm} disabled={busy || locked || usedUp(sel)} sfx={false} data-difficulty-confirm>
                 {p.mode === 'change' ? 'この難易度にする' : '解剖を始める'}
               </Button>
             </div>

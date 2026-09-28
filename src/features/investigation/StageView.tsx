@@ -10,6 +10,7 @@ import { ShardPortrait } from '../../ui/ShardPortrait';
 import { Stamp } from '../../ui/Stamp';
 import { SHARD_COUNT, shardsLit } from './caseData';
 import type { Controller } from './controller';
+import { spentOf } from '../budget/budget';
 
 export interface StageViewProps {
   ctl: Controller;
@@ -52,7 +53,8 @@ export function StageView({ ctl, pub, progress, elapsed }: StageViewProps) {
     return () => clearTimeout(t);
   }, [bumpTick]);
 
-  const asked = progress?.snapshot?.asked ?? 0;
+  // counted questions (質問枠, src/features/budget): free ones do not move this number
+  const asked = spentOf(progress?.snapshot);
   const unlockedCount = progress?.factOrder.length ?? 0;
   const pct = Math.round(shown * 100);
 

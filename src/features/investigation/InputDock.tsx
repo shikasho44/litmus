@@ -2,7 +2,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { audio } from '../../audio';
 import { layout } from '../../lib/viewport';
 import { Icon } from '../../ui/Icon';
+import { BudgetCounter } from '../budget/BudgetCounter';
+import type { BudgetView } from '../budget/budget';
 import type { Controller } from './controller';
+import { HolmaFace } from './HolmaFace';
 
 export const MAX_QUESTION = 200;
 
@@ -13,6 +16,10 @@ export interface InputDockProps {
   empty: boolean;
   disabled?: boolean;
   inputId: string;
+  /** 質問枠 of the run (null until the case data is known). 'closed' replaces the input. */
+  budget?: BudgetView | null;
+  /** The closed dock's button (教授, questions used up). */
+  onOpenInquest?: () => void;
 }
 
 /**
@@ -20,7 +27,7 @@ export interface InputDockProps {
  * (questions are one line), 200-char limit with a live counter, starter chips that fill the
  * input without sending, read-only while Holma is examining (keeps the phone keyboard up).
  */
-export function InputDock({ ctl, starters, empty, disabled, inputId }: InputDockProps) {
+export function InputDock({ ctl, starters, empty, disabled, inputId, budget, onOpenInquest }: InputDockProps) {
   const ta = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
   const compEndAt = useRef(0);
@@ -93,9 +100,29 @@ export function InputDock({ ctl, starters, empty, disabled, inputId }: InputDock
     });
   };
 
+  if (budget?.state === 'closed') {
+    // 教授: the question budget is used up — no input, Holma's line and the way on
+    return (
+      <div class="dock is-closed" role="status" data-budget-closed>
+        <div class="dock__closed">
+          <HolmaFace mood="serious" size={40} />
+          <p class="dock__closed-text">
+            <b>質問はここまで</b>
+            教授の質問枠（{budget.budget}問）を使い切りました。
+            <span class="dock__closed-sub">所見が足りなくても、審問で「ホルマに泣きつく」ことができます。</span>
+          </p>
+          <button type="button" class="dock__closed-btn" onClick={onOpenInquest} data-autofocus>
+            <Icon name="gavel" size={20} />
+            審問を開く
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form
-      class={`dock ${busy ? 'is-busy' : ''} ${chips ? 'has-chips' : ''} ${queued ? 'is-queued' : ''}`}
+      class={`dock ${busy ? 'is-busy' : ''} ${chips ? 'has-chips' : ''} ${queued ? 'is-queued' : ''} ${budget ? 'has-budget' : ''}`}
       onSubmit={(e) => {
         e.preventDefault();
         send();
@@ -147,6 +174,7 @@ export function InputDock({ ctl, starters, empty, disabled, inputId }: InputDock
           <span class="dock__examples-label">質問の例</span>
         </button>
         <div class={`dock__field ${len >= MAX_QUESTION ? 'is-full' : len >= MAX_QUESTION - 20 ? 'is-near' : ''} ${len >= 120 ? 'is-counting' : ''}`}>
+          {budget && <BudgetCounter view={budget} />}
           <label class="sr-only" for={inputId}>
             ホルマへの質問（はい／いいえで答えられる形で）
           </label>

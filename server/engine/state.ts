@@ -11,6 +11,8 @@ export interface GameState {
   /** Unlocked science memo ids. */
   memos: string[];
   asked: number;
+  /** Questions counted against the question budget (shared/budget.ts isCharged). ≤ asked. */
+  spent: number;
   hintsUsed: number;
   debateMisses: number;
   /** 「ホルマに泣きつく」 count. */
@@ -76,6 +78,7 @@ export function initialState(c: Case, now: number): GameState {
     unlocked,
     memos,
     asked: 0,
+    spent: 0,
     hintsUsed: 0,
     debateMisses: 0,
     grants: 0,
@@ -112,6 +115,7 @@ export function snapshot(c: Case, s: GameState): ProgressSnapshot {
     unlocked: [...s.unlocked],
     memos: [...s.memos],
     asked: s.asked,
+    spent: s.spent,
     hintsUsed: s.hintsUsed,
     debateCleared: [...s.cleared],
     debateMisses: s.debateMisses,

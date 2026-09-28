@@ -47,7 +47,7 @@ function readQuiz(caseId: string) {
 function finishRun(caseId: string, summary: CaseSummary | null) {
   const p = getCaseProgress(caseId);
   if (p?.stage === 'complete' && p.lastResult) return p.lastResult;
-  const { result } = buildCaseResult(p, { difficulty: summary?.difficulty ?? 2, estimatedMinutes: summary?.estimatedMinutes });
+  const { result } = buildCaseResult(p, { difficulty: summary?.difficulty ?? 2, estimatedMinutes: summary?.estimatedMinutes, questionBudget: summary?.questionBudget });
   completeCase(caseId, result);
   return result;
 }

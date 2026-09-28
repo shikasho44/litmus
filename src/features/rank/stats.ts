@@ -5,12 +5,15 @@
  * counters (inquest.grants / suspensions are only known to the UI), then the chat log.
  */
 import type { CaseProgress, CaseResult } from '../../state/types';
+import { budgetRule, questionBudget, type CaseBudgetOverride } from '../../../shared/budget';
 import { runPoints, type RunPoints } from './points';
 import { computeRank, type RankInput, type RankResult } from './rank';
 
 export interface CaseMeta {
   difficulty: number;
   estimatedMinutes?: number;
+  /** The case's question budget override (CaseSummary.questionBudget). */
+  questionBudget?: CaseBudgetOverride;
 }
 
 const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
@@ -21,10 +24,18 @@ export function collectRankInput(p: CaseProgress | undefined, meta: CaseMeta): R
   const answers = log.filter((e) => e.kind === 'answer') as Extract<CaseProgress['log'][number], { kind: 'answer' }>[];
   const questions = log.filter((e) => e.kind === 'question').length;
   const keyQuestions = answers.filter((a) => Array.isArray(a.unlocked) && a.unlocked.length > 0).length;
+  const asked = num(snap?.asked, Math.max(questions, answers.length));
+  // the question budget of the difficulty the run is played on (shared/budget.ts)
+  const play = p?.difficulty ?? 'normal';
+  const rule = budgetRule(play);
   return {
     difficulty: meta.difficulty,
     estimatedMinutes: meta.estimatedMinutes,
-    asked: num(snap?.asked, Math.max(questions, answers.length)),
+    asked,
+    spent: Math.min(asked, num(snap?.spent, asked)),
+    budget: questionBudget(meta.difficulty, play, meta.questionBudget),
+    overCost: rule.overCost,
+    overCap: rule.overCap,
     keyQuestions,
     answered: answers.length,
     hintsUsed: num(snap?.hintsUsed, p?.hints.length ?? 0),
@@ -71,6 +82,10 @@ export function buildCaseResult(p: CaseProgress | undefined, meta: CaseMeta, now
       score: rank.score,
       points: points.total,
       asked: input.asked,
+      spent: input.spent ?? input.asked,
+      budget: rank.budget,
+      budgetCost: input.overCost ?? 0,
+      budgetCap: input.overCap ?? 0,
       keyQuestions: input.keyQuestions,
       answered: input.answered,
       hintsUsed: input.hintsUsed,

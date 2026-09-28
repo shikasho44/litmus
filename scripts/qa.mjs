@@ -28,7 +28,7 @@
 // runs in real time (short real sleeps between ticks). Chromium headless + SwiftShader.
 // Screenshots: qa/flow/<size>-<case>-<nn>-<state>.png. Exit 1 on page errors, console
 // errors, failed checks, wrong scene order or horizontal overflow.
-import { mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, realpathSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -83,6 +83,33 @@ const INCOMPLETE = {
   c04: 'トリカブトの毒で亡くなった。',
 };
 
+/**
+ * 質問枠 (shared/budget.ts, 2026-09-28): the expected budget of a case run and the counter text.
+ * Kept in step with BUDGET_TUNING by hand (par 14 + 8 × case difficulty; ×1.6 / ×1.3 / ×1.1).
+ */
+const BUDGET_FACTOR = { easy: 1.6, normal: 1.3, hard: 1.1 };
+const BUDGET_KIND = { easy: 'guide', normal: 'soft', hard: 'hard' };
+function expectedBudget(c, level) {
+  const o = c.questionBudget?.[level];
+  return Math.max(3, typeof o === 'number' ? o : Math.round((14 + 8 * Math.min(3, Math.max(1, c.difficulty))) * BUDGET_FACTOR[level]));
+}
+function expectedCounter(spent, budget, level) {
+  const kind = BUDGET_KIND[level];
+  if (spent >= budget && kind === 'hard') return '質問締切';
+  if (spent > budget) return `${kind === 'guide' ? '目安超え' : '超過'}+${spent - budget}/${budget}`;
+  return `${kind === 'guide' ? '目安' : '残り'}${budget - spent}/${budget}`;
+}
+async function budgetCheck(page, c, label) {
+  const s = await saveOf(page, c.id);
+  const snap = s?.snapshot ?? {};
+  const spent = Math.min(snap.asked ?? 0, snap.spent ?? snap.asked ?? 0);
+  const level = levelOf(c);
+  const want = expectedCounter(spent, expectedBudget(c, level), level);
+  const got = await page.evaluate(() => document.querySelector('.qbudget')?.textContent.replace(/\s+/g, '') ?? (document.querySelector('[data-budget-closed]') ? '質問締切' : null));
+  check(got === want, `${c.id}: ${label}: the question counter reads ${got} (${spent} counted of ${expectedBudget(c, level)}, ${level})`);
+  return spent;
+}
+
 /** Case probes (exact bank questions → deterministic rules answers) that unlock the findings the debate needs, then the weightiest others. */
 function questionPlan(c, max = 14) {
   const probeFor = (id, skip = new Set()) =>
@@ -131,12 +158,13 @@ let server = null;
     // Our own Vite dev server (JS API): rules mode, no HMR / file watching, so nothing reloads
     // the page mid-run. Closed at the end.
     Object.assign(process.env, { PIPELINE_MODE: 'rules', DECISION_PROVIDER: 'rules', LLM_PROVIDER: 'none', TRACE_FILE: '0' });
-    const { createServer } = await import('vite');
+    const { createServer, searchForWorkspaceRoot } = await import('vite');
     server = await createServer({
       configFile: resolve(root, 'vite.config.ts'),
       root,
       logLevel: 'warn',
-      server: { host: '127.0.0.1', port: PORT, strictPort: true, hmr: false, watch: { ignored: ['**/*'] } },
+      // (a git worktree may link node_modules from the main checkout: the fonts are served from there)
+      server: { host: '127.0.0.1', port: PORT, strictPort: true, hmr: false, watch: { ignored: ['**/*'] }, fs: { allow: [searchForWorkspaceRoot(root), realpathSync(resolve(root, 'node_modules'))] } },
     });
     await server.listen();
     let hh = null;
@@ -490,6 +518,15 @@ async function investigation(page, c, name, { questions, full }) {
       await waitGone(page, '.whisper');
       check(((await saveOf(page, c.id)).hints ?? []).length === 1, `${c.id}: the whisper is saved as hint 1`);
     }
+  }
+
+  // 2b) 質問枠: the counter follows the counted questions; a hint request in the chat is free
+  const spentNow = await budgetCheck(page, c, 'after the probes');
+  if (full) {
+    const free = await ask(page, c, 'ヒントをください');
+    check(free.length === 1 && free[0].free === true && free[0].answerClass === 'cannot', `${c.id}: a hint request typed in the chat is not counted (${free[0]?.answerClass}${free[0]?.free ? ', free' : ''})`);
+    check((await budgetCheck(page, c, 'after a free question')) === spentNow, `${c.id}: the free question left the counter at ${spentNow}`);
+    check((await page.locator('.arow__free').count()) >= 1, `${c.id}: the free answer carries 「ノーカウント」`);
   }
 
   // 3) make sure every debate round has its evidence (ask more probes if needed)
@@ -964,6 +1001,12 @@ async function result(page, c, name, { full }) {
     return { total: Object.values(cases).reduce((a, x) => a + (x.bestPoints ?? 0), 0), shown: Number(document.querySelector('.rs-deg')?.getAttribute('data-degree')) };
   });
   check(degree.shown === degree.total, `${c.id}: the result shows 名探偵度数 ${degree.shown} (save ${degree.total})`);
+  // 質問枠: the run was scored against the budget of the difficulty played, and the tile says so
+  const st = s.lastResult?.stats ?? {};
+  const budget = expectedBudget(c, levelOf(c));
+  check(st.budget === budget && typeof st.spent === 'number' && st.spent <= st.asked, `${c.id}: the result stores the question budget ${st.budget} (expected ${budget}) and ${st.spent} counted of ${st.asked}`);
+  const tile = await page.evaluate(() => [...document.querySelectorAll('.rs-stat')].find((e) => e.textContent.includes('質問数'))?.textContent.replace(/\s+/g, '') ?? '');
+  check(tile.includes(`${st.spent}/${budget}問`), `${c.id}: the result tile shows the questions against the budget (${tile})`);
   if (full) {
     await boot(page, { reload: true });
     await waitScene(page, 'result');

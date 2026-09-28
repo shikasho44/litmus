@@ -11,6 +11,7 @@ import type { Controller } from './controller';
 import { HolmaFace } from './HolmaFace';
 import { SupportCard } from './SupportCard';
 import { TypeLine } from './TypeLine';
+import '../budget/budget.css';
 
 type AnswerEntry = Extract<LogEntry, { kind: 'answer' }>;
 
@@ -136,6 +137,11 @@ function AnswerRow({
               核心に迫る
             </span>
           )}
+          {e.free && !support && (
+            <span class="arow__free" data-tip="質問枠に数えない返答です" title="質問枠に数えない返答です">
+              ノーカウント
+            </span>
+          )}
           {degraded && (
             <span class="arow__badge" title="通信が不安定なため、簡易判定で答えています" data-tip="通信が不安定なため簡易判定で答えています">
               <Icon name="info" size={12} />
@@ -176,6 +182,38 @@ function HintRow({ level, text }: { level: number; text: string }) {
         <span class="hrow__lv t-mono">LV.{level}</span>
       </div>
       <p class="hrow__text">{text}</p>
+    </div>
+  );
+}
+
+const NUDGE_TAG: Record<Extract<LogEntry, { kind: 'nudge' }>['reason'], { tag: string; tone: '' | 'budget' | 'alarm' }> = {
+  stuck: { tag: 'ひとりごと', tone: '' },
+  ready: { tag: 'ひとりごと', tone: '' },
+  low: { tag: '質問枠', tone: 'budget' },
+  zero: { tag: '質問枠', tone: 'budget' },
+  over: { tag: '質問枠', tone: 'alarm' },
+  closed: { tag: '質問枠', tone: 'alarm' },
+};
+
+/** Holma speaking up unasked: a free nudge (ひとりごと) or a remark on the question budget. */
+function NudgeRow({ e }: { e: Extract<LogEntry, { kind: 'nudge' }> }) {
+  const meta = NUDGE_TAG[e.reason] ?? NUDGE_TAG.stuck;
+  return (
+    <div class={`nrow ${meta.tone ? `nrow--${meta.tone}` : ''}`} data-nudge={e.reason}>
+      <div class="arow__avatar">
+        <HolmaFace mood={e.mood ?? 'normal'} />
+      </div>
+      <div class="nrow__body">
+        <div class="nrow__meta">
+          <span class="arow__name">ホルマ</span>
+          <span class="nrow__tag">
+            <Icon name={meta.tone ? 'info' : 'whisper'} size={12} />
+            {meta.tag}
+          </span>
+          {e.nudge && <span class="nrow__free">（減点なし）</span>}
+        </div>
+        <p class="nrow__line">{e.text}</p>
+      </div>
     </div>
   );
 }
@@ -298,6 +336,9 @@ export function ChatLog({ ctl, progress, pub }: ChatLogProps) {
         });
       } else if (e.kind === 'hint') {
         out.push({ key: e.id, start: true, node: <HintRow level={e.level} text={e.text} /> });
+      } else if (e.kind === 'nudge') {
+        // said after the answers were shown: it becomes the newest thing to keep in view
+        out.push({ key: e.id, start: true, node: <NudgeRow e={e} /> });
       } else if (e.kind === 'system') {
         out.push({ key: e.id, start: true, node: <p class={`srow srow--${e.tone ?? 'info'}`}>{e.text}</p> });
       }

@@ -53,6 +53,23 @@ export const HolmaLinesSchema = z.object({
     hintIntro: bank(3),
     inquestConfirmLow: bank(3), // few findings yet
     inquestConfirm: bank(3),
+    /**
+     * Question budget remarks (shared/budget.ts, 2026-09-28): guide = 見習い, soft = 審問官,
+     * hard = 教授. Optional — the browser has short fallbacks.
+     */
+    budget: z
+      .object({
+        guideLow: bank(1),
+        guideReached: bank(1),
+        softLow: bank(1),
+        softZero: bank(1),
+        softOver: bank(1),
+        hardLow: bank(1),
+        hardClosed: bank(1),
+      })
+      .optional(),
+    /** Free nudges: `ready` (the inquest looks ready), `starter` (a template with {q} = an unasked starter question). */
+    nudge: z.object({ ready: bank(1), starter: bank(1) }).optional(),
   }),
   inquest: z.object({
     open: bank(3),

@@ -63,7 +63,15 @@ export interface LogAnswer {
   memos: string[]; // science memo ids unlocked by this answer
   /** This answer confirmed a core hypothesis (AskAnswer.nearCore) → ★核心 in the question log. */
   nearCore?: boolean;
+  /** Not counted against the question budget (AskAnswer.free) → 「ノーカウント」 in the chat. */
+  free?: boolean;
 }
+
+/**
+ * Why Holma spoke up unasked (src/features/budget): a free nudge when the player is stuck, or the
+ * inquest looks ready, or a remark on the question budget (low / used up / beyond / closed).
+ */
+export type NudgeReason = 'stuck' | 'ready' | 'low' | 'zero' | 'over' | 'closed';
 
 /**
  * Read-only copy of an attempt that was restarted because the server could not verify the
@@ -81,6 +89,8 @@ export type LogEntry =
   | { id: string; at: number; kind: 'question'; text: string }
   | ({ id: string; at: number; kind: 'answer'; degraded?: boolean; notice?: 'support' | 'degraded' } & LogAnswer)
   | { id: string; at: number; kind: 'hint'; level: number; text: string }
+  /** `nudge` = the direction text given (never repeated in a run; counts toward the mode's free nudges). */
+  | { id: string; at: number; kind: 'nudge'; reason: NudgeReason; text: string; mood?: HolmaMood; nudge?: string }
   | { id: string; at: number; kind: 'system'; text: string; tone?: 'info' | 'warn' | 'error' };
 
 export type InquestPhase = 'debate' | 'verdict' | 'reconstruction' | 'done';

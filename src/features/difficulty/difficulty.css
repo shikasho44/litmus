@@ -371,6 +371,10 @@
   transform: rotate(35deg);
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
 }
+/* room for the 「いまの難易度」 tag under the rule text (it sits at the card's bottom-left) */
+.dcard:has(.dcard__now) {
+  padding-bottom: 40px;
+}
 .dcard__now {
   top: auto;
   bottom: 14px;
@@ -419,6 +423,34 @@
 .dcard__lives b {
   font-size: var(--fs-sm);
   color: var(--cyan);
+}
+/* 質問枠 of the mode (shared/budget.ts) */
+.dcard__budget {
+  position: relative;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin-top: auto;
+  font-size: var(--fs-sm);
+  color: var(--bone);
+}
+.dcard__budget svg {
+  align-self: center;
+  color: var(--dc);
+}
+.dcard__budget b {
+  font-weight: 700;
+}
+.dcard__budget small {
+  font-size: var(--fs-xs);
+  color: var(--bone-3);
+}
+.dcard__budget.is-used small {
+  color: var(--alarm);
+}
+.dcard__budget + .dcard__rule {
+  margin-top: 0;
 }
 .dcard__rule {
   position: relative;
@@ -541,6 +573,7 @@
   grid-template-areas:
     'jp en'
     'mode lives'
+    'budget budget'
     'rule rule';
   align-items: center;
   gap: 6px 10px;
@@ -574,6 +607,15 @@
   width: 9px;
   height: 15px;
 }
+[data-layout='narrow'] .dcard__budget {
+  grid-area: budget;
+  margin: 0;
+  font-size: var(--fs-xs);
+  padding-right: 34px;
+}
+[data-layout='narrow'] .dcard__budget small {
+  font-size: var(--fs-2xs);
+}
 [data-layout='narrow'] .dcard__rule {
   grid-area: rule;
   margin: 0;
@@ -597,6 +639,9 @@
 [data-layout='narrow'] .dcard__now {
   position: static;
   grid-area: auto;
+}
+[data-layout='narrow'] .dcard:has(.dcard__now) {
+  padding-bottom: 12px;
 }
 [data-layout='narrow'] .dfc__foot {
   grid-template-columns: minmax(0, 1fr);

@@ -45,6 +45,19 @@ const FALLBACK = {
     hintIntro: ['仕方ありませんねェ。囁いてあげましょう。'],
     inquestConfirmLow: ['……証拠がずいぶん心許ないようですが？'],
     inquestConfirm: ['よろしい。審問を開きますか？'],
+    budget: {
+      guideLow: ['目安の数まで、あとわずかですよ。'],
+      guideReached: ['目安に届きました。見習いに罰はありませんよ。'],
+      softLow: [{ text: '質問の残りが、心許なくなってきましたよ。', mood: 'serious' }],
+      softZero: ['質問枠は使い切りました。ここから先は、一問ごとに点が削れますよ。'],
+      softOver: [{ text: '枠の外の質問ですねェ。そろそろ審問を開いては？', mood: 'laugh' }],
+      hardLow: [{ text: '質問の残りは、あとわずかですよ。', mood: 'serious' }],
+      hardClosed: [{ text: '問いは尽きました。あとは審問で。', mood: 'serious' }],
+    },
+    nudge: {
+      ready: ['所見は、だいぶ揃っていますよ。審問を開く頃合いかもしれません。'],
+      starter: ['たとえば「{q}」。まだ、訊いていませんでしたよ。'],
+    },
   },
   inquest: {
     open: [{ text: '開廷ですとも！', mood: 'laugh' }],

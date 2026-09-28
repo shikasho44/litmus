@@ -376,7 +376,7 @@ export function IntroScene({ params }: SceneProps) {
         )}
 
         <div ref={janeRef} class={`intro__jane ${kind === 'jane' ? 'is-speaking' : ''}`} aria-hidden={!janeIn}>
-          <ShardPortrait image={pub?.portrait} seed={caseId} revealed={0} glow={kind === 'jane'} label={pub?.codename ?? 'ジェーン・ドゥ'} />
+          <ShardPortrait image={pub?.portrait} silhouette={pub?.silhouette} seed={caseId} revealed={0} glow={kind === 'jane'} label={pub?.codename ?? 'ジェーン・ドゥ'} />
         </div>
         <div class={`intro__holma ${kind === 'holma' ? 'is-speaking' : ''}`} aria-hidden="true">
           <HolmaSprite mood={holmaStep?.mood ?? 'normal'} talking={kind === 'holma'} framing={narrow ? 'hip' : 'hip'} rim={kind === 'holma' ? 'rgba(198,255,61,0.3)' : undefined} />

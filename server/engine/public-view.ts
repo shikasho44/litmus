@@ -42,6 +42,7 @@ export function toSummary(c: Case): CaseSummary {
     accent: c.assets.accent,
     portrait: c.victim.portrait,
   };
+  if (c.victim.silhouette && c.victim.silhouette !== 'bust') s.silhouette = c.victim.silhouette;
   if (c.contentWarning) s.contentWarning = c.contentWarning;
   return s;
 }
@@ -219,6 +220,7 @@ export function solutionView(c: Case, unlocked: ReadonlySet<string>): SolutionRe
       occupation: c.victim.occupation,
       portrait: c.victim.portrait,
       farewell: [...c.victim.farewell],
+      ...(c.victim.profile ? { profile: c.victim.profile.map((r) => ({ ...r })) } : {}),
     },
     truth: {
       summary: c.truth.summary,

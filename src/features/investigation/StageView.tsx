@@ -66,6 +66,7 @@ export function StageView({ ctl, pub, progress, elapsed }: StageViewProps) {
         <div class="ivs__jane-halo" aria-hidden="true" />
         <ShardPortrait
           image={pub?.portrait}
+          silhouette={pub?.silhouette}
           seed={ctl.caseId}
           shardCount={SHARD_COUNT}
           revealed={lit}

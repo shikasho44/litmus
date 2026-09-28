@@ -12,7 +12,7 @@
  *   who        「犯人は誰？」「誰がやったの？」「誰のせい？」「毒を入れたのは誰？」「混ぜたのは編集者？」
  *   identity   anything about the culprit except whether one exists: 「犯人は編集者？」「犯人は女性？」
  *   named-*    a named person's part in the crime: mixed / put poison in / procured the poison /
- *              killed / did it / fault / suspicious / involved / motive —
+ *              killed / did it / fault / suspicious or innocent / involved / motive —
  *              「編集者が小鉢に混ぜた？」「老人が毒を入れたの？」「編集者のせい？」「老人は怪しい？」
  *              「友人は関係ある？」「編集者は彼女を恨んでいた？」
  * Answered:  the manner with nobody named (「殺されたの？」「誰かが毒を混ぜたの？」「犯人はいますか？」
@@ -73,7 +73,7 @@ function compileRules(people: readonly string[]): { id: string; re: RegExp }[] {
     { id: 'named-act', re: P(`${PERSON}(?:が|は|も|って|に)?(?:.{0,16}?)${CRIME_ACT}`) },
     { id: 'named-done-by', re: P(`${PERSON}(?:に|から)(?:.{0,8})${DONE_BY}`) },
     { id: 'named-blame', re: P(`${PERSON}(?:の(?:せい|所為|仕業|しわざ)|(?:が|は|も)(?:悪|わる)(?:い|く|かっ)|(?:に|の)責任|を責め|(?:が|は)(?:やった|やりました|やったん|やったの))`) },
-    { id: 'named-suspect', re: P(`${PERSON}(?:が|は|も|を)?(?:.{0,6})(?:怪し|あやし|疑わし|うたがわし|疑う|うたがう|疑っ|うたがっ|不審)`) },
+    { id: 'named-suspect', re: P(`${PERSON}(?:が|は|も|を)?(?:.{0,6})(?:怪し|あやし|疑わし|うたがわし|疑う|うたがう|疑っ|うたがっ|不審|無実|むじつ|潔白|けっぱく|疑いが晴|うたがいがはれ)`) },
     {
       id: 'named-involved',
       re: P(`${PERSON}(?:が|は|も|って)?(?:(?:この件|事件|じけん|事故|じこ|死|彼女の死|それ|毒|どく)に)?(?:関係(?:し|あ|が(?:あ|な)|な)|関わ|かかわ|関与|かんよ|絡ん|からん)`),

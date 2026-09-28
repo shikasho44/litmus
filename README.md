@@ -33,6 +33,7 @@ npm run dev          # 開発サーバーを起動
 1. タイトル → 「審問を始める」→ 初回はプロローグ（スキップ可）→ 事件ファイルで事件を選ぶ。
 2. 捜査: 下の入力欄に質問を打って Enter。例「彼女は一人でしたか？」「部屋に窓はありましたか？」。
    困ったら入力欄の上の例チップ、または右上の「ホルマの囁き」（ヒント3段階。ランクが少し下がる）。
+   質問には難易度ごとの**質問枠**がある（入力欄の上の札「残り n/N」。審問官は超えると減点、教授は使い切ると締切。「具体的に」や雑談は数えない。`shared/budget.ts`）。
 3. 「審問を開く」→ ノイズ・ブレイク（光っている語を所見で撃つ）→ 死因宣告（自由記述）→ 真相再構成（コマ漫画）。
 4. 身元回復 → 科学解剖 → 記憶の定着（確認テスト）→ 結果。
 
@@ -65,7 +66,7 @@ npm run dev          # 開発サーバーを起動
 | `npm run qa:versus` | オンライン対戦を PC とスマホの2台で通しプレイ（部屋→開始→勝敗→結果→脱落、ひとりのセーブが無傷か。ポート 5199）。画面写真は `qa/versus/` |
 
 `npm run qa -- --case all` で3事件すべてを通しプレイします（1回 数分〜十数分）。
-場面ごとの細かい写真: `node scripts/shots-investigation.mjs` / `shots-inquest.mjs` / `shots-ending.mjs` / `ui-shots.mjs` / `shots-score.mjs`（名探偵度数と「減点」表示）（各ファイル冒頭に使い方）。
+場面ごとの細かい写真: `node scripts/shots-investigation.mjs` / `shots-inquest.mjs` / `shots-ending.mjs` / `ui-shots.mjs` / `shots-score.mjs`（名探偵度数と「減点」表示）/ `shots-budget.mjs`（質問枠・ホルマのひとりごと・教授の締切）（各ファイル冒頭に使い方）。
 AIに事件を遊ばせる確認: `npx tsx scripts/playtest.ts --dry-run`（無料の配線確認）、本番は `--max-usd 0.3` など上限つきで（`docs/engine.md` §10）。
 
 **公開前の検証のひとそろい**

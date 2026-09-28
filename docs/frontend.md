@@ -162,6 +162,11 @@ and for the 名探偵度数 (2026-09-27, all optional — no SAVE_VERSION bump):
 - `lastResult.stats.points` (the run's 獲得度数), `stats.gameOvers`, `stats.quizMisses` (now
   scored), and `lastResult.prevBestPoints` (the case best before the run, for 「更新ならず」).
 
+Log entries (2026-09-28): answers may carry `free: true` (not counted against the question
+budget → 「ノーカウント」 chip), and `kind: 'nudge'` entries are Holma speaking up unasked
+(`reason: stuck | ready | low | zero | over | closed`, `text`, `mood`, and `nudge` = the direction
+given, used to never repeat one and to count the run's free nudges). See §2b.
+
 See `src/state/types.ts`. The rank and points are pure and unit-tested: `src/features/rank/`
 (`rank.ts` — computeRank, PENALTY_RULES, penaltyStep for the in-play 「減点 −n」; `points.ts` —
 runPoints, DETECTIVE_LEVELS, detectiveLevel; `Badge.tsx` — DetectiveBadge / DegreeMeter /
@@ -170,6 +175,42 @@ PenaltyTag; the result block is `src/scenes/Result/Degree.tsx`).
 Settings: `bgmVolume, sfxVolume, voiceBlips, muted, textSpeed (slow|normal|fast|instant),
 fontScale (100|115|130), reduceMotion (defaults to prefers-reduced-motion), pipelineMode (dev)`.
 Font scale drives `html { font-size }` → use `rem` for text, px for geometry.
+
+---
+
+## 2b. Question budget (質問枠) and Holma's nudges — `src/features/budget`
+
+Design: bible §3-1b, docs/decisions.md 2026-09-28. **All numbers live in `shared/budget.ts`
+(`BUDGET_TUNING`)** — budget = round(par × factor), par = 14 + 8 × case difficulty; 見習い guide
+×1.6 (no cost), 審問官 soft ×1.3 (1.5 事件スコア per counted question beyond it, cap 24), 教授 hard
+×1.1 (closes the questioning). A case may override exact budgets (`CaseSummary.questionBudget`).
+
+- **Counting is the server's**: `ProgressSnapshot.spent` (parts answered yes/no/partial/irrelevant
+  without a meta kind; ≤ `asked`, which keeps counting everything). Old snapshots lack it →
+  `spentOf()` reads `asked`. `AskAnswer.free` marks the parts that did not count.
+- `budget.ts` (pure, tested): `caseBudget(pub, progress)` → `BudgetView {kind, budget, spent, left,
+  over, state: ok|low|zero|over|closed, rule}`, `counterText`, `ruleText`, `chooserText`,
+  `turnPenalty(before, after)` (= the rank's charge), `planRemarks(turn)` (what Holma says after a
+  turn: budget remarks on crossing low / zero / over (1st and every 5th) / closed, and free nudges
+  — stuck 6 answers without a finding / hint / nudge, or the budget just turned low; gap 5; at most
+  `rule.nudges`; sources: case `nudges` → unasked starter questions → case idle lines that do not
+  assume an idle player; `ready` at ≥ 60 % shards), `nextDirection`, `stuckStreak`.
+- `BudgetCounter.tsx`: the legend-style tag on the question field's top border (`.qbudget`,
+  `data-budget-state`). Tap → toast with the rule. The number pops on change (not with reduced motion).
+- `InputDock` takes `budget` and `onOpenInquest`: state `closed` replaces the whole dock with Holma
+  + 「審問を開く」 (`[data-budget-closed]`). `TopBar` QUESTIONS and the phone stage HUD show `spent`.
+- `controller.ask()` refuses to send when closed, and on 教授 sends `limit: budget` (the server
+  answers only the parts that fit and declines once used up). After the presentation `afterTurn()`
+  floats `fx.penalty(cost, '.qbudget', 'left')` and appends the remarks as `nudge` log entries.
+- The chat renders nudges as `.nrow` (「ひとりごと（減点なし）」 or 「質問枠」), free answers with
+  `.arow__free`. The difficulty chooser shows each mode's budget (`.dcard__budget`) and refuses
+  教授 mid-case when its budget is already used. 遊び方 has a QUESTIONS page (`HowToArt.tsx`).
+- Rank: `collectRankInput` fills `spent / budget / overCost / overCap` from the play difficulty;
+  results store `stats.spent / budget / budgetCost / budgetCap`; results without them are scored by
+  the legacy rule (par, 0.6) so older records still explain themselves. The result tile reads
+  「31 /29問 — 質問枠 29問・2問超過・数えない質問 3」.
+- Lines: `investigation.budget.*` and `investigation.nudge.{ready,starter}` in
+  `content/holma-lines.json` (fallbacks in `src/lib/lines.ts`; `{q}` = the starter question).
 
 ---
 
@@ -284,6 +325,13 @@ is suspended while the tab is hidden. Tracks are 16-bar loops with a variation e
   (:5194): the result block (rank-up mid-count, at rest, a replay that did not beat the best,
   reduced motion), the Files meter and tag points, the 遊び方 page, and every 「減点」 float in real
   play plus the game-over tag, at 1280×800 and 390×844, into `qa/score/`. `--size pc|sp`, `--only`.
+- `node scripts/shots-budget.mjs` → 質問枠 visual QA on its own rules-mode dev server (:5213): the
+  counter (ok / free question / low + nudge / used up / 減点 beyond / 見習い guide), the 教授 close
+  (a multi-question message cut by the server, the closed dock, the server declining), the chooser
+  lines, the 遊び方 page and the result tile, at 1280×800, 390×844 and 320×640, into `qa/budget/`.
+  `--size pc|sp|xs`, `--only counter,guide,hard,chooser,howto,result`.
+- The QA scripts that start their own Vite (qa.mjs, shots-budget.mjs) allow the real path of
+  `node_modules` so a git worktree with a linked `node_modules` still serves the fonts.
 - `?mute=1` starts muted, `?nofx=1` disables the backdrop shader.
 
 ## 8. Fonts

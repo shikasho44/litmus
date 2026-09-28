@@ -1,7 +1,8 @@
 /**
- * RoomStore — the few Redis hash commands the versus service needs, with two implementations:
+ * RoomStore — the few Redis hash commands the versus service needs, with three implementations:
  *   MemoryRoomStore  one process (dev server, tests, local preview with VERSUS_STORE=memory)
- *   UpstashRoomStore Upstash Redis over its REST API (server/versus/upstash.ts) — serverless
+ *   UpstashRoomStore Upstash Redis over its REST API (server/versus/upstash.ts) — serverless (Vercel)
+ *   D1RoomStore      Cloudflare D1 (server/versus/d1.ts) — the Cloudflare Worker
  *
  * One room = one hash. Every player writes only its own fields (`g:<slot>`, `s:<slot>` …), and
  * the contested ones are claimed with HSETNX (first solve, slot, start), so concurrent requests
@@ -11,7 +12,7 @@
  * a room lives TTL seconds after its last write and no write can leave a key without expiry.
  */
 export interface RoomStore {
-  readonly kind: 'memory' | 'redis';
+  readonly kind: 'memory' | 'redis' | 'd1';
   /** Every field of the hash, or null when the key does not exist (or has expired). */
   hgetall(key: string): Promise<Record<string, string> | null>;
   /** Sets the field only when it is absent. true = this call set it. */

@@ -81,21 +81,27 @@ function clientIp(req: Request): string {
   return first(h.get('x-vercel-forwarded-for')) || first(h.get('x-real-ip')) || first(h.get('x-forwarded-for')) || 'local';
 }
 
-/** Per-process key: both strings are compared as fixed-length HMAC digests (no length leak). */
-const EQ_KEY: Uint8Array = (() => {
+/**
+ * Per-process key: both strings are compared as fixed-length HMAC digests (no length leak).
+ * Made on first use, not at import: Cloudflare Workers refuse random values in the global scope.
+ */
+let eqKey: Uint8Array | undefined;
+function getEqKey(): Uint8Array {
+  if (eqKey) return eqKey;
   const b = new Uint8Array(32);
   const c = (globalThis as { crypto?: Crypto }).crypto;
   if (c && typeof c.getRandomValues === 'function') c.getRandomValues(b);
   else for (let i = 0; i < b.length; i++) b[i] = Math.floor(Math.random() * 256);
-  return b;
-})();
+  return (eqKey = b);
+}
 const utf8 = new TextEncoder();
 /** Longer headers are never a valid token (and are not worth hashing). */
 const MAX_ADMIN_HEADER = 512;
 
 export function safeEqual(a: string, b: string): boolean {
-  const da = hmacSha256(EQ_KEY, utf8.encode(a));
-  const db = hmacSha256(EQ_KEY, utf8.encode(b));
+  const key = getEqKey();
+  const da = hmacSha256(key, utf8.encode(a));
+  const db = hmacSha256(key, utf8.encode(b));
   let d = 0;
   for (let i = 0; i < da.length; i++) d |= da[i] ^ db[i];
   return d === 0 && da.length === db.length;

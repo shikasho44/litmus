@@ -6,7 +6,7 @@ import type { PipelineMode } from '../../shared/api.js';
 import { MIN_ADMIN_TOKEN_CHARS, MIN_SESSION_SECRET_CHARS, readConfig, type EngineConfig, type EnvLike } from '../engine/env.js';
 import { componentsFor, createComponents } from '../engine/factory.js';
 import { GameService } from '../engine/game.js';
-import { BudgetGuard } from '../engine/budget.js';
+import { BudgetGuard, type BudgetStore } from '../engine/budget.js';
 import type { PipelineComponents } from '../engine/judge-types.js';
 import type { ContentRegistry } from '../engine/registry.js';
 import { consoleJsonSink, TraceHub, TraceRing, type TraceSink } from '../engine/trace.js';
@@ -14,6 +14,8 @@ import { RateLimiter, DEFAULT_RATE_RULES, type RateRule } from './rate-limit.js'
 import { VersusService } from '../versus/service.js';
 import { sharedMemoryStore, type RoomStore } from '../versus/store.js';
 import { UpstashRoomStore, upstashConfig } from '../versus/upstash.js';
+import { D1RoomStore } from '../versus/d1.js';
+import type { D1DatabaseLike } from '../cloudflare/d1.js';
 
 export interface BenchReportInfo {
   file: string;
@@ -38,20 +40,30 @@ export interface ApiRuntime {
   versusInfo: { enabled: boolean; store?: RoomStore['kind']; reason?: string };
 }
 
+export interface VersusStoreOptions {
+  /** Cloudflare D1 binding (the Worker's env.VERSUS_DB). */
+  d1?: D1DatabaseLike;
+  /** Many short-lived instances that share no memory (Workers): never the memory store. */
+  serverless?: boolean;
+  clock?: () => number;
+}
+
 /**
  * The room store for online versus:
  *   Upstash Redis REST (UPSTASH_REDIS_REST_URL/_TOKEN or Vercel's KV_REST_API_URL/_TOKEN) wherever set;
+ *   else Cloudflare D1 when the Worker has the VERSUS_DB binding;
  *   else the in-process memory store on the dev server (or with VERSUS_STORE=memory on a
  *   single long-lived process such as `vite preview`); else disabled — serverless instances do
  *   not share memory, so production never falls back to it. VERSUS_ENABLED=false switches it off.
  */
-export function versusStoreFor(env: EnvLike, dev: boolean): { store?: RoomStore; reason?: string } {
+export function versusStoreFor(env: EnvLike, dev: boolean, o: VersusStoreOptions = {}): { store?: RoomStore; reason?: string } {
   if (/^(0|false|off|no)$/i.test((env.VERSUS_ENABLED ?? '').trim())) return { reason: 'VERSUS_ENABLED is off' };
   const up = upstashConfig(env);
   if (up) return { store: new UpstashRoomStore(up) };
+  if (o.d1) return { store: new D1RoomStore(o.d1, o.clock) };
   const wantMemory = (env.VERSUS_STORE ?? '').trim().toLowerCase() === 'memory';
-  if (dev || (wantMemory && !env.VERCEL)) return { store: sharedMemoryStore() };
-  return { reason: 'no room store configured (set UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN)' };
+  if (dev || (wantMemory && !env.VERCEL && !o.serverless)) return { store: sharedMemoryStore() };
+  return { reason: 'no room store configured (set UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN, or bind a D1 database as VERSUS_DB on Cloudflare)' };
 }
 
 export interface RuntimeOptions {
@@ -68,6 +80,10 @@ export interface RuntimeOptions {
   componentsFor?: (mode: PipelineMode) => PipelineComponents;
   /** Test hook: the versus room store (null = versus disabled). Default: versusStoreFor(env). */
   roomStore?: RoomStore | null;
+  /** Cloudflare Worker: the D1 binding for versus rooms, and "no shared memory" (see versusStoreFor). */
+  versusStore?: VersusStoreOptions;
+  /** Shared daily-spend store (Cloudflare D1), so DAILY_COST_LIMIT_USD holds across instances. */
+  budgetStore?: BudgetStore;
 }
 
 const warnedOnce = new Set<string>();
@@ -101,7 +117,7 @@ export function createRuntime(o: RuntimeOptions): ApiRuntime {
   const traces = new TraceRing(300);
   const sinks: TraceSink[] = [traces, ...(o.sinks ?? [])];
   if (!config.dev) sinks.push(consoleJsonSink);
-  const budget = new BudgetGuard(config.dailyCostLimitUsd, o.clock);
+  const budget = new BudgetGuard(config.dailyCostLimitUsd, o.clock, o.budgetStore);
   const service = new GameService({
     content: o.content,
     secret: config.sessionSecret,
@@ -114,7 +130,10 @@ export function createRuntime(o: RuntimeOptions): ApiRuntime {
     questionCap: config.questionCap,
     clock: o.clock,
   });
-  const vs = o.roomStore !== undefined ? { store: o.roomStore ?? undefined, reason: o.roomStore ? undefined : 'disabled' } : versusStoreFor(o.env, config.dev);
+  const vs =
+    o.roomStore !== undefined
+      ? { store: o.roomStore ?? undefined, reason: o.roomStore ? undefined : 'disabled' }
+      : versusStoreFor(o.env, config.dev, { clock: o.clock, ...o.versusStore });
   const versus =
     vs.store && !config.misconfigured
       ? new VersusService({ store: vs.store, secret: config.sessionSecret, content: o.content, dev: config.dev, clock: o.clock })

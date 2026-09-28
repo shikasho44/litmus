@@ -1,0 +1,54 @@
+{
+  // リトマス審問 — AI 判定版（http ビルド + API）を Cloudflare Workers で配信する設定。
+  // 手順・シークレット・D1・上限・Vercel への戻し方は docs/DEPLOY.md §3。
+  // 配備は必ず `npm run deploy:cf`（事件データの埋め込み → ビルド → _headers → D1 マイグレーション → deploy）。
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "litmus-shinmon",
+  "main": "server/cloudflare/worker.ts",
+  "compatibility_date": "2026-09-27",
+  // 本番は独自ドメインだけ（workers.dev・プレビューURLは閉じる）
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "litmus.fourthplace43.com", "custom_domain": true }],
+  // Codex 用の Node 専用コード（開発機だけで使う）が import する組み込みモジュールを空の代わりに差し替える。
+  // Worker では LLM_PROVIDER=codex を使わないので呼ばれない（nodejs_compat を入れずに済ませるため）。
+  "alias": {
+    "node:child_process": "./server/cloudflare/node-stub.ts",
+    "node:readline": "./server/cloudflare/node-stub.ts",
+    "node:fs": "./server/cloudflare/node-stub.ts",
+    "node:os": "./server/cloudflare/node-stub.ts",
+    "node:path": "./server/cloudflare/node-stub.ts"
+  },
+  "assets": {
+    // npm run build の出力（VITE_SITE_URL=https://litmus.fourthplace43.com/ で作る。_headers は cloudflare/_headers の写し）
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // #/… のハッシュ経路なので本来は不要だが、知らないパスはタイトルへ（Vercel の rewrites と同じ）
+    "not_found_handling": "single-page-application",
+    // API だけ先に Worker を通す（静的ファイルは Worker を起動せずに返る＝無料・無制限）
+    "run_worker_first": ["/api", "/api/*"]
+  },
+  "vars": {
+    "APP_ENV": "production",
+    "PIPELINE_MODE": "jev",
+    // UTC の1日あたりの見積もり上限（ドル）。D1 で全インスタンスの合計を数える
+    "DAILY_COST_LIMIT_USD": "1"
+    // シークレット（wrangler secret put。値はここに書かない）: SESSION_SECRET / OPENROUTER_API_KEY
+    //   任意: ADMIN_TOKEN（入れると本番の管理 API が開く。管理画面は VITE_INCLUDE_ADMIN=true でビルドしたときだけ入る）
+  },
+  // オンライン対戦の部屋と、1日の AI 費用の合計（cloudflare/migrations/*.sql）
+  "d1_databases": [
+    {
+      "binding": "VERSUS_DB",
+      "database_name": "litmus-versus",
+      "database_id": "96458d83-a77c-4889-a913-2bea811937ba",
+      "migrations_dir": "cloudflare/migrations"
+    }
+  ],
+  // AI を呼ぶ API（質問・宣告）の IP ごとの上限（Cloudflare の拠点ごと・おおよそ）。アプリ内の上限と二重
+  "ratelimits": [{ "name": "AI_RATE_LIMITER", "namespace_id": "4301", "simple": { "limit": 40, "period": 60 } }],
+  // 期限切れの対戦部屋と古い費用の行を消す（毎時17分）
+  "triggers": { "crons": ["17 * * * *"] },
+  "limits": { "cpu_ms": 30000 },
+  "observability": { "enabled": true }
+}

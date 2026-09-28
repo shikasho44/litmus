@@ -72,7 +72,7 @@ export interface VersusConfig {
   nameMax?: number;
   countdownMs?: number;
   /** dev only: which room store answers. */
-  store?: 'memory' | 'redis';
+  store?: 'memory' | 'redis' | 'd1';
 }
 
 /**

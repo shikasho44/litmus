@@ -16,7 +16,10 @@
     "bench": "tsx scripts/bench.ts",
     "qa": "node scripts/qa.mjs",
     "qa:mobile": "node scripts/qa.mjs --mobile",
-    "qa:versus": "node scripts/qa-versus.mjs"
+    "qa:versus": "node scripts/qa-versus.mjs",
+    "cf:content": "tsx scripts/cf-content.ts",
+    "deploy:cf": "node scripts/deploy-cloudflare.mjs",
+    "smoke:cf": "node scripts/smoke-cloudflare.mjs"
   },
   "dependencies": {
     "@fontsource/anton": "^5.3.0",

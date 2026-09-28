@@ -22,14 +22,17 @@ export const MIN_ADMIN_TOKEN_CHARS = 32;
  * Per-process random key used in production when SESSION_SECRET is unusable. The token routes
  * answer 503 in that state anyway (handler.ts); this only makes sure that nothing could ever be
  * signed or verified with a key an attacker knows (the public DEV_SESSION_SECRET).
+ * Made on first use, not at import: Cloudflare Workers refuse random values in the global scope.
  */
-const EPHEMERAL_SECRET: string = (() => {
+let ephemeralSecret: string | undefined;
+function getEphemeralSecret(): string {
+  if (ephemeralSecret) return ephemeralSecret;
   const bytes = new Uint8Array(32);
   const c = (globalThis as { crypto?: Crypto }).crypto;
   if (c && typeof c.getRandomValues === 'function') c.getRandomValues(bytes);
   else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
-  return `ephemeral-${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`;
-})();
+  return (ephemeralSecret = `ephemeral-${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`);
+}
 
 export interface EngineConfig {
   dev: boolean;
@@ -103,7 +106,7 @@ export function readConfig(env: EnvLike): EngineConfig {
     dailyCostLimitUsd: num(env.DAILY_COST_LIMIT_USD, 1),
     // Dev: the public dev key is fine (and a short secret is the developer's choice).
     // Production: never the public key — misconfigured → random key + 503 on token routes.
-    sessionSecret: misconfigured ? EPHEMERAL_SECRET : secretIsDefault ? DEV_SESSION_SECRET : secret,
+    sessionSecret: misconfigured ? getEphemeralSecret() : secretIsDefault ? DEV_SESSION_SECRET : secret,
     secretIsDefault,
     secretTooShort,
     misconfigured,

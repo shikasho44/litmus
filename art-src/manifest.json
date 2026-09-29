@@ -1870,5 +1870,37 @@
       "height": 1024
     },
     "note": "reconstruction panel c06 p3 (CASE 02 snowman) (take 3; batch saved nothing, recovered from generated_images by aspect ratio 16:9 vs 3:2 and checked by eye)"
+  },
+  {
+    "path": "C:\\coding\\workspace\\GameCreate\\projects\\janedoe-wt-rose\\art-src\\bg\\c07-bg.png",
+    "prompt": "Wide 16:9 background illustration for a mystery adventure video game, no characters.\nScene: a quiet Japanese home dining room at dawn, seen from the doorway at table height. A plain wooden dining table with four simple wooden chairs; one chair is pulled back a little from the table, as if someone had been sitting there not long ago. The table top is bare and clean: only a folded cloth napkin and a small wooden tray, nothing else on it. A plain lace curtain with a simple geometric (not floral) pattern, the first pale morning light coming through it and falling in a long soft band across the empty table and the floor. On the wall a plain clock with a completely blank face and no hands, a sideboard with stacked plain white plates and bowls. Through the window, a grey-blue dawn sky and the dark roof of the house next door. Still, hushed, tender, a small mystery: the moment just after something quietly happened.\nThere are absolutely NO flowers, NO vase, NO plants, NO leaves, NO houseplants, NO trees visible through the window, NO botanical pictures, NO floral patterns on any fabric, dish or wallpaper, NO animals, NO people.\nAccent colour of this case: rose red #E8435A, used only for a thin streak of the first warm sunrise light on the wall and on the edge of the table.\nArt style: bold graphic-novel illustration, confident black ink linework, flat cel shading with subtle halftone screentone dots in the shadows, limited palette (ink navy #0B0D12, bone white #F2EFE6, cold teal shadows #1B3A44) plus the single accent colour given in this prompt, theatrical lighting, stylish and elegant, gentle, warm and quietly curious mystery mood, cozy rather than unsettling, suitable for children. Polished key-visual quality for a premium mystery adventure video game.\nComposition: the key subjects are kept inside the central 60% of the width so the image can be cropped to a narrower frame, with clean readable depth and atmospheric perspective. No person.\nStrict constraints: NO gore, NO blood, NO wounds, NO text, NO letters, NO numbers, NO numerals, NO writing of any kind, NO captions, NO speech bubbles, NO logos, NO watermark, NO signature, NO frame, NO border.",
+    "prompt_sent": "Generate 1 SEPARATE images, one image generation call per item, in order.\nEach item has its own prompt and its own absolute save path.\n\n### Item 1\nSave to: C:/coding/workspace/GameCreate/projects/janedoe-wt-rose/art-src/bg/c07-bg.neutral.png\nImage size: 2048x1152\nQuality: high\nWide 16:9 background illustration for a mystery adventure video game, no characters.\nScene: a quiet Japanese home dining room at dawn, seen from the doorway at table height. A plain wooden dining table with four simple wooden chairs; one chair is pulled back a little from the table, as if someone had been sitting there not long ago. The table top is bare and clean: only a folded cloth napkin and a small wooden tray, nothing else on it. A plain lace curtain with a simple geometric (not floral) pattern, the first pale morning light coming through it and falling in a long soft band across the empty table and the floor. On the wall a plain clock with a completely blank face and no hands, a sideboard with stacked plain white plates and bowls. Through the window, a grey-blue dawn sky and the dark roof of the house next door. Still, hushed, tender, a small mystery: the moment just after something quietly happened.\nThere are absolutely NO flowers, NO vase, NO plants, NO leaves, NO houseplants, NO trees visible through the window, NO botanical pictures, NO floral patterns on any fabric, dish or wallpaper, NO animals, NO people.\nAccent colour of this case: rose red #E8435A, used only for a thin streak of the first warm sunrise light on the wall and on the edge of the table.\nArt style: bold graphic-novel illustration, confident black ink linework, flat cel shading with subtle halftone screentone dots in the shadows, limited palette (ink navy #0B0D12, bone white #F2EFE6, cold teal shadows #1B3A44) plus the single accent colour given in this prompt, theatrical lighting, stylish and elegant, gentle, warm and quietly curious mystery mood, cozy rather than unsettling, suitable for children. Polished key-visual quality for a premium mystery adventure video game.\nComposition: the key subjects are kept inside the central 60% of the width so the image can be cropped to a narrower frame, with clean readable depth and atmospheric perspective. No person.\nStrict constraints: NO gore, NO blood, NO wounds, NO text, NO letters, NO numbers, NO numerals, NO writing of any kind, NO captions, NO speech bubbles, NO logos, NO watermark, NO signature, NO frame, NO border.\n\nDo ONLY two things per item: call the image generation tool once, and save the result to the given path. Do NOT resize, crop, convert, compress, or post-process the images. Do NOT look for ImageMagick, ffmpeg, or any other tool. Do NOT open, inspect, or verify the saved files, and do NOT regenerate an item unless the tool itself failed. Do NOT read skill documents or other files. When all items are done, reply with the single word DONE.\nYou MUST call the image generation tool. Do NOT write any code or scripts to draw images. Do NOT use Python, PIL/Pillow, matplotlib, SVG, HTML, CSS, or canvas to draw. Do not ask questions and do not wait for confirmation; complete the task in this run.",
+    "created_at": "2026-09-29T09:35:09+09:00",
+    "size_arg": "2048x1152",
+    "quality_arg": "high",
+    "codex_bin": "C:\\Users\\sikas\\AppData\\Local\\OpenAI\\Codex\\bin\\13995fba801849b0\\codex.exe",
+    "codex_version": "codex-cli 0.155.0-alpha.16.4",
+    "codex_session_id": "01a0ea95-1945-72a0-8ace-fde80d0db9e6",
+    "batch_size": 1,
+    "session_usage": {
+      "used_percent_first": 21.0,
+      "used_percent_last": 21.0,
+      "model_calls": 5,
+      "uncached_input": 21481,
+      "cached_input": 125824
+    },
+    "refs": [],
+    "note": "background c07-bg, 2026-09-29 rework: a neutral dining room at dawn that does not show what the victim is (no flower, no vase) (saved as c07-bg.neutral.png, then renamed to c07-bg.png; the rose version moved to art-src/rejected/c07-bg.rose-visible.png. Retouched: a darker red blotch in the sunrise light on the left chair seat, which could read as a stain, inpainted with OpenCV Telea from its surroundings. Returned at 1672x941, cover-resized to 1920x1080.)",
+    "validation": {
+      "ok": true,
+      "problems": [],
+      "width": 1672,
+      "height": 941,
+      "format": "PNG",
+      "mode": "RGB",
+      "unique_colors": 100000,
+      "bytes": 2194465,
+      "bytes_per_pixel": 1.3948
+    }
   }
 ]

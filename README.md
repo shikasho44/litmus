@@ -125,7 +125,7 @@ npx tsc --noEmit && npx vitest run && npm run validate && npx vite build && npm 
 
 1. `content/cases/<新しいid>/case.json` を置く（形式は `shared/case-schema.ts`。既存の3件を手本にする。`id` はフォルダ名と同じ）。
    画像は `public/cases/<短いid>/`（背景・肖像・再構成のコマ4〜6枚。**画像の中に文字を入れない**）。
-   被害者が人でないときは `victim.silhouette`（破片の型。`scripts/art/trace_silhouette.py` で肖像から取れる）と `victim.profile`（名前の下の行。年齢・職業の代わり）を書きます。
+   被害者が人でないときは `victim.silhouette`（破片の型。`scripts/art/trace_silhouette.py` で肖像から取れる）と `victim.profile`（名前の下の行。年齢・職業の代わり）を書きます。肖像が少しずつ見えるだけで正体が分かってしまう事件は、解くまで破片に映す絵を `victim.shardPortrait` で差し替えられます（c07）。
 2. `npm run validate` を実行し、エラーが 0 になるまで直す（警告は通る）。
    検査内容: 形式、ヒント3つ、答えの要素、出典3件以上、公開してよい文に答えの語（`leakTerms`）が無いこと、想定質問との自己一致率95%以上 など（`docs/engine.md` §4）。
 3. `npm run dev` で遊んで確かめる。`publish: false` の間は本番の一覧に出ません。

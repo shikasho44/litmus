@@ -294,3 +294,8 @@ Codex（ChatGPT のサインイン枠）は2回だけ使用（費用 0）。仕�
 - **CASE 08（c04）**: 導入ナレーションに「その朝、山菜を届けに来た隣家の老人は、彼女の籠を見るなり、『あの沢はやめとけ』と声を荒らげた。」。友人の名前を F37「看護師の小田切ひかる」に、別れの言葉を「幼なじみのひかる。すぐに電話してくれて、ありがとう。」に。
 - 想定質問 c01 469→486・c02 399→402・c03 268→270・c04 260→262、回帰セットに 16＋3＋4＋3 問。詳細は各事件の NOTES.md（c01 の Review log 2026-09-30、c02 §12、c03 §10、c04 §8）。
 - 確認（2026-09-30）: `npx tsc --noEmit -p .`、`npx vitest run`（47ファイル 891件合格。PC が混んでいて既定の5秒で時間切れが出たため `--testTimeout 600000 --maxWorkers 2` で実行）、`npm run validate`（8件合格・警告0・rules 自己一致すべて100%）、`npm run build`・`npm run build:static`（リリースガード合格）、`node scripts/qa.mjs --case c01／c02／c03／c04 --no-smoke --port 5251` 4件とも `[qa] OK`（53／53／52／53 チェック。c02〜c04 は1回目が PC の混雑でブラウザの落ち・時間切れになり、やり直しで合格）。導入の新しい行は PC（1440×900）とスマホ（390×844）で別に写真を撮って目で確かめた（c03 の2行はスマホで5行に折れたので、独立した行に分けた）。有料の API は使っていない。
+
+## 2026-09-30 くられ先生へのご相談資料（改訂版）を配置
+
+- 持ち主の指示で、`promo/proposal/` を **https://fourthplace43.com/proposal/litmus-71466a69/** に置いた（URLを知っている人だけ。推測されにくい文字つき、`noindex, nofollow`。一覧やサイト内のリンクからは辿れない）。事件の真相を含むので、この URL は先生以外に広めない。
+- 更新は `python C:/Users/sikas/.claude/skills/server-deploy/scripts/deploy.py --src promo/proposal --dest proposal/litmus-71466a69` → `01_active-projects/fourthplace43-cloudflare` の `bash scripts/publish.sh`。

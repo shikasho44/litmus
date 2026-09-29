@@ -246,3 +246,8 @@ Codex（ChatGPT のサインイン枠）は2回だけ使用（費用 0）。仕�
 - **公式シリーズとの重なり**: アナフィラキシーは #15（移植でうつったピーナッツアレルギー）・#25（ラテックス・フルーツ症候群）で既出。きっかけ（ハチの毒）・謎の芯（二度目のひと刺し）・ミスディレクション（熱中症）・教える内容（あおむけで足を高く・119番）が別。監修依頼のときに本作の側から伝える（`docs/science-check/c08.md` §6、`overlap.md` §4-4）。
 - **画像8枚**（背景・肖像・コマ5枚＋肖像の撮り直し1枚）: codex-imagegen の `batch_imagegen.py` 1回の起動で7枚（週の枠 21.0%→21.0%）、肖像は破片の胸像の型に合わせて構図を細かく指示し1枚だけ作り直した（21.0%→22.0%）。記録は `art-src/CREDITS.md`・`art-src/manifest.json`。有料の API（Jev・LLM）は使っていない。
 - **確認**（2026-09-29）: `npm run validate`（8件合格・警告0。c08 は rules 自己一致 100%＝196/196）、`npx tsc --noEmit -p .`、`npx vitest run`（45ファイル 849件合格）、`npm run build`・`npm run build:static`（リリースガードに短い漏洩語「IgE」がフォントの base64 と一致して止まったので、漏洩語から外した）、`npm run cf:content`（8件）、`node scripts/qa.mjs --port 5221`（CASE 01＝c08 の通しプレイ＋ほか7件、192チェック合格）、`node scripts/qa.mjs --mobile --port 5221`（180チェック合格）。画面写真は `qa/flow/`（git に入らない）。
+
+## 2026-09-29 CASE 04 の id を変更・CASE 01 の年齢を67歳に（持ち主の判断）
+
+- CASE 04 の id を `c07-rose-that-bowed` から `c07-thirst-beside-water` に変えた。id が URL（`#/intro/<id>`）や API の一覧に出るため、「rose」で答えが分かってしまっていた。画像の置き場所（`cases/c07/`）は変えていない。この事件の遊びかけの記録は最初からになる（試遊段階なので許容）。
+- CASE 01 の宮下千秋さんを62歳から67歳に変えた。ハチ等による死亡の統計で、女性は65歳以上が多いため（docs/science-check/c08.md §4-1）。肖像の絵（白髪まじり）はそのままで合う。

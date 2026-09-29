@@ -84,7 +84,7 @@
 
 ## 6. 引き継ぎ（リードへ）
 
-- **事件の id `c07-rose-that-bowed` は URL のハッシュ（`#/intro/c07-rose-that-bowed` など）に出る**。PC のアドレス欄で「rose」が読める。id を変えるなら、フォルダ名・`tests/content/*`・`src/features/diagrams/model.test.ts`・`scripts/shots-ending.mjs`・`server/cloudflare/content.generated.ts`（`npm run cf:content`）・遊んだ人のセーブ（id がキー）に波及する。
+- **事件の id `c07-thirst-beside-water` は URL のハッシュ（`#/intro/c07-thirst-beside-water` など）に出る**。PC のアドレス欄で「rose」が読める。id を変えるなら、フォルダ名・`tests/content/*`・`src/features/diagrams/model.test.ts`・`scripts/shots-ending.mjs`・`server/cloudflare/content.generated.ts`（`npm run cf:content`）・遊んだ人のセーブ（id がキー）に波及する。
 - 破片の肖像は、所見が灯るにつれて肖像画の破片を青く見せる。バラの肖像のままだと、復元28%で萼（がく）と葉がはっきり見えた（QA の画面写真で確認）。そこで事件データに `victim.shardPortrait`（解くまで破片に映す絵。既定は肖像）を足し（`shared/case-schema.ts`・`server/engine/public-view.ts` の `toSummary`・画像の存在検査）、c07 は背景の切り抜き `cases/c07/shards.webp`（夜明けの食卓と窓）を映す。儀式と記録（解決後）は解答といっしょに届く本物の肖像（バラ）を使う。
 - README・`docs/design-bible.md` §6・`docs/handover.html` の事件一覧は旧題「うなだれたバラ」のまま（並べ替えの作業と同じ行なので、合流のときに直す）。
 - 規則判定の癖（事件データ側で回避済み）: 「〜ではない？」「〜なかった？」のような否定の問い（よね・でしょ なし）は否定確認と読まれない → 「飲めなかった／飲まなかった」は はい の F25 へ、「飲んだ／飲めた」は いいえ の F15 へ。「人間ではないのですか？」「人じゃないの？」は想定質問で押さえた。短い「〜かった？」の想定質問は文字の似かたで別の問い（痛かった・寒かった）を吸うので置かない。2文字のひらがなキーワード（かび・むし・あわ・まま…）は別の語に当たるので使わない。

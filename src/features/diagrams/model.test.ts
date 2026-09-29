@@ -6,7 +6,7 @@ import { beatY, cloudPoints, ecgModel, formatValue, levelsModel, niceStep, parse
 
 const CASES = [
   'c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper',
-  'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-rose-that-bowed', 'c08-half-folded-towel',
+  'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-thirst-beside-water', 'c08-half-folded-towel',
 ];
 const load = (id: string) => JSON.parse(readFileSync(resolve(__dirname, '../../../content/cases', id, 'case.json'), 'utf8'));
 

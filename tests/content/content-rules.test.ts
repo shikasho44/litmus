@@ -44,7 +44,7 @@ describe('content rules', () => {
   it('loads all eight cases', () => {
     expect(cases.map((c) => c.id).sort()).toEqual([
       'c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper',
-      'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-rose-that-bowed', 'c08-half-folded-towel',
+      'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-thirst-beside-water', 'c08-half-folded-towel',
     ]);
   });
 
@@ -53,7 +53,7 @@ describe('content rules', () => {
     expect(byNumber.map((c) => c.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(byNumber.map((c) => c.id)).toEqual([
       'c08-half-folded-towel',
-      'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-rose-that-bowed',
+      'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-thirst-beside-water',
       'c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper',
     ]);
     // the codename follows the display number (「ジェーン・ドゥ #01」 is CASE 01)
@@ -71,7 +71,7 @@ describe('content rules', () => {
     for (const c of byNumber.slice(1, 4)) {
       // an object soul: its own shard mask and profile rows, no human wording in the science chain
       // c07 hides what she is until the verdict (2026-09-29): a shapeless mask instead of the rose.
-      if (c.id === 'c07-rose-that-bowed') expect(c.victim.silhouette, c.id).toBe('none');
+      if (c.id === 'c07-thirst-beside-water') expect(c.victim.silhouette, c.id).toBe('none');
       else expect(c.victim.silhouette, c.id).toMatch(/^M/);
       expect(c.victim.profile?.length, c.id).toBeGreaterThan(0);
       expect(c.science.chain.map((x) => x.stage), c.id).not.toContain('人体への影響');
@@ -289,7 +289,7 @@ describe('Holma’s eye is amber', () => {
 });
 
 describe('c07 keeps what she is a secret until the player asks (2026-09-29)', () => {
-  const c7 = cases.find((c) => c.id === 'c07-rose-that-bowed')!;
+  const c7 = cases.find((c) => c.id === 'c07-thirst-beside-water')!;
   // 言葉 / 屋根 are not leaves or roots
   const PLANT = /花|植物|茎|(?<!言)葉|(?<!屋)根|つぼみ|バラ|ばら|薔薇|かびん|rose|flower|vase|plant|petal|stem|bloom|bouquet/iu;
 

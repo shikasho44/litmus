@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from style import ART_SRC, ROOT  # noqa: E402
 
 BOX_W, BOX_H = 300, 400
-CASES = {"c05": "c05-tiptoe-milk-bottle", "c06": "c06-snowman-below-zero", "c07": "c07-rose-that-bowed"}
+CASES = {"c05": "c05-tiptoe-milk-bottle", "c06": "c06-snowman-below-zero", "c07": "c07-thirst-beside-water"}
 # per case: colour distance from the ground that counts as subject, closing kernel (source pixels,
 # bridges dark parts such as the snowman's scarf), extra dilation for thin twigs / stems,
 # simplification tolerance (box units)

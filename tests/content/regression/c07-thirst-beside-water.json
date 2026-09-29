@@ -1,6 +1,6 @@
 {
   "_comment": "c07「水のそばの渇き」（旧題「うなだれたバラ」）回帰セット（2026-09-28 作成、2026-09-29 作り直し: 彼女が人かバラか分からないところから始まる）。人だと思っている質問は植物・花・茎と言うカード（F19・F20・F21・F33・F34）を開かない（forbid）。書式は tests/content/regression-harness.ts の冒頭。",
-  "caseId": "c07-rose-that-bowed",
+  "caseId": "c07-thirst-beside-water",
   "minRate": 0.95,
   "questions": [
     {

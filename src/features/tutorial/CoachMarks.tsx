@@ -27,6 +27,11 @@ interface StepDef {
   /** Extra condition before the step shows. */
   ready?: () => boolean;
   next?: string;
+  /**
+   * Put the bubble above the lit element when there is room (2026-09-30: below the verdict panel
+   * it covered the 「宣告する」 button and the choices' neighbours on a phone).
+   */
+  prefer?: 'above';
 }
 
 const $ = (sel: string) => document.querySelector(sel);
@@ -123,6 +128,7 @@ const STEPS: Record<TutStepId, StepDef> = {
     target: () => first('.iq .vpanel__body'),
     ready: () => iqAt('verdict', '[data-verdict-step="write"]') && !!$('.vpanel__body .vchoice, .vpanel__body .vcloze, .vpanel__body #verdict-text'),
     next: 'はじめる',
+    prefer: 'above',
   },
 };
 
@@ -136,7 +142,7 @@ interface Placement {
 
 const BUBBLE_H = 200; // approximate bubble height (the real one is measured after render)
 
-function place(el: Element): Placement {
+function place(el: Element, prefer?: 'above'): Placement {
   const r = el.getBoundingClientRect();
   const vw = window.innerWidth;
   const vh = window.visualViewport?.height ?? window.innerHeight;
@@ -149,6 +155,10 @@ function place(el: Element): Placement {
   const spaceAbove = hole.y;
   const spaceRight = vw - (hole.x + hole.w);
   const spaceLeft = hole.x;
+  if (prefer === 'above' && spaceAbove >= BUBBLE_H + 14) {
+    const x = Math.max(12, Math.min(vw - w - 12, hole.x + hole.w / 2 - w / 2));
+    return { hole, bubble: { x, y: hole.y - 14, w, side: 'above' } };
+  }
   if (spaceBelow < BUBBLE_H + 14 && spaceAbove < BUBBLE_H + 14 && Math.max(spaceRight, spaceLeft) >= w + 20) {
     const right = spaceRight >= spaceLeft;
     const x = right ? hole.x + hole.w + 14 : hole.x - 14 - w;
@@ -197,6 +207,23 @@ export function CoachMarks() {
     if (step.id === 'ask' && base.current && answers > base.current.answers) tutorialNext();
   });
 
+  // The last step (死因宣告) must never stand between the player and the verdict: the first touch
+  // on the verdict panel (a choice, a blank, the text box, 「宣告する」) ends the tutorial.
+  const onVerdict = runs && step?.id === 'verdict' && r.scene === 'inquest';
+  useEffect(() => {
+    if (!onVerdict) return;
+    const onDown = (e: Event) => {
+      const t = e.target as Element | null;
+      if (t?.closest('.vpanel') && !t.closest('.coach')) endTutorial();
+    };
+    document.addEventListener('pointerdown', onDown, true);
+    document.addEventListener('keydown', onDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', onDown, true);
+      document.removeEventListener('keydown', onDown, true);
+    };
+  }, [onVerdict]);
+
   if (!runs || !step) return null;
   if (TUT_STEPS.find((s) => s.id === step.id)?.scene !== r.scene) return null;
   const def = STEPS[step.id];
@@ -207,7 +234,7 @@ export function CoachMarks() {
 }
 
 function Coach({ id, def, target }: { id: TutStepId; def: StepDef; target: Element }) {
-  const p = place(target);
+  const p = place(target, def.prefer);
   const bubble = useRef<HTMLDivElement>(null);
   const [h, setH] = useState(0);
   const idx = TUT_STEPS.findIndex((s) => s.id === id);

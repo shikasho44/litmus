@@ -1,4 +1,9 @@
-<title>リトマス審問 ゲーム企画</title>
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>リトマス審問 改訂版のご相談</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,31 +16,35 @@
     --ink-2: #1A1E27;
     --paper: #F2EFE6;
     --paper-2: #E8E3D6;
+    --card: #FBF9F3;
     --text: #1B1E25;
     --soft: #5C6270;
     --rule: #D3CDBE;
     --formalin: #C6FF3D;
     --formalin-ink: #4E6B00;
     --alarm: #E0244F;
+    --alarm-soft: #FBE7EC;
     --cyan: #1E9DB8;
+    --cyan-ink: #0F6F84;
     --display: "Dela Gothic One", "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif;
     --body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
     --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
   }
-  html { background: var(--paper); }
-  body { background: var(--paper); color: var(--text); font-family: var(--body); font-size: 16px; line-height: 1.85; }
+  * { box-sizing: border-box; }
+  html { background: var(--paper); -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--paper); color: var(--text); font-family: var(--body); font-size: 16px; line-height: 1.85; overflow-wrap: anywhere; }
   .wrap { max-width: 980px; margin: 0 auto; padding-inline: 20px; }
-  a { color: var(--cyan); text-underline-offset: 3px; }
-  a:focus-visible, button:focus-visible { outline: 3px solid var(--alarm); outline-offset: 3px; }
+  a { color: var(--cyan-ink); text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid var(--alarm); outline-offset: 3px; }
   img { display: block; max-width: 100%; height: auto; }
 
   /* Header */
   .hero { background: var(--ink); color: var(--paper); padding-block: 28px 36px; }
   .hero .wrap { display: grid; gap: 22px; }
   .tag { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; color: var(--formalin); text-transform: uppercase; }
-  .hero h1 { font-family: var(--display); font-weight: 400; font-size: clamp(28px, 5vw, 44px); line-height: 1.3; margin: 0; text-wrap: balance; }
+  .hero h1 { font-family: var(--display); font-weight: 400; font-size: clamp(26px, 5vw, 44px); line-height: 1.3; margin: 0; text-wrap: balance; }
   .hero h1 em { font-style: normal; color: var(--formalin); }
-  .hero .lead { margin: 0; max-width: 62ch; color: #C9CCD4; }
+  .hero .lead { margin: 0; max-width: 64ch; color: #C9CCD4; }
   .hero figure { margin: 0; border: 1px solid #2C3240; }
   .meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 12.5px; color: #9BA1AE; }
   .meta b { color: var(--paper); font-weight: 600; }
@@ -43,13 +52,32 @@
 
   /* Sections */
   main { padding-block: 12px 56px; }
-  section { padding-block: 40px 8px; border-bottom: 1px solid var(--rule); }
+  section { padding-block: 40px 16px; border-bottom: 1px solid var(--rule); }
   section:last-of-type { border-bottom: 0; }
   .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; color: var(--soft); text-transform: uppercase; margin: 0 0 6px; }
   h2 { font-family: var(--display); font-weight: 400; font-size: clamp(22px, 3.4vw, 30px); line-height: 1.35; margin: 0 0 18px; text-wrap: balance; }
   h3 { font-size: 18px; margin: 0 0 6px; line-height: 1.5; }
   p { margin: 0 0 14px; max-width: 68ch; }
   .note { font-size: 14px; color: var(--soft); }
+  .points { margin: 0 0 14px; padding-left: 1.2em; max-width: 70ch; }
+  .points li { margin-bottom: 8px; }
+
+  /* Feedback → what we did */
+  .fixes { display: grid; gap: 14px; margin-top: 6px; }
+  .fix { background: var(--card); border: 1px solid var(--rule); border-left: 4px solid var(--ink); display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.6fr); }
+  .fix .said { padding: 14px 16px; background: var(--paper-2); }
+  .fix .said .k { font-family: var(--mono); font-size: 11.5px; letter-spacing: .12em; color: var(--soft); display: block; }
+  .fix .said b { display: block; font-size: 16px; line-height: 1.55; margin-top: 2px; }
+  .fix .did { padding: 14px 16px; font-size: 15px; }
+  .fix .did p { margin: 0 0 8px; }
+  .fix .did p:last-child { margin-bottom: 0; }
+  .fix .state { display: inline-block; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; padding: 1px 8px; margin-bottom: 6px; background: var(--ink); color: var(--formalin); }
+  .fix .state.wip { background: var(--paper-2); color: var(--soft); border: 1px dashed var(--soft); }
+  .fix .state.changed { background: var(--alarm); color: #fff; }
+  .fix.proposal { border-left-color: var(--alarm); }
+  .callout { background: var(--alarm-soft); border: 1px solid #EDB9C6; padding: 12px 14px; font-size: 14.5px; margin-top: 10px; }
+  .callout p { margin: 0 0 8px; }
+  .callout p:last-child { margin: 0; }
 
   /* Play flow: a real sequence, so it is numbered */
   .flow { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 34px; counter-reset: step; }
@@ -58,22 +86,13 @@
   .flow .step::before { content: "STEP " counter(step, decimal-leading-zero); display: block; font-family: var(--mono); font-size: 12px; letter-spacing: .14em; color: var(--alarm); margin-bottom: 4px; }
   .flow p { font-size: 15px; }
   figcaption { font-family: var(--mono); font-size: 11.5px; color: #9BA1AE; background: var(--ink); padding: 6px 10px; }
-
-  .phones { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 30px; }
+  .phones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 34px; max-width: 760px; }
   .phones figure { margin: 0; border: 1px solid var(--ink); background: var(--ink); }
-
-  /* Specimen-label facts */
-  .labels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 18px 0 10px; }
-  .label { background: #FBF9F3; border: 1px solid var(--rule); border-left: 4px solid var(--ink); padding: 14px 16px; }
-  .label .v { font-family: var(--display); font-size: 26px; line-height: 1.2; display: block; font-variant-numeric: tabular-nums; }
-  .label .k { font-size: 13.5px; color: var(--soft); display: block; margin-top: 4px; line-height: 1.6; }
-
-  .points { margin: 0; padding-left: 1.2em; max-width: 70ch; }
-  .points li { margin-bottom: 8px; }
+  .wide-shot { margin: 30px 0 0; border: 1px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); background: var(--ink); }
 
   /* Cases */
-  .cases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-  .case { background: #FBF9F3; border: 1px solid var(--rule); padding: 16px; display: grid; gap: 6px; align-content: start; }
+  .cases { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .case { background: var(--card); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 6px; align-content: start; }
   .case .no { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; color: var(--soft); }
   .case h3 { font-family: var(--display); font-weight: 400; font-size: 20px; margin: 0; }
   .case .en { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--alarm); }
@@ -81,248 +100,428 @@
   .case dl { margin: 6px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 13.5px; }
   .case dt { color: var(--soft); }
   .case dd { margin: 0; }
+  .case.intro { background: #F7F4EC; }
+  .sup { display: inline-block; font-size: 12.5px; font-weight: 700; padding: 0 8px; border: 1px solid var(--ink); }
+  .sup.full { background: var(--ink); color: var(--formalin); }
+  .sup.light { background: transparent; color: var(--soft); border-style: dashed; }
 
-  /* Two-column table */
+  /* Spoilers */
+  details { background: var(--card); border: 1px solid var(--rule); padding: 10px 16px; }
+  details[open] { border-color: var(--ink); }
+  summary { cursor: pointer; font-weight: 700; }
+  details.spoiler { margin-top: 8px; padding: 8px 12px; background: #fff; border: 1px dashed var(--alarm); }
+  details.spoiler[open] { border-style: solid; }
+  details.spoiler summary { font-size: 13.5px; color: var(--alarm); }
+  details.spoiler p { font-size: 13.5px; margin: 8px 0 0; }
+  .qs-wrap { display: grid; gap: 8px; margin: 10px 0 14px; }
+  .syn { font-size: 14px; color: var(--soft); margin: 10px 0 6px; }
+  .qs { margin: 8px 0 4px; padding-left: 1.4em; font-size: 14.5px; }
+  .qs li { margin-bottom: 8px; }
+  .add { font-family: var(--mono); font-size: 11px; color: var(--alarm); border: 1px solid var(--alarm); padding: 0 5px; margin-right: 4px; white-space: nowrap; }
+  .overlap { font-size: 14px; background: var(--paper-2); padding: 8px 12px; margin: 8px 0 4px; }
+  .warn { display: inline-block; font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; color: #fff; background: var(--alarm); padding: 2px 8px; margin-bottom: 10px; }
+
+  /* Tables */
   .table-wrap { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 520px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
   th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--rule); }
   th { font-family: var(--mono); font-size: 12px; letter-spacing: .1em; color: var(--soft); font-weight: 600; background: var(--paper-2); }
 
   /* Options */
-  .options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-  .option { border: 1px solid var(--ink); background: #FBF9F3; padding: 16px; }
-  .option h3 { font-size: 16.5px; }
+  .options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 10px 0 14px; }
+  .option { border: 1px solid var(--ink); background: var(--card); padding: 16px; }
+  .option h4 { font-size: 16px; margin: 0 0 6px; line-height: 1.5; }
   .option p { font-size: 14px; margin: 0; }
 
-  .ask { background: var(--ink); color: var(--paper); padding: 22px; margin-top: 8px; }
-  .ask h3 { color: var(--formalin); }
-  .ask ol { margin: 8px 0 0; padding-left: 1.3em; }
-  .ask li { margin-bottom: 8px; }
+  .asks { display: grid; gap: 18px; }
+  .ask { background: var(--ink); color: var(--paper); padding: 22px; }
+  .ask h3 { color: var(--formalin); font-size: 19px; }
+  .ask h3 .n { font-family: var(--mono); font-size: 13px; color: #9BA1AE; margin-right: 8px; }
+  .ask p { color: #D8DBE2; }
   .ask .note { color: #AEB3BF; }
+  .ask .options .option { background: var(--ink-2); border-color: #3A4152; color: var(--paper); }
+  .ask .options .option p { color: #C9CCD4; }
+  .ask .table-wrap table { color: var(--paper); }
+  .ask th { background: var(--ink-2); color: #9BA1AE; }
+  .ask td { border-bottom-color: #2C3240; }
+  .smallq { background: var(--card); border: 1px solid var(--rule); padding: 18px 20px; }
+  .smallq ol { margin: 6px 0 0; padding-left: 1.3em; }
+  .smallq li { margin-bottom: 8px; }
 
+  .route { counter-reset: r; list-style: none; padding: 0; margin: 10px 0 16px; display: grid; gap: 10px; max-width: 70ch; }
+  .route li { counter-increment: r; background: var(--card); border: 1px solid var(--rule); padding: 10px 14px 10px 48px; position: relative; }
+  .route li::before { content: counter(r); position: absolute; left: 14px; top: 10px; font-family: var(--display); font-size: 20px; line-height: 1.3; color: var(--alarm); }
   .contact { font-size: 15px; }
-  .contact .url { font-family: var(--mono); font-size: 14px; word-break: break-all; }
-
-
-  .verdicts td.mark { font-family: var(--display); font-size: 24px; text-align: center; color: var(--formalin-ink); }
-  .verdicts td:first-child { white-space: nowrap; font-weight: 700; }
-  .small { font-size: 12.5px; color: var(--soft); font-weight: 400; }
-  .qs-wrap { display: grid; gap: 8px; margin: 10px 0 14px; }
-  details { background: #FBF9F3; border: 1px solid var(--rule); padding: 10px 16px; }
-  details[open] { border-color: var(--ink); }
-  summary { cursor: pointer; font-weight: 700; }
-  .syn { font-size: 14px; color: var(--soft); margin: 10px 0 6px; }
-  .qs { margin: 8px 0 4px; padding-left: 1.4em; font-size: 14.5px; }
-  .qs li { margin-bottom: 8px; }
+  .url { font-family: var(--mono); font-size: 14px; word-break: break-all; }
   footer { background: var(--ink); color: #9BA1AE; font-size: 12.5px; padding-block: 18px; }
 
   @media (max-width: 760px) {
+    .wrap { padding-inline: 16px; }
     .flow li { grid-template-columns: 1fr; gap: 12px; }
-    .labels, .cases, .options { grid-template-columns: 1fr; }
-    .phones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .fix { grid-template-columns: 1fr; }
+    .cases, .options { grid-template-columns: 1fr; }
+    .phones { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .ask { padding: 18px 16px; }
+    table.stack thead { display: none; }
+    table.stack tr { display: block; border-bottom: 1px solid var(--rule); padding: 8px 0; }
+    table.stack td { display: block; border: 0; padding: 2px 4px; }
+    table.stack td[data-k]::before { content: attr(data-k) "："; color: var(--soft); font-size: 12.5px; }
+    .ask table.stack tr { border-bottom-color: #2C3240; }
   }
   @media (prefers-reduced-motion: no-preference) {
     .flow figure { transition: transform .25s ease, box-shadow .25s ease; }
     .flow figure:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--ink); }
   }
 </style>
+</head>
+<body>
 
 <header class="hero">
   <div class="wrap">
-    <div class="meta"><span class="tag">CASE FILE — 企画概要</span><span><b>2026年9月</b></span><span>ご相談用資料</span><span class="draft">DRAFT</span></div>
-    <h1>『リトマス審問』<br><em>自分で質問して解ける</em>死因推理ゲーム。</h1>
-    <p class="lead">プレイヤーが自由に質問を打ち込み、AIのゲームマスターが「はい／いいえ」で答える水平思考型の推理ゲームです。死因を当てたあとは、その死の裏にある科学を図解で学んで帰ります。PC・スマートフォンのブラウザで遊べます。</p>
-    <figure><img src="img/01-title.jpg" alt="タイトル画面。白ウサギの剥製標本の案内役ホルマと、ガラス片でできた女性のシルエット" width="1280" height="800"></figure>
-    <div class="meta"><span>制作: <b>一般社団法人フォースプレイス　四ヶ所伸一（ヨンサン）</b></span></div>
+    <div class="meta"><span class="tag">CASE FILE — 改訂版（2026-09-30）</span><span><b>くられ先生へ</b></span><span>監修のご相談資料</span><span class="draft">先生だけにお送りしています</span></div>
+    <h1>『リトマス審問』<br><em>いただいたご意見で、ここまで作り直しました。</em></h1>
+    <p class="lead">試作版を実際に遊んでいただき、監修のお引き受けと、お名前を出してよいというお返事まで、本当にありがとうございました。大変心強く思っています。お送りいただいたご意見をもとに作り直した今の版をご報告し、監修の進め方をご相談させてください。</p>
+    <figure><img src="img/01-title.jpg" alt="タイトル画面。リトマス試験紙の形のロゴ『リトマス審問』と、白衣を着た白ウサギの剥製標本の案内役ホルマ" width="1280" height="800"></figure>
+    <div class="meta"><span>制作: <b>一般社団法人フォースプレイス　代表　四ヶ所伸一（ヨンサン）</b></span></div>
   </div>
 </header>
 
 <main class="wrap">
 
-  <section aria-labelledby="s-origin">
-    <p class="eyebrow">きっかけ</p>
-    <h2 id="s-origin">家族で番組を楽しむうちに、「自分たちで遊べたら」と思いました。</h2>
-    <p>妻が『Dr.STONE』をきっかけにくられ先生の動画を見るようになり、ドズル社さんとのコラボ回で、ドズル社が大好きな娘が「ジェーンドゥの死因」にすっかりハマりました。家族で一緒に推理するのが楽しく、「これを誰でも自分で遊べる形にできないか」と考えて、ブラウザゲームとして試作しました。</p>
-    <p>現在、3つの事件を最後まで遊べる状態になっています。公開の前に、科学解説の監修と公開のかたちについて、薬理凶室さんにご相談させてください。<br>タイトルは、御社のご企画と重ならないよう『リトマス審問』に改めました。リトマス試験紙が赤か青かで答えを示すように、「はい／いいえ」の答えから真相の色を見分けていくゲーム、という意味を込めています。</p>
+  <section aria-labelledby="s-hello">
+    <p class="eyebrow">ごあいさつ</p>
+    <h2 id="s-hello">あらためて、どんなゲームか</h2>
+    <p>一般社団法人フォースプレイスの四ヶ所伸一（ヨンサン）です。『リトマス審問』は、名前を失った死者（ジェーン・ドゥ）に「はい／いいえ」で答えられる質問を重ねて死の真相を当て、解いたあとにその死の裏にある科学を図解で学ぶ、ブラウザの推理ゲームです。真相は人が作ったデータに固定し、AIは質問が「はい」か「いいえ」かの判定だけを行います。</p>
+    <p>妻と娘が先生の動画、とくにドズル社さんとのコラボ回を家族で楽しんだことがきっかけで作り始めました。</p>
+    <p>ご意見をいただいてからの数日で、事件は3件から8件になり、遊びの仕組みも大きく変わりました。以下、いただいたご意見ごとに、何をしたかをまとめます。</p>
+  </section>
+
+  <section aria-labelledby="s-fixes">
+    <p class="eyebrow">ご意見の反映</p>
+    <h2 id="s-fixes">いただいたご意見を、こう反映しました</h2>
+    <div class="fixes">
+      <div class="fix">
+        <div class="said"><span class="k">ご意見 1</span><b>題名は、先方の企画と重ならない名前に</b></div>
+        <div class="did"><span class="state">対応済み</span>
+          <p>『<strong>リトマス審問</strong>』（LITMUS INQUEST : YES OR NO）に改めました。リトマス試験紙が赤か青かで答えを示すように、「はい／いいえ」の答えから真相を見分けていく、という意味です。ロゴは「リトマス」を試験紙に刷った形にし、遊べる場所の URL も新しい名前（litmus.fourthplace43.com）に移しました。</p></div>
+      </div>
+      <div class="fix">
+        <div class="said"><span class="k">ご意見 2</span><b>繰り返し出るメインビジュアルは手描きで。印象に残るイラストレーターを</b></div>
+        <div class="did"><span class="state wip">探しています</span>
+          <p>ホルマの立ち絵とタイトルのキービジュアルを手描きでお願いするため、今作の雰囲気に合うイラストレーターの方を探し、ご相談の準備を進めています。どの絵を手描きにするか（優先度つき）の一覧もまとめました。</p>
+          <p class="note">画面の絵は、今はまだすべて AI で作ったものです。決まりしだいご報告します。</p></div>
+      </div>
+      <div class="fix">
+        <div class="said"><span class="k">ご意見 3</span><b>ミスのペナルティと、「名探偵度数」のランクバッジ</b></div>
+        <div class="did"><span class="state">対応済み</span>
+          <p>ミスをした<strong>その瞬間</strong>に「減点 −n」を見せるようにしました（ヒント、反証の外れ、救済、死因宣告の失敗、確認テストのやり直し）。結果画面の点数より、ミスした瞬間に数字が見える方が「ペナルティの実感」になると考えました。</p>
+          <p>事件のスコア × 難易度の倍率を積み上げた「<strong>名探偵度数</strong>」と、5段階の称号（駆け出し探偵 → 一人前 → 腕利き → 名探偵 → 伝説の名探偵）のバッジを付けました。数えるのは事件ごとの最高だけなので、同じ事件の周回では稼げません。</p></div>
+      </div>
+      <div class="fix">
+        <div class="said"><span class="k">ご意見 4</span><b>同時プレイで、どちらが先に答えにたどり着くか</b></div>
+        <div class="did"><span class="state">対応済み</span>
+          <p><strong>オンライン対戦</strong>を作りました。6文字の部屋コードで2〜4人が同じ事件を同時に始め、相手の進み具合を見ながら、先に死因宣告を通した人が勝ちです。勝敗はサーバーが判定するので、ずるはできません。配信のときに部屋コードを隠す表示もあります。</p>
+          <p class="note">AI 判定版（litmus.fourthplace43.com）のタイトル画面の「対戦」から遊べます。</p></div>
+      </div>
+      <div class="fix">
+        <div class="said"><span class="k">ご意見 5</span><b>ミスディレクションをもっと</b></div>
+        <div class="did"><span class="state">対応済み</span>
+          <p>事故の事件にも「殺人では？」と本気で疑わせる手がかりと、それを晴らす証拠を足しました（夜中のもう一枚の入館カード、土手で怒鳴った男、霧の中の人影 など）。殺人の事件には、逆に「事故では？」と思わせる手がかりがあります。</p>
+          <p>あわせて、疑いを晴らしたあとの寄り道が真相へ戻るよう、8件すべてを読み直しました。前置きなしに出てくる人物や物をなくし、自動の確認も足しています。真相と科学は変えていません。</p></div>
+      </div>
+      <div class="fix">
+        <div class="said"><span class="k">ご意見 6</span><b>純粋な殺人事件も</b></div>
+        <div class="did"><span class="state">対応済み</span>
+          <p>CASE 08「<strong>白い花の夕餉</strong>」を作りました。植物の毒による、事故に見せかけた殺人です。この事件だけ、死因宣告で犯人の名指しが要ります。量・時間・入手や加工など、まねできる情報は書いていません。</p></div>
+      </div>
+      <div class="fix proposal">
+        <div class="said"><span class="k">ご意見 7</span><b>殺人事件では、捜査中は「殺人か事故か」に答えない</b></div>
+        <div class="did"><span class="state changed">ご提案と変えました（ご意見ください）</span>
+          <p>最初はご提案どおり、捜査中は「殺された？」「事故？」に答えない形にしました。ところが、年齢や立場の違う9人の設定を AI に演じさせた試遊（72回）で、はじめての人が行き詰まることが分かりました。たとえば中学2年生の設定は、「犯人がいる」前提で質問を続けて事故の手がかりを取りこぼし、8回とも解けませんでした。</p>
+          <p>そこで今は、「殺人ですか？」「事故ですか？」には事実どおり答え、<strong>封じているのは殺人事件（CASE 08）での犯人の名指しだけ</strong>にしています（容疑者が少ないので、はい／いいえで一人ずつ聞けば当たってしまうため）。緊張感は、封印の代わりに、新しく入れた「<strong>質問枠</strong>」（質問できる回数に限りがある）でつくる考えです。</p>
+          <div class="callout"><p>ご提案とは違う形にしています。「やはり答えない方がよい」とお考えでしたら、戻すことも含めて検討します。ご意見をいただけると助かります。</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-other">
+    <p class="eyebrow">ほかに変えたこと</p>
+    <h2 id="s-other">遊びやすさのための変更</h2>
+    <ul class="points">
+      <li><strong>難易度を3つに：</strong>見習い（最後の死因宣告は選択式・やり直し10回）／審問官（穴埋め式・3回）／教授（自由記述・3回）。</li>
+      <li><strong>質問枠：</strong>事件ごとに質問できる回数の目安があります。見習いは目安だけ、審問官は超えると1問ごとに減点、教授は使い切ると締め切り。「答えられない」と返った質問は数えません。手詰まりのときは、ホルマが「ひとりごと」で方角だけこぼします。</li>
+      <li><strong>質問の例のカード：</strong>最初から全部は見せず、時間とともに1枚ずつ配ります（見習い・審問官は2枚から始まって1分ごと、教授は2分たってから）。並ぶのは3枚まで。使っても減点はなく、待つ時間だけが代償です。一枚も使わずに解くと「素手の審問官」の称号が付きます。</li>
+      <li><strong>反証（リトマス試験）：</strong>記憶の中で光る「誤差」に所見を当てる場面を、銃で撃つ演出から、リトマス試験紙の演出に変えました。正しければ誤差が赤から青に変わり、「反応あり！」と出ます。</li>
+      <li><strong>初回の解決の記録：</strong>事件ごとに最初の1回だけを「初回の解決」（難易度・解決タイム・ランク）として残します。全部の事件を初見でどれだけ速く解けるか、という遊び方もできます。</li>
+      <li><strong>入門の事件：</strong>CASE 02〜04 は、被害者が人ではなく「もの」の、10〜15分の短い事件です。成功体験を積んでから、本編へ進めるようにしました。</li>
+      <li><strong>新しい CASE 01：</strong>最初の事件は、身近な場面で起きる人の死（67歳の女性）にしました。遊びながら操作を覚えるチュートリアルも、この事件に入っています。</li>
+    </ul>
   </section>
 
   <section aria-labelledby="s-flow">
-    <p class="eyebrow">遊びの流れ</p>
+    <p class="eyebrow">いまの画面</p>
     <h2 id="s-flow">質問して、反証して、名前を取り戻し、科学を持ち帰る。</h2>
+    <p class="note">画面は開発中のものです。答えが分からないように、PC の捜査の画面は CASE 08 を、反証から後の画面とスマホの画面は入門の CASE 02（牛乳びん）を使っています。</p>
     <ol class="flow">
       <li>
-        <figure><img src="img/03-investigation.jpg" alt="捜査画面。質問に対して『いいえ』のスタンプが押され、手がかりのカードが増えていく" loading="lazy" width="1280" height="800"><figcaption>捜査 — 自由に質問する</figcaption></figure>
-        <div class="step"><h3>自由に質問する（捜査）</h3><p>「毒は関係ありますか？」「部屋に窓はありましたか？」など、自由な文章で質問します。案内役のホルマが「はい／いいえ／関係ない」などで答え、重要な手がかりは「所見カード」として手元に残ります。手がかりが増えるほど、名前を失った女性（ジェーン・ドゥ）の姿が少しずつ見えてきます。</p></div>
+        <figure><img src="img/02-files.jpg" alt="事件ファイルの画面。CASE 01から08までの事件の札が並び、名探偵度数のメーターがある" loading="lazy" width="1280" height="1893"><figcaption>事件ファイル — 8つの事件</figcaption></figure>
+        <div class="step"><h3>事件を選ぶ</h3><p>事件ファイルに8つの事件が並びます。はじめての方は CASE 01 から。見出しには名探偵度数と、解いた事件の数が出ます。</p></div>
       </li>
       <li>
-        <figure><img src="img/04-noise-break.jpg" alt="審問の画面。女性の発言の中で光る言葉（誤差）に、所見カードを当てる" loading="lazy" width="1280" height="800"><figcaption>審問 — 間違った記憶を、所見で正す</figcaption></figure>
-        <div class="step"><h3>間違った記憶を、所見で正す（審問）</h3><p>ジェーン・ドゥは、自分の死について間違った記憶を信じています。発言の中で光る「誤差」に、集めた所見カードを当てます。正しければリトマス試験紙のように色が変わり、記憶が正されます。必要な手がかりが無くても、案内役に頼めば先へ進めるので、詰むことはありません。</p></div>
+        <figure><img src="img/03-investigation.jpg" alt="CASE 08の捜査画面。質問に『はい』のスタンプ、下に質問の例のカードが3枚、入力欄の右上に質問枠の残り" loading="lazy" width="1280" height="800"><figcaption>捜査 — 質問の例と質問枠</figcaption></figure>
+        <div class="step"><h3>自由に質問する（捜査）</h3><p>自由な文章で質問し、ホルマが「はい／いいえ／関係ない」などで答えます。大事な手がかりは所見カードとして手元に残ります。入力欄の上には時間とともに配られる質問の例、右上には質問枠の残りが出ます。</p></div>
       </li>
       <li>
-        <figure><img src="img/05-verdict.jpg" alt="死因宣告の画面。自由記述の推理に対し、要素ごとの判定が表示される" loading="lazy" width="1280" height="800"><figcaption>死因宣告 — 自分の言葉で答える</figcaption></figure>
-        <div class="step"><h3>自分の言葉で死因を答える（死因宣告）</h3><p>「何が起きて、なぜ死んだのか」を自由に書きます。答えは「直接の死因」「きっかけの出来事」「科学的な仕組み」などの要素ごとに判定され、足りない要素だけが分かります（答えそのものは教えません）。</p></div>
+        <figure><img src="img/04-litmus.jpg" alt="反証の場面。誤差に所見を当て、赤から青に変わる帯に『反応あり！』の文字" loading="lazy" width="1280" height="800"><figcaption>審問 ① 反証 — 反応あり！</figcaption></figure>
+        <div class="step"><h3>記憶の誤差に、所見を当てる（反証）</h3><p>ジェーン・ドゥは、自分の死について間違った記憶を語ります。光る「誤差」に所見を当てると、試験紙のように赤から青へ変わります。反証は任意で、成功すると死因宣告の手がかりが増えます。</p></div>
       </li>
       <li>
-        <figure><img src="img/06-reconstruction.jpg" alt="真相再構成。5コマ漫画の空白のコマを、選択肢から埋める" loading="lazy" width="1280" height="800"><figcaption>真相再構成 — 5コマで組み直す</figcaption></figure>
-        <div class="step"><h3>事件を5コマで組み直す（真相再構成）</h3><p>事件の流れを漫画のコマで組み直します。すべて埋まると、案内役が事件の全貌を語ります。</p></div>
+        <figure><img src="img/05-verdict.jpg" alt="死因宣告の画面。穴埋め式の宣告書に『正解』の判子" loading="lazy" width="1280" height="800"><figcaption>審問 ② 死因宣告 — 難易度で形が変わる</figcaption></figure>
+        <div class="step"><h3>死因を宣告する</h3><p>見習いは選択式、審問官は穴埋め式、教授は自由記述。答えは要素ごとに判定され、足りない要素だけが分かります。</p></div>
       </li>
       <li>
-        <figure><img src="img/07-identity.jpg" alt="身元回復の画面。ガラス片がつながり、女性の肖像と名前が戻る" loading="lazy" width="1280" height="800"><figcaption>身元回復 — 名前が戻る</figcaption></figure>
-        <div class="step"><h3>彼女の名前が戻る（身元回復）</h3><p>死因が明らかになると、ガラス片がつながって肖像と名前が戻り、本人が別れの言葉を告げます。物語としての締めくくりです。</p></div>
+        <figure><img src="img/06-reconstruction.jpg" alt="真相再構成。漫画のコマの空白に、選択肢から正しい一枚を選ぶ" loading="lazy" width="1280" height="800"><figcaption>真相再構成 — コマで組み直す</figcaption></figure>
+        <div class="step"><h3>事件をコマで組み直す（真相再構成）</h3><p>事件の流れを漫画のコマで組み直します。すべて埋まると、ホルマが全貌を語ります。</p></div>
       </li>
       <li>
-        <figure><img src="img/08-science.jpg" alt="科学解剖の画面。酸素濃度ごとの体への影響を示す図解" loading="lazy" width="1280" height="800"><figcaption>科学解剖 — 図解で学ぶ</figcaption></figure>
-        <div class="step"><h3>その死の科学を学ぶ（科学解剖・確認テスト）</h3><p>原因 → 科学現象 → 体に起きたこと → 結果、の順に図解で解説します。よくある誤解、身近な場面での注意、身を守る方法、参考資料まで載せ、最後に短い確認テストで知識を定着させます。</p></div>
+        <figure><img src="img/07-identity.jpg" alt="身元回復の画面。ガラス片がつながり、牛乳びんの姿と名前『真白』が戻る" loading="lazy" width="1280" height="800"><figcaption>身元回復 — 名前が戻る</figcaption></figure>
+        <div class="step"><h3>名前が戻る（身元回復）</h3><p>ガラス片がつながって姿と名前が戻り、本人が別れの言葉を告げます。</p></div>
+      </li>
+      <li>
+        <figure><img src="img/08-science.jpg" alt="科学解剖の画面。水が凍ると体積が約9%ふえることを示す図" loading="lazy" width="1280" height="800"><figcaption>科学解剖 — 図解で学ぶ</figcaption></figure>
+        <div class="step"><h3>その死の科学を学ぶ（科学解剖・確認テスト）</h3><p>原因 → 科学現象 → 体（もの）に起きたこと → 結果、の順に図解します。よくある誤解、身近な場面、身を守る方法、出典まで載せ、最後に短い確認テストがあります。確認が済むまでは「専門家確認前」と表示しています。</p></div>
+      </li>
+      <li>
+        <figure><img src="img/09-result.jpg" alt="結果画面。ランクA、名探偵度数+80と称号、初回の解決の記録、質問数と質問枠" loading="lazy" width="1280" height="800"><figcaption>結果 — 名探偵度数と初回の解決</figcaption></figure>
+        <div class="step"><h3>ランクと名探偵度数</h3><p>ランク、名探偵度数と称号、「初回の解決」（難易度・解決タイム・ランク）、質問数と質問枠、反証や宣告の回数が出ます。</p></div>
+      </li>
+      <li>
+        <figure><img src="img/10-versus.jpg" alt="オンライン対戦のロビー。部屋コードと参加者の一覧、開始ボタン" loading="lazy" width="1280" height="800"><figcaption>オンライン対戦 — ロビー</figcaption></figure>
+        <div class="step"><h3>みんなで早解き（オンライン対戦）</h3><p>部屋を作ってコードを伝えると、2〜4人で同じ事件を同時に始められます。</p></div>
       </li>
     </ol>
     <div class="phones" aria-label="スマートフォンでの表示">
-      <figure><img src="img/10-sp-title.jpg" alt="スマートフォンのタイトル画面" loading="lazy" width="540" height="1169"><figcaption>スマホ — タイトル</figcaption></figure>
-      <figure><img src="img/11-sp-investigation.jpg" alt="スマートフォンの捜査画面" loading="lazy" width="540" height="1169"><figcaption>スマホ — 捜査</figcaption></figure>
-      <figure><img src="img/12-sp-inquest.jpg" alt="スマートフォンの審問画面" loading="lazy" width="540" height="1169"><figcaption>スマホ — 審問</figcaption></figure>
-      <figure><img src="img/13-sp-science.jpg" alt="スマートフォンの科学解説画面" loading="lazy" width="540" height="1169"><figcaption>スマホ — 科学解剖</figcaption></figure>
+      <figure><img src="img/11-sp-title.jpg" alt="スマートフォンのタイトル画面" loading="lazy" width="540" height="1169"><figcaption>スマホ — タイトル</figcaption></figure>
+      <figure><img src="img/12-sp-investigation.jpg" alt="スマートフォンの捜査画面" loading="lazy" width="540" height="1169"><figcaption>スマホ — 捜査</figcaption></figure>
+      <figure><img src="img/13-sp-result.jpg" alt="スマートフォンの結果画面" loading="lazy" width="540" height="1169"><figcaption>スマホ — 結果</figcaption></figure>
     </div>
-  </section>
-
-  <section aria-labelledby="s-ai">
-    <p class="eyebrow">AIの使い方</p>
-    <h2 id="s-ai">真相は人が作ったデータに固定。AIは「判定」だけ。</h2>
-    <p>AIに真相を考えさせたり、自由に文章を書かせたりはしていません。事件の真相・手がかり・正解の条件はすべて事前に人が作ったデータに固定し、AIはプレイヤーの質問が「はい」か「いいえ」かを判定するだけです。返事の台詞も書き溜めたものから選ぶため、AIが答えを漏らしたり、無い事実を作ったりしない仕組みです。</p>
-    <div class="labels">
-      <div class="label"><span class="v">91.1%</span><span class="k">判定の正答率。あらかじめ正しい答え（はい・いいえ など）を決めておいた823問の質問をAIに判定させ、答えが一致した割合</span></div>
-      <div class="label"><span class="v">約0.3秒</span><span class="k">質問してから答えが返るまで（中央値）</span></div>
-    </div>
-    <ul class="points">
-      <li><strong>安全への配慮：</strong>自傷や「人を傷つける方法」を尋ねる質問は、AIに渡す前に止め、相談窓口（厚生労働省「まもろうよ こころ」）を案内します。致死量や手順は、解説にも一切載せていません。</li>
-      <li><strong>事件の追加：</strong>事件はデータとして独立しているため、プログラムを直さずに新しい事件を追加できます。</li>
-    </ul>
   </section>
 
   <section aria-labelledby="s-cases">
     <p class="eyebrow">収録している事件（すべて架空）</p>
-    <h2 id="s-cases">3つの事件と、その裏にある科学</h2>
+    <h2 id="s-cases">8つの事件</h2>
+    <p>「監修のお願い」は制作側の案です。人が亡くなり医学の説明が中心になる事件はしっかり見ていただき、「もの」が被害者の入門の3件は軽く見ていただくか対象外に、と考えています。</p>
+    <p class="note">このページは先生だけにお送りしているので、各事件の答え（真相と科学）を「ネタばれ」として閉じた形で載せています。先に遊んでくださる場合は開かずにお進みください。詳しい科学の点検は、別にお送りする資料にあります。</p>
     <div class="cases">
       <article class="case">
-        <span class="no">CASE 01 · 難易度 ★</span>
+        <span class="no">CASE 01 · 難易度 ★ · 約12分</span>
+        <h3>たたみかけのタオル</h3>
+        <span class="en">THE HALF-FOLDED TOWEL</span>
+        <p>九月はじめの暑い午後。2階の和室で、取りこんだ洗濯物のそばに、67歳の女性が座りこむようにして倒れていた。暑さか、心臓か。</p>
+        <dl><dt>分野</dt><dd>生理学・くらしの科学</dd><dt>監修</dt><dd><span class="sup full">しっかりお願いしたい</span></dd></dl>
+        <details class="spoiler"><summary>真相と科学（ネタばれ）</summary><p>バスタオルのひだにひそんでいたアシナガバチに手首を刺された。前の年のひと刺しで体が毒を覚えていて（感作）、二度目で全身のアレルギー反応、アナフィラキシーが起きた。血圧が下がり、のどがむくんだ。学べること：二度目が危ない理由、あおむけで足を高く・119番・エピペン、洗濯物は取りこむ前にはたく。判定 ○（ハチ刺傷による死亡は日本で毎年十数人〜20人前後）。出典10件。</p></details>
+      </article>
+      <article class="case intro">
+        <span class="no">CASE 02 · 難易度 ★ · 約10分 · 入門</span>
+        <h3>背のびした牛乳びん</h3>
+        <span class="en">THE BOTTLE ON TIPTOE</span>
+        <p>夏休みの朝、冷凍庫の中で、二本ならんだ牛乳びんの一本にひびが入っていた。口からは白い柱がのびている。</p>
+        <dl><dt>分野</dt><dd>物理・くらしの科学</dd><dt>監修</dt><dd><span class="sup light">軽く、または対象外（ご判断を）</span></dd></dl>
+        <details class="spoiler"><summary>真相と科学（ネタばれ）</summary><p>満タンのびんのまま凍らせた。牛乳の約87%は水で、水は凍るとかさが約1割（約9%）ふえる。行き場のない分が口から氷の柱になって押し出され、胴にひびを入れた。すきまのあった半分のびんは無事。出典8件。</p></details>
+      </article>
+      <article class="case intro">
+        <span class="no">CASE 03 · 難易度 ★ · 約12分 · 入門</span>
+        <h3>氷点下の雪だるま</h3>
+        <span class="en">THE SNOWMAN BELOW ZERO</span>
+        <p>一日じゅう氷点下の晴れた日。庭の雪だるまの頭が落ちていた。首のまわりだけが、細くやせていた。</p>
+        <dl><dt>分野</dt><dd>物理・気象</dd><dt>監修</dt><dd><span class="sup light">軽く、または対象外（ご判断を）</span></dd></dl>
+        <details class="spoiler"><summary>真相と科学（ネタばれ）</summary><p>妹が巻いた黒い毛糸のマフラーが日の光を吸って0℃をこえ、ふれている首の雪をとかした。気温は日かげの空気の温度で、日なたの黒いものはそれより温まる。白い雪は光をはね返すので胴や頭は無事。出典8件。</p></details>
+      </article>
+      <article class="case intro">
+        <span class="no">CASE 04 · 難易度 ★ · 約15分 · 入門</span>
+        <h3>水のそばの渇き</h3>
+        <span class="en">THIRST BESIDE THE WATER</span>
+        <p>朝の食卓で、彼女は首をがっくりと曲げたまま見つかった。ひどく渇いていた。すぐそばに、きれいな水がたっぷりあったのに。</p>
+        <dl><dt>分野</dt><dd>生理学・くらしの科学</dd><dt>監修</dt><dd><span class="sup light">軽く、または対象外（ご判断を）</span></dd></dl>
+        <details class="spoiler"><summary>真相と科学（ネタばれ）</summary><p>「彼女」は母の日の赤いバラ。人かどうかも分からないところから始まり、「人間ですか？」と訊くこと自体がひらめきになる事件。紙に包まれて7時間窓辺に隠されるあいだに、切り口から茎の道管に空気が入り、空気の中で切り戻したため、花びんの水を吸い上げられずに首が曲がった。水の中で茎を切ったおばあちゃんのバラは元気。出典5件。</p></details>
+      </article>
+      <article class="case">
+        <span class="no">CASE 05 · 難易度 ★ · 約25分</span>
         <h3>息のない部屋</h3>
         <span class="en">THE ROOM WITHOUT BREATH</span>
-        <p>窓のない地下の試料保管室で、若い研究者が眠るように亡くなっていた。</p>
-        <dl><dt>科学</dt><dd>液体窒素の気化による酸素欠乏（化学・生理学）</dd><dt>出典</dt><dd>23件</dd></dl>
+        <p>大学の研究棟、窓のない地下の試料保管室。明け方、若い女性研究者が棚にもたれて座ったまま見つかった。傷も、争った跡もない。</p>
+        <dl><dt>分野</dt><dd>化学・生理学</dd><dt>監修</dt><dd><span class="sup full">しっかりお願いしたい</span></dd></dl>
+        <details class="spoiler"><summary>真相と科学（ネタばれ）</summary><p>深夜、一人で液体窒素を補充するうちにタンクがあふれ、気化した大量の窒素が部屋の酸素の割合を下げた。排気の停止、閉まった防火扉、電池切れの酸素濃度計、一人作業が重なった事故で、窒素には毒がなく息苦しさが出にくいため危険に気づけなかった。他殺の線（もう一枚の入館カード、外されたストッパー、前日の口論）は証拠で晴れる。判定 ○。出典23件。</p></details>
       </article>
       <article class="case">
-        <span class="no">CASE 02 · 難易度 ★★</span>
+        <span class="no">CASE 06 · 難易度 ★★ · 約35分</span>
         <h3>夕暮れの白球</h3>
         <span class="en">THE BALL AT DUSK</span>
-        <p>夏の夕方、弟とキャッチボールをしていた少女が突然倒れた。</p>
-        <dl><dt>科学</dt><dd>心臓震盪と、AEDが救える命（物理・生理学）</dd><dt>出典</dt><dd>40件</dd></dl>
+        <p>八月の夕暮れの河川敷。弟の投球練習に付き合っていた少女が、突然崩れ落ちた。その少し前、土手の上では見知らぬ男の怒鳴り声が響いていた。</p>
+        <dl><dt>分野</dt><dd>物理・生理学</dd><dt>監修</dt><dd><span class="sup full">しっかりお願いしたい</span></dd></dl>
+        <details class="spoiler"><summary>真相と科学（ネタばれ）</summary><p>夕日の逆光で見失った軟式ボールが左胸に当たり、心臓の拍動のごく短い受攻期に重なって心室細動が起きた（心臓震盪）。大人たちは熱中症と思い込み、死戦期呼吸を「息がある」と受け取ったため、胸骨圧迫も AED も使われなかった。土手の男は無実。判定 ○。出典40件。</p></details>
       </article>
       <article class="case">
-        <span class="no">CASE 03 · 難易度 ★★★</span>
+        <span class="no">CASE 07 · 難易度 ★★★ · 約35分</span>
         <h3>雪に残されたもの</h3>
         <span class="en">WHAT WAS LEFT IN THE SNOW</span>
-        <p>冬山の岩陰で、薄着の女性が見つかった。周りの雪には防寒具が点々と落ちていた。</p>
-        <dl><dt>科学</dt><dd>低体温症と「矛盾脱衣」（生理学・法医学）</dd><dt>出典</dt><dd>23件</dd></dl>
+        <p>一月の雪山。戻らなかった女性が、岩の隙間で見つかった。防寒具は周りの雪の上に点々と落ち、カメラには霧の中に立つ黒い人影が写っていた。</p>
+        <dl><dt>分野</dt><dd>生理学・法医学</dd><dt>監修</dt><dd><span class="sup full">しっかりお願いしたい</span></dd></dl>
+        <details class="spoiler"><summary>真相と科学（ネタばれ）</summary><p>ホワイトアウトで道を外れ、重い低体温症（凍死）に。末期に体が熱いと錯覚して服を自分で脱ぎ（矛盾脱衣）、岩の隙間へ這い込んだ（穴ごもり行動と考えられる）。霧の人影は自分の影（ブロッケン現象）、裂けた袖は岩の角によるもの。判定 ○。出典27件。</p></details>
       </article>
-    </div>
-    <p class="note" style="margin-top:14px">1事件あたり、手がかり40件以上・想定質問210〜360問を用意し、AIの判定精度を自動で測れるようにしています。</p>
-  </section>
-
-  <section aria-labelledby="s-own">
-    <p class="eyebrow">番組とのちがい</p>
-    <h2 id="s-own">番組の内容は使わず、すべて新しく作っています。</h2>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th scope="col">新しく作ったもの</th><th scope="col">番組から使っていないもの</th></tr></thead>
-        <tbody>
-          <tr><td>事件（問題）と真相・手がかり</td><td>番組の問題・出題文・真相</td></tr>
-          <tr><td>案内役「ホルマ」（白ウサギの剥製標本）と世界観</td><td>出演者・キャラクター・イラスト</td></tr>
-          <tr><td>イラスト・背景・漫画のコマ</td><td>ロゴ・サムネイル・動画の映像</td></tr>
-          <tr><td>BGM・効果音（すべて自作の合成音）</td><td>音声・楽曲</td></tr>
-          <tr><td>科学解説・確認テスト（公的機関や論文で裏付け）</td><td>番組内の解説</td></tr>
-        </tbody>
-      </table>
+      <article class="case">
+        <span class="no">CASE 08 · 難易度 ★★★ · 約40分</span>
+        <h3>白い花の夕餉</h3>
+        <span class="en">SUPPER OF WHITE FLOWERS</span>
+        <p>四月の終わり、山あいの古民家。摘みたての山菜の夕食のあと、植物画家の女性がその夜のうちに亡くなった。春の山ではよくある、山菜の採り違え——誰もがそう思った。</p>
+        <dl><dt>分野</dt><dd>毒性学・植物学・法医学</dd><dt>監修</dt><dd><span class="sup full">しっかりお願いしたい</span></dd></dl>
+        <details class="spoiler"><summary>真相と科学（ネタばれ）</summary><p>担当編集者が盛り付けのとき、彼女の小鉢にだけ刻んだトリカブトの若葉を混ぜた、採り違えの事故に見せかけた殺人。アコニチン類による致死性の不整脈。籠に毒草がないこと、毒が彼女の小鉢だけから出たこと、はさみの刃の成分などで故意と分かる。隣家の山菜名人はレッドヘリング。学べること：葉ではなく白い花を一本ずつ確かめる、迷ったら採らない・食べない、すぐ受診・吐かせない。判定 ○。出典33件。</p></details>
+      </article>
     </div>
   </section>
 
   <section aria-labelledby="s-science">
-    <p class="eyebrow">科学の裏付け</p>
-    <h2 id="s-science">3つとも「現実に起こりうる」ことを資料で確かめました。</h2>
-    <p>各事件の解説は、厚生労働省・消防庁・学会・大学・学術論文などの資料で裏付けを取り、出典を画面に載せています。さらに公開前の点検として、事件ごとに「筋書きが現実に起こりうるか」「解説の一文一文が正しいか」「専門家ならどこで反論するか」の3つの観点で調べ直し、見つかった点を直しました（2026年9月25日）。</p>
-    <div class="table-wrap">
-      <table class="verdicts">
-        <thead><tr><th scope="col">事件</th><th scope="col">判定</th><th scope="col">現実の裏づけ（主なもの）</th></tr></thead>
-        <tbody>
-          <tr><td>息のない部屋<br><span class="small">液体窒素による酸素欠乏</span></td><td class="mark">○</td><td>研究施設の小部屋で液体窒素の補充中に研究員が亡くなった国内の労働災害事例（厚生労働省）、北海道大学の低温実験室の事故（1992年）、韓国の大学院生の事故（2008年の論文）など、ほぼ同じ形の事故が記録されています。安全上の決まりが何重にも破られていることが条件です。</td></tr>
-          <tr><td>夕暮れの白球<br><span class="small">心臓震盪</span></td><td class="mark">○</td><td>国内でも、遊びの最中に逸れた軟式ボールで子どもが亡くなった例があります（日本臨床救急医学会誌の報告）。被害者の9割以上は男性で、18歳の女性は少数派ですが、十代の女性の例も報告されています。</td></tr>
-          <tr><td>雪に残されたもの<br><span class="small">低体温症（矛盾脱衣）</span></td><td class="mark">○</td><td>凍死の3割前後に服を自分で脱ぐ「矛盾脱衣」が見られるという法医学の研究があり、若く健康な登山者の例や、服を脱いでいたため事件と疑われた例も報告されています。</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="note">○＝起こりうるが、条件の重なりが必要。3つとも、資料だけでは決めきれない点が残っているため、専門家の方に確かめていただきたいと考えています。致死量や危険になるまでの時間など、まねできてしまう数値や手順は、ゲームにも本資料にも載せていません。</p>
-    <p><strong>番組の出題との重なり：</strong>公開されている公式の28問の正解を確かめたところ、3つの事件と同じ死因の回はありませんでした。ただ、CASE 01 は「冷却に使うガスが閉じた空間にたまる」という型が、#16「呪われた施設の大量死体」（ドライアイスの二酸化炭素）と近いです。仕組みは異なります（毒性のない窒素で酸素だけが減る）が、近すぎるとお感じになる場合は舞台や小道具を変えます。</p>
-    <h3 style="margin-top:22px">専門家に確認していただきたい点（全27問）</h3>
-    <p class="note">「はい／いいえ」か短いお答えで足りる形にしています。謎解きの設計や演出は範囲に含みません。</p>
+    <p class="eyebrow">科学の確認</p>
+    <h2 id="s-science">科学の確認で、先生に伺いたいこと</h2>
+    <p>各事件は、公的機関・学会・大学・論文の資料で裏付けを取り、「筋書きが現実に起こりうるか」「解説の一文一文が正しいか」「専門家ならどこで反論するか」の3つの観点で点検しました。人が亡くなる5件の判定は、どれも「○ 起こりうるが、条件の重なりが必要」です。下は、資料だけでは決めきれなかった点です。「はい／いいえ」か短いお答えで足りる形にしています。謎解きの設計や演出は範囲に含めていません。</p>
+    <p class="note">致死量、危険になるまでの時間や濃度、衝撃の速さ、毒の入手や加工など、まねできてしまう数値や手順は、ゲームにも本資料にも載せていません。</p>
+    <p><span class="warn">ネタばれを含みます</span></p>
     <div class="qs-wrap">
-<details><summary>CASE 01「息のない部屋」 液体窒素の気化による酸素欠乏症</summary><p class="syn">深夜、大学の研究者（女性）が、スマホに届いた液面低下の警報を受けて、一人で研究棟地下の試料保管室（窓なし、六畳ほど）へ行く。大型の供給容器からホースで保存タンクに補充する間、タンクに背を向けて細胞の箱を点検していた。タンクがあふれても、補充中にもともと出ている霧にまぎれて気づかない。夜間は排気が止まり、防火扉は自動で閉まり、酸素濃度計は電池切れ（残量低下の表示は出ていたが点検されていなかった）。強い息苦しさのないまま判断力を失い、扉の近くの棚にもたれて座り込み、亡くなる。約4時間後に警備員が発見する。</p><ol class="qs"><li><strong>あふれに気づかない理由</strong>: 補充中にもともと出ている霧にまぎれて、タンクに背を向けていた研究者が、あふれ始めに約20分気づかない。これは液体窒素を日常的に扱う人の感覚として自然でしょうか。あふれる前から、補充で気化する窒素（ホースの予冷など）で判断力が落ち始めていた、と考えるほうが自然でしょうか。</li><li><strong>息苦しさの書き方</strong>: 「息苦しさの合図は、体内の二酸化炭素が増えることにとても敏感に反応する。酸素がゆっくり減る場合、多くの人は息苦しさを訴える前に考える力が大きく落ちるか意識を失う。酸素が大きく下がれば、低い酸素そのものも強い息苦しさを生みうる」という説明は、一般向けとして正確でしょうか。</li><li><strong>発見した警備員が無事だったこと</strong>: 流れが止まって約3.5時間後、閉まっていた防火扉を開けて警備員が一歩踏み込み、声をかけるうちにめまいを覚え、すぐ引き返して回復した。扉のすき間からの自然な空気の入れ替わりを考えて、この状態は起こりうるでしょうか。</li><li><strong>凍傷がないこと</strong>: 約50分あふれ続けたとして、タンクから離れた扉の近くに座っていた遺体に、寒冷による傷害（死後のものを含む）が出ない、としてよいでしょうか。</li><li><strong>姿勢</strong>: 実例では床に倒れる例が多く見られます。「扉の近くの棚にもたれて座り込み、眠っているように見える」姿勢は自然でしょうか。</li><li><strong>発見時の色</strong>: 死後約4時間、冷えた部屋で座った姿勢の遺体に、唇と指先の「わずかな青紫色」を描いてよいでしょうか。本文では「窒息以外の死でも見られ、決め手にはならない」としています。死斑や寒さによる変化とは、どう見分けられますか。</li><li><strong>設備の現実性</strong>: 大学の地下の保管室で、夜間の省エネ運転により排気が完全に止まる運用や、大型の自加圧式供給容器の常置は、実在の施設で起こりうる範囲でしょうか（本文では「本来はそうしない」と明記しています）。液面の警報がスマホに届くのに、補充は手動で、上限で自動で止まる仕組みがない、という組み合わせは不自然ではないでしょうか。</li><li><strong>安全の決まり文句の言い換え</strong>: 「ひと呼吸で倒れる」を、生理学の知見に合わせて「ほんの数回の呼吸のうちに、警告らしい警告もないまま意識を失うことがある」に直しました。正確さと、安全教育としての強さの両面で問題ないでしょうか。</li></ol></details>
-<details><summary>CASE 02「夕暮れの白球」 心臓震盪</summary><p class="syn">8月の夕方（18時12分ごろ）、河川敷で、元ソフトボール部の捕手だった18歳の女性が、10歳の弟（少年野球の投手）の投球練習の相手をしている。夕日の逆光で最後の一球を見失い、軟式ボールが防具のない左胸に当たる。骨も折れないふつうの一球だが、心室細動が起きる。本人はボールを拾い、「大丈夫」と手を振った数秒後に倒れる。周りの大人は熱中症と思い込み、死戦期呼吸を「息がある」と受け取る。119番でも「息はしている」と答えたため口頭指導に至らず、胸骨圧迫もAEDもないまま、倒れて約14分後に救急隊が到着。まだ細かい心室細動が残っていたが、処置を続けても戻らなかった。</p><ol class="qs"><li><strong>救急隊到着時の心電図</strong>: 倒れて約14分、胸骨圧迫なしで、救急隊が着いたときにまだ細かい心室細動が残っていた、という描写は自然でしょうか（日本の全国登録では、この条件で15分時点の心室細動・心室頻拍は約14%）。心静止のほうが自然なら、その場合も心臓震盪と判断できるでしょうか。</li><li><strong>被害者の設定</strong>: 18歳の女性の胸に、小学5年生が投げた軟式ボール（J号）が当たって心臓震盪が起きる、という設定は不自然ではないでしょうか。大人に近い体格や乳房の組織で起こりにくくなる、という見方はありますか。</li><li><strong>119番の場面</strong>: 通報者が「熱中症のようだ、息はある」と伝え、呼吸の様子を訊かれても「息はしている」と答えたため、指令員も心停止だと気づかず、胸骨圧迫の口頭指導に至らなかった。現在の日本の指令の手順から見て、起こりうるでしょうか。指令員を責めない書き方として問題はないでしょうか。</li><li><strong>解剖所見</strong>: 約40分の胸骨圧迫と電気ショックのあとの18歳の解剖で、「処置の跡（圧迫・パッドの跡）はあるが、肋骨・胸骨の骨折も、心臓・肺の損傷もない」は自然でしょうか。ボールによる淡い丸い赤みは、処置の跡と見分けて残っているでしょうか。「ごく淡い皮下出血」と書くほうが現実的でしょうか。</li><li><strong>倒れる前後の様子</strong>: 当たってから倒れるまでの数秒に「目の前がすうっと暗くなった」（強い立ちくらみ）を描き、周りからは平気そうに見えた、としました。また、倒れたあとの全身のけいれんは描いていません。この二つは自然でしょうか。</li><li><strong>熱中症を否定する根拠</strong>: 「搬送先の病院で測った深部体温が平熱の範囲」としました。夏の夕方に30分ほど投球を受けたあと、30分以上の心停止と蘇生を経た時点の深部体温を「平熱の範囲」と書いてよいでしょうか。</li><li><strong>仕組みの説明の数値</strong>: 受攻期を「T波の頂上の少し手前（ブタの実験で約30〜15ミリ秒前、幅およそ15ミリ秒）」「心周期の約1%」と書きました。強さについては数値を出さず、「遅すぎる球では起きず、速すぎると骨や心臓そのものの損傷が目立つ。実際は、その競技や遊びでふつうの速さの球で起きることが多い」としました。一般向けに正確でしょうか。</li><li><strong>除外診断の書き方</strong>: 「解剖で心臓の病気や形の異常なし、高校1年の学校心臓検診（心電図）でも異常なし」としました。若い人の突然死で解剖所見が正常なとき、日本の実務では死後の遺伝子検査まで行うのが一般的でしょうか。また「胸骨・肋骨・心臓に構造的な損傷がないことは、米国の登録などで使われてきた判断基準の一つ」という書き方でよいでしょうか（近年の総説は、骨の損傷を条件に含めることに異論を示しています）。</li></ol></details>
-<details><summary>CASE 03「雪に残されたもの」 低体温症（矛盾脱衣を伴う）</summary><p class="syn">1月、34歳の山岳写真家（女性、健康、飲酒なし、冬山経験は豊富。ツェルトは持たず、保温シートは持っていた）が単独で稜線へ。午後に天候が急変してホワイトアウトになり、足首を捻挫して道を外れる。稜線で電話がつながらず、夕方には寒さでスマホの電源が落ちる。沢筋に迷い込み、気温−15℃前後・強風の中で夜を迎える。激しい震え、手がかじかむ、判断が鈍る、夜更けに震えが止まる。最後の十数メートルを、よろめき、最後は這いながら、帽子・手袋・上着を順に脱ぎ、雪から突き出た大岩の隙間に潜り込み、ほどなく意識を失う。明け方までに死亡（行動を止めてから約9〜11時間）。翌朝見つかり、薄着と散らばった防寒具から当初は事件が疑われる。</p><ol class="qs"><li><strong>服を脱ぎながらの移動</strong>: 震えが止まった段階（深部体温がおよそ32〜30℃）の人が、捻挫した足で十数メートル、よろめき、最後は這いながら、帽子→手袋→ファスナー付きの上着の順に脱ぐことは、生理的に無理がないでしょうか。図では矛盾脱衣の起きる体温を31℃（目安）の点で示していますが、帯で示すべきでしょうか。</li><li><strong>死亡までの時間</strong>: 上の条件（健康でしらふの34歳、−15℃前後、強風、汗と雪による湿り、朝から9時間以上の行動の疲れ、ツェルトなし、保温シート未使用）で、行動を止めてから約9〜11時間で亡くなる経過は自然でしょうか。ほかに明記すべき条件はありますか。</li><li><strong>「穴ごもり行動」と呼んでよいか</strong>: 屋外の吹雪のあと、岩の隙間へ自分から入った行動を「穴ごもり行動（terminal burrowing）と考えられる」と書いてよいでしょうか。風をよけるふつうの避難と、現場の所見（脱衣のあとに入った、這った跡など）で区別できるでしょうか。屋外での報告例をご存じでしたら教えてください。</li><li><strong>年齢としらふ</strong>: しらふで健康な34歳の女性に、矛盾脱衣とヴィシネフスキー斑（胃の粘膜の小さな出血斑）がそろうのは不自然ではないでしょうか。また、ヴィシネフスキー斑はケトン体の増加と関連するという剖検研究がありますが、所見に「血液中のケトン体がやや多かった」を足すべきでしょうか。</li><li><strong>震えが止まる理由の説明</strong>: 一般向けの説明で、「体の芯が冷えて、体温調節の働きや筋肉そのものが衰える」を主な理由にし、「血糖が大きく下がると早く止まることもある」を補足にしました。この比重でよいでしょうか。</li><li><strong>膝・肘の変色と指先の凍傷</strong>: 遺体は、亡くなってから発見（翌朝10時20分）まで数時間〜10時間ほど氷点下の屋外にありました。膝・肘の変色や指先の凍傷を、生前のものとして記載できるでしょうか。這ってできた膝の擦り傷とは、一般向けにどう書き分ければよいでしょうか。</li><li><strong>解剖の種類</strong>: 山中で薄着の遺体が見つかり、当初は事件が疑われた場合、日本の実務では司法解剖と調査法解剖のどちらが自然でしょうか。胃粘膜の所見、毒物検査、心臓と脳の検索までそろうのは妥当でしょうか。</li><li><strong>装備と通報</strong>: 冬山の単独日帰りで、ツェルトを持たず保温シートだけを持つ経験者は現実的でしょうか。稜線で負傷したあと電話がつながらず、夕方には寒さで電源が落ちた、という設定は、山岳救助の現場の感覚で自然でしょうか。</li></ol></details>
-<details><summary>3つに共通する質問</summary><ol class="qs"><li><strong>死亡推定時刻の示し方</strong>: c01（液体窒素で冷えたあと、ゆっくり温まった部屋。「入館記録などと合わせて午前2時前後」）と c03（氷点下の屋外。「雪がやんだあとの足跡と服が埋もれずに残っていたことから、深夜〜明け方」）の推定の書き方は、法医学的に妥当でしょうか。</li><li><strong>死因が判断される時点</strong>: ゲームは「死因の欄が空白のまま」という前提で始まります。現実には、c01 なら消防や警察が現場で早い段階に酸欠を疑うと考えてよいでしょうか。現実との違いを、ゲーム内で「ゲーム上の設定」と断ったほうがよいでしょうか。</li><li><strong>数値を書かない方針</strong>: 危険になる時間・濃度・速さなどの数値を本文から外しています。科学解説として必要な情報が欠けていないか、逆に、まだ書きすぎている箇所がないか、ご意見をいただけると助かります。</li></ol></details>
+<details><summary>CASE 01「たたみかけのタオル」 アナフィラキシー</summary><ol class="qs">
+<li><strong>筋書き</strong>: 局所の大きなはれだけの既往（全身症状なし）の67歳の女性が、約1年後のアシナガバチ1回の刺傷で致死的なアナフィラキシーになる。「まれだが起こりうる」という書き方でよいでしょうか（本文では「二度目に刺されたら必ず重くなるわけではない」と書いています）。</li>
+<li><strong>死後の顔のむくみ</strong>: 死後2時間半ほどの時点で、唇とまぶたのむくみは、発見した家族や救急隊に見て分かるでしょうか。じんましんは死後に目立たなくなると考え、その手がかりは「本人のスマホの検索記録」にしています。</li>
+<li><strong>解剖所見</strong>: 死因の判断の根拠を「のどの入り口のむくみ」「血液のトリプターゼの上昇」「刺し跡とハチ」「心臓・脳に病気なし」の組み合わせにしました。法医学の実務と合っているでしょうか。</li>
+<li><strong>時間の置き方</strong>: 刺されてから心停止まで十数分としました（本文には分数を書かず、「数分のうちに」「短いあいだ」までにしています）。無理はないでしょうか。</li>
+<li><strong>アシナガバチを選んだこと</strong>: 死亡例ではスズメバチが多いとされます。洗濯物にまぎれこむ身近さと、アナフィラキシーのきっかけとしてはアシナガバチが最多という集計から選びました。問題ないでしょうか。</li>
+<li><strong>応急の伝え方</strong>: 「あおむけに寝かせて足を高く」「急に座ったり立ったりしない」「119番」「処方された人はエピペンを使う」「洗濯物は取りこむ前にはたく」を覚えて帰る点にしました。一般向けとして過不足はないでしょうか。</li>
+</ol><p class="overlap"><strong>公式シリーズとの関係：</strong>アナフィラキシーを答えとする回が2つあります（#15 移植でうつったピーナッツアレルギー、#25 ラテックス・フルーツ症候群）。死因の系統は同じですが、きっかけ（ハチの毒）、謎の芯（一度目のひと刺しで体が毒を覚え、二度目に全身が反応する）、ミスディレクション（熱中症・心臓）、教える内容（応急の体位・119番）は別にしています。近すぎるとお感じになる場合は、ご指摘ください。</p></details>
+<details><summary>CASE 02〜04 入門の3件　監修が要るかどうか</summary><p class="syn">被害者は「もの」で、扱う科学は小中学校の理科や、公的機関・学会の一般向けページの範囲です。念のため人の目で見てほしい点は次の3つです。</p><ul class="qs">
+<li>CASE 02: 満タンのガラスびんで、口から氷の柱が押し出されつつ胴にもひびが入る（口の氷が先に固まって栓になり、残りが胴を押す、という説明）。</li>
+<li>CASE 03: 気温 −2℃の快晴の日なたで、黒い毛糸のマフラーが0℃をこえ、ふれた雪をとかす（数値は書いていません）。</li>
+<li>CASE 04: 7時間の乾燥と空気の中での切り戻しで、切り花がひと晩で首を曲げる（日本植物生理学会 Q&amp;A の「気泡による導管閉塞」に基づく）。</li>
+</ul><ol class="qs">
+<li><strong>監修の要否</strong>: この3件は、監修の対象から外してよいでしょうか。それとも、上の3点の読み合わせ程度を見ていただくのがよいでしょうか。</li>
+<li><strong>表示</strong>: 対象から外す場合、画面の「専門家確認前」の表示は、この3件だけ「制作側で出典を確認」などに変えてよいでしょうか。</li>
+</ol><p class="overlap"><strong>公式シリーズとの関係：</strong>ろうそくの炎（#26）、風船（#28）、閉じた空間での酸欠の型は、重ならないよう使っていません。</p></details>
+<details><summary>CASE 05「息のない部屋」 液体窒素の気化による酸素欠乏症</summary><p class="syn">深夜、大学の研究者（29歳の女性）が、スマホに届いた液面低下の警報を受けて、一人で地下の試料保管室（窓なし、六畳ほど）へ行く。大型の供給容器からホースで保存タンクに補充する間、タンクに背を向けて細胞の箱を点検していた。タンクがあふれても、補充中にもともと出ている霧にまぎれて気づかない。夜間は排気が止まり、防火扉は閉まっており、酸素濃度計は電池切れ。強い息苦しさのないまま判断力を失い、扉の近くの棚にもたれて座り込み、亡くなる。約4時間後に警備員が発見する。<br><span class="add">追加</span>他殺を疑わせる手がかり（もう一枚の入館カード、外された防火扉のストッパー、鳴らなかった酸素濃度計、前日の同僚との口論）を置き、証拠で晴らします。晴れたあとは「その夜、彼女が一人で作業した理由」につながります。</p><ol class="qs">
+<li><strong>あふれに気づかない理由</strong>: 補充中にもともと出ている霧にまぎれて、タンクに背を向けていた研究者が、あふれ始めに約20分気づかない。これは液体窒素を日常的に扱う人の感覚として自然でしょうか。あふれる前から、補充で気化する窒素（ホースの予冷など）で判断力が落ち始めていた、と考えるほうが自然でしょうか。</li>
+<li><strong>息苦しさの書き方</strong>: 「息苦しさの合図は、体内の二酸化炭素が増えることにとても敏感に反応する。酸素がゆっくり減る場合、多くの人は息苦しさを訴える前に考える力が大きく落ちるか意識を失う。酸素が大きく下がれば、低い酸素そのものも強い息苦しさを生みうる」という説明は、一般向けとして正確でしょうか。</li>
+<li><strong>発見した警備員が無事だったこと</strong>: 流れが止まって約3.5時間後、閉まっていた防火扉（昼間はストッパーで開けて使い、夜10時の巡回で閉める決まり）を開けて警備員が一歩踏み込み、声をかけるうちにめまいを覚え、すぐ引き返して回復した。扉のすき間からの自然な空気の入れ替わりを考えて、この状態は起こりうるでしょうか。</li>
+<li><strong>凍傷がないこと</strong>: 約50分あふれ続けたとして、タンクから離れた扉の近くに座っていた遺体に、寒冷による傷害（死後のものを含む）が出ない、としてよいでしょうか。</li>
+<li><strong>姿勢</strong>: 実例では床に倒れる例が多く見られます。「扉の近くの棚にもたれて座り込み、眠っているように見える」姿勢は自然でしょうか。</li>
+<li><strong>発見時の色</strong>: 死後約4時間、冷えた部屋で座った姿勢の遺体に、唇と指先の「わずかな青紫色」を描いてよいでしょうか。本文では「窒息以外の死でも見られ、決め手にはならない」としています。死斑や寒さによる変化とは、どう見分けられますか。</li>
+<li><strong>設備の現実性</strong>: 大学の地下の保管室で、夜間の省エネ運転により排気が完全に止まる運用や、大型の自加圧式供給容器の常置は、実在の施設で起こりうる範囲でしょうか（本文では「本来はそうしない」と明記しています）。液面の警報がスマホに届くのに、補充は手動で、上限で自動で止まる仕組みがない、という組み合わせは不自然ではないでしょうか。</li>
+<li><strong>安全の決まり文句の言い換え</strong>: 「ひと呼吸で倒れる」を、生理学の知見に合わせて「ほんの数回の呼吸のうちに、警告らしい警告もないまま意識を失うことがある」に直しました。正確さと、安全教育としての強さの両面で問題ないでしょうか。</li>
+<li><span class="add">追加</span><strong>夜間の補充の運用</strong>: 同じタンクを使う別の研究室の大学院生のスマホにも同じ警報が届き、夜中の補充はふだん二人で行っていた（その夜だけ一人で来た）、という設定は、大学の現場の運用として自然でしょうか。</li>
+<li><span class="add">追加</span><strong>「計器が黙っていた」ことの見方</strong>: 酸素濃度計が鳴らなかったのは細工ではない、とする根拠を「電池切れが近いという表示が何週間も前から出ていた」「電池は入ったままで、いじられた跡がない」「点検簿の欄が何か月も空欄」にしました。調べる側の見方として妥当でしょうか。</li>
+</ol><p class="overlap"><strong>公式シリーズとの関係：</strong>同じ死因の回はありませんが、型の近い回が2つあります。#16「呪われた施設の大量死体」（ドライアイスの二酸化炭素が止まったエレベーター内にたまる）と、#26 GENKI LABO 前編（閉じたコップの中で酸素が減り、ろうそくの炎が消える。解答者の「液体窒素で部屋が窒素に満ちて窒息」は不正解扱い）です。この事件の主題は「それ自体に毒のない窒素で酸素だけが減り、息苦しさが出にくいため危険に気づけない」ことで、二酸化炭素の回とは仕組みが違うと考えています。近すぎるとお感じになる場合は、舞台や小道具を変えます。</p></details>
+<details><summary>CASE 06「夕暮れの白球」 心臓震盪</summary><p class="syn">8月の夕方、河川敷で、元ソフトボール部の捕手だった18歳の女性が、10歳の弟（少年野球の投手）の投球練習の相手をしている。夕日の逆光で最後の一球を見失い、軟式ボールが防具のない左胸に当たる。心室細動が起き、「大丈夫」と手を振った数秒後に倒れる。周りの大人は熱中症と思い込み、死戦期呼吸を「息がある」と受け取る。119番でも「息はしている」と答えたため口頭指導に至らず、胸骨圧迫も AED もないまま、倒れて約14分後に救急隊が到着。まだ細かい心室細動が残っていたが、戻らなかった。<br><span class="add">追加</span>倒れる20分ほど前、弟の暴投で転びかけた自転車の男性が弟を怒鳴り、土手から見下ろしていた。胸には丸い痕がある。男性はコンビニの防犯カメラとレシートで晴れる。怒鳴られてしょげた弟に、彼女は「最後は、全力で」と声をかけ、その一球が胸に当たった。</p><ol class="qs">
+<li><strong>救急隊到着時の心電図</strong>: 倒れて約14分、胸骨圧迫なしで、救急隊が着いたときにまだ細かい心室細動が残っていた、という描写は自然でしょうか（日本の全国登録では、この条件で15分時点の心室細動・心室頻拍は約14%）。心静止のほうが自然なら、その場合も心臓震盪と判断できるでしょうか。</li>
+<li><strong>被害者の設定</strong>: 18歳の女性の胸に、小学5年生が投げた軟式ボール（J号）が当たって心臓震盪が起きる、という設定は不自然ではないでしょうか。<span class="add">追加</span>最後の一球は、弟が「全力で」投げたものにしました。大人に近い体格や乳房の組織で起こりにくくなる、という見方はありますか。</li>
+<li><strong>119番の場面</strong>: 通報者が「熱中症のようだ、息はある」と伝え、呼吸の様子を訊かれても「息はしている」と答えたため、指令員も心停止だと気づかず、胸骨圧迫の口頭指導に至らなかった。現在の日本の指令の手順から見て、起こりうるでしょうか。指令員を責めない書き方として問題はないでしょうか。</li>
+<li><strong>解剖所見</strong>: 約40分の胸骨圧迫と電気ショックのあとの18歳の解剖で、「処置の跡（圧迫・パッドの跡）はあるが、肋骨・胸骨の骨折も、心臓・肺の損傷もない」は自然でしょうか。ボールによる淡い丸い赤みは、処置の跡と見分けて残っているでしょうか。「ごく淡い皮下出血」と書くほうが現実的でしょうか。</li>
+<li><strong>倒れる前後の様子</strong>: 当たってから倒れるまでの数秒に「目の前がすうっと暗くなった」（強い立ちくらみ）を描き、周りからは平気そうに見えた、としました。また、倒れたあとの全身のけいれんは描いていません。この二つは自然でしょうか。</li>
+<li><strong>熱中症を否定する根拠</strong>: 「搬送先の病院で測った深部体温が平熱の範囲」としました。夏の夕方に30分ほど投球を受けたあと、30分以上の心停止と蘇生を経た時点の深部体温を「平熱の範囲」と書いてよいでしょうか。</li>
+<li><strong>仕組みの説明の数値</strong>: 受攻期を「T波の頂上の少し手前（ブタの実験で約30〜15ミリ秒前、幅およそ15ミリ秒）」「心周期の約1%」と書きました。強さについては数値を出さず、「遅すぎる球では起きず、速すぎると骨や心臓そのものの損傷が目立つ。実際は、その競技や遊びでふつうの速さの球で起きることが多い」としました。一般向けに正確でしょうか。</li>
+<li><strong>除外診断の書き方</strong>: 「解剖で心臓の病気や形の異常なし、高校1年の学校心臓検診（心電図）でも異常なし」としました。若い人の突然死で解剖所見が正常なとき、日本の実務では死後の遺伝子検査まで行うのが一般的でしょうか。また「胸骨・肋骨・心臓に構造的な損傷がないことは、米国の登録などで使われてきた判断基準の一つ」という書き方でよいでしょうか（近年の総説は、骨の損傷を条件に含めることに異論を示しています）。</li>
+<li><span class="add">追加</span><strong>胸の丸い痕で殴打を否定すること</strong>: 胸の淡い丸い痕の大きさと形が軟式ボールと一致することを、「こぶしで殴られたのではない」とする証拠の一つにしました（決め手は防犯カメラとレシート）。こぶしによる打撲と見分ける手がかりとして、無理はないでしょうか。</li>
+</ol><p class="overlap"><strong>公式シリーズとの関係：</strong>胸への打撃、スポーツ中の事故、不整脈、AED を扱った回は見当たりませんでした。</p></details>
+<details><summary>CASE 07「雪に残されたもの」 低体温症（矛盾脱衣・穴ごもり行動を伴う）</summary><p class="syn">1月、34歳の山岳写真家（女性、健康、飲酒なし、冬山経験は豊富。ツェルトは持たず、保温シートは持っていた）が単独で稜線へ。午後に天候が急変してホワイトアウトになり、足首を捻挫して道を外れる。稜線で電話がつながらず、夕方には寒さでスマホの電源が落ちる。沢筋に迷い込み、気温−15℃前後・強風の中で夜を迎える。夜更けに震えが止まり、最後の十数メートルを、よろめき、最後は這いながら、帽子・手袋・上着を順に脱ぎ、大岩の隙間に潜り込んで意識を失う。明け方までに死亡（行動を止めてから約9〜11時間）。薄着と散らばった防寒具から、当初は事件が疑われる。<br><span class="add">追加</span>カメラには、天候が崩れる少し前（13時半ごろ）に霧の中に立つ黒い人影（彼女自身の影が霧に映ったブロッケン現象）。フリースの袖はひじのあたりで裂けている（隙間へ這い込むとき、入り口の岩角で裂けた）。足跡は雪がやんだあとの彼女一人分。</p><ol class="qs">
+<li><strong>服を脱ぎながらの移動</strong>: 震えが止まった段階（深部体温がおよそ32〜30℃）の人が、捻挫した足で十数メートル、よろめき、最後は這いながら、帽子→手袋→ファスナー付きの上着の順に脱ぐことは、生理的に無理がないでしょうか。図では矛盾脱衣の起きる体温を31℃（目安）の点で示していますが、帯で示すべきでしょうか。</li>
+<li><strong>死亡までの時間</strong>: 上の条件（健康でしらふの34歳、−15℃前後、強風、汗と雪による湿り、朝から9時間以上の行動の疲れ、ツェルトなし、保温シート未使用）で、行動を止めてから約9〜11時間で亡くなる経過は自然でしょうか。ほかに明記すべき条件はありますか。</li>
+<li><strong>「穴ごもり行動」と呼んでよいか</strong>: 屋外の吹雪のあと、岩の隙間へ自分から入った行動を「穴ごもり行動（terminal burrowing）と考えられる」と書いてよいでしょうか。風をよけるふつうの避難と、現場の所見（脱衣のあとに入った、這った跡など）で区別できるでしょうか。屋外での報告例をご存じでしたら教えてください。</li>
+<li><strong>年齢としらふ</strong>: しらふで健康な34歳の女性に、矛盾脱衣とヴィシネフスキー斑（胃の粘膜の小さな出血斑）がそろうのは不自然ではないでしょうか。また、ヴィシネフスキー斑はケトン体の増加と関連するという剖検研究がありますが、所見に「血液中のケトン体がやや多かった」を足すべきでしょうか。</li>
+<li><strong>震えが止まる理由の説明</strong>: 一般向けの説明で、「体の芯が冷えて、体温調節の働きや筋肉そのものが衰える」を主な理由にし、「血糖が大きく下がると早く止まることもある」を補足にしました。この比重でよいでしょうか。</li>
+<li><strong>膝・肘の変色と指先の凍傷</strong>: 遺体は、亡くなってから発見（翌朝10時20分）まで数時間〜10時間ほど氷点下の屋外にありました。膝・肘の変色や指先の凍傷を、生前のものとして記載できるでしょうか。這ってできた膝の擦り傷とは、一般向けにどう書き分ければよいでしょうか。</li>
+<li><strong>解剖の種類</strong>: 山中で薄着の遺体が見つかり、当初は事件が疑われた場合、日本の実務では司法解剖と調査法解剖のどちらが自然でしょうか。胃粘膜の所見、毒物検査、心臓と脳の検索までそろうのは妥当でしょうか。</li>
+<li><strong>装備と通報</strong>: 冬山の単独日帰りで、ツェルトを持たず保温シートだけを持つ経験者は現実的でしょうか。稜線で負傷したあと電話がつながらず、夕方には寒さで電源が落ちた、という設定は、山岳救助の現場の感覚で自然でしょうか。</li>
+<li><span class="add">追加</span><strong>霧の中の人影（ブロッケン現象）</strong>: 1月の13時半ごろ、稜線の上で、眼下に霧があり背後から日が差したときに、自分の影と光の輪が霧に映ることは現実的でしょうか。「カメラを構えた本人と同じ姿勢の人影が、太陽のちょうど反対側に出ている」ことを、他人ではない根拠にしています。その直後に霧が濃くなり、吹雪に変わる時間の並びに無理はないでしょうか。</li>
+<li><span class="add">追加</span><strong>裂けた袖</strong>: 岩の隙間の入り口の岩角に同じ色の繊維が残り、擦り傷は手のひら・ひじ・膝（這うときに触れる所）だけ、つかまれた跡や防御創はない——この組み合わせで「争った跡ではない」と判断するのは、法医学の見方として妥当でしょうか。</li>
+</ol><p class="overlap"><strong>公式シリーズとの関係：</strong>寒さ、雪山、低体温症、服を脱いだ遺体を扱った回は見当たりませんでした。</p></details>
+<details><summary>CASE 08「白い花の夕餉」 トリカブト中毒（採り違えに見せかけた殺人）</summary><p class="syn">四月の終わり、山あいの古民家で、植物画家の女性（38歳）が毎年の春の夕食会を開く。朝、彼女は沢で白い花を確かめながらニリンソウを摘んだ。夕食の直前、担当編集者が一人で台所に立っておひたしを小鉢に盛り付け、彼女の小鉢にだけ、刻んだトリカブトの若葉を混ぜた（動機は、原画を無断で売っていたことに気づかれかけたこと。手口の細部は書いていません）。食後まもなく口と手足のしびれ、嘔吐、脈の乱れが出て、友人がすぐ通報し、残った料理を保管した。病院で治療を受けたが、致死的な不整脈から回復せず、その夜のうちに亡くなる。籠と残りの山菜に毒草がないこと、毒が彼女の小鉢だけから出たこと、上流の刃物の切り口、借りた園芸ばさみの刃の成分、盛り付けと証言の食い違いが重なって、故意と分かる。</p><ol class="qs">
+<li><strong>ナトリウムチャネルの説明</strong>: 「門を開きやすく、閉じにくくする（開きっぱなしに近い）」＋「一部のアルカロイドは逆に遮断する（単純化した説明）」という書き方は、一般向けとして適切でしょうか。</li>
+<li><strong>気づかれずに食べる設定</strong>: ゆでたニリンソウのおひたしに、刻んだトリカブトの若葉が混ざっていた場合、食べる人は見た目・味・食感で気づきにくい、としてよいでしょうか（混ぜ方は書いていません）。</li>
+<li><strong>捜査の描写</strong>: 小鉢の残りの葉のかけらを形と DNA でトリカブトと確かめる、園芸ばさみの刃から同じ成分が見つかる、という描写は現実的でしょうか。</li>
+<li><strong>喫食調査の考え方</strong>: 「同じ鍋のおひたしを食べた3人のうち1人だけに症状、鍋の残りと手つかずの小鉢は陰性、彼女の小鉢だけ陽性」から「取り分けたあとで一つの器に加えられた」と考える流れは、食中毒調査の考え方として妥当でしょうか（偶然一つの器にだけ入った可能性は本文でも認め、ほかの手がかりと合わせて結論にしています）。</li>
+<li><strong>経過の書き方</strong>: 症状の出方は「食後まもなく」、亡くなったのは「その夜のうちに」とだけ書き、分数や時間は書いていません。科学解説として足りているでしょうか。逆に、書きすぎている箇所はありますか。</li>
+<li><strong>見分け方の図</strong>: 葉柄の中空・中実、葉のつき方、根の形まで載せ、結びで「葉だけで見分けようとしない。白い花を一本ずつ確かめて摘み、迷ったら採らない・食べない」と書いています。「見分けられる」と誤解させないために、削ったほうがよい項目はありますか。</li>
+<li><strong>内容の注意書き</strong>: いまは「推理の中で、事故・事件・他者による加害の可能性に触れます」です。「殺人を含む」とはっきり書くべきでしょうか（書くと推理の答えが最初から分かってしまいます）。</li>
+<li><strong>中毒110番の番号</strong>を科学解説とメモに載せています。載せ方として問題はないでしょうか。</li>
+<li><strong>実在の事件・事故との近さ</strong>: 英国の事件（2009年、食べ物にアコニットを混ぜた殺人）や、今年の北海道・青森の採り違えの事故に近すぎると感じる点はありますか（今年の事故は本文の例には使っていません）。</li>
+<li><strong>初めての殺人事件のトーン</strong>: 犯人の動機と手口の書き方（細部は書かない）は、トーンとして問題ないでしょうか。</li>
+</ol><p class="overlap"><strong>公式シリーズとの関係：</strong>公開されている28問の正解に、トリカブト、山菜の採り違え、毒を混ぜた殺人の回はありません。植物が関わる回は #18（触れると激しく痛む植物）と #24（アボカドの成分。被害者は鳥）で、仕組みも筋も別です。</p></details>
+<details><summary>すべての事件に共通する質問</summary><ol class="qs">
+<li><strong>死亡推定時刻の示し方</strong>: CASE 05（液体窒素で冷えたあと、ゆっくり温まった部屋。「入館記録などと合わせて午前2時前後」）と CASE 07（氷点下の屋外。「雪がやんだあとの足跡と服が埋もれずに残っていたことから、深夜〜明け方」）の推定の書き方は、法医学的に妥当でしょうか。</li>
+<li><strong>死因が判断される時点</strong>: ゲームは「死因の欄が空白のまま」という前提で始まります。現実には、CASE 05 なら消防や警察が現場で早い段階に酸欠を疑うと考えてよいでしょうか。現実との違いを、ゲーム内で「ゲーム上の設定」と断ったほうがよいでしょうか。</li>
+<li><strong>数値を書かない方針</strong>: 危険になる時間・濃度・速さ・量などの数値を本文から外しています。科学解説として必要な情報が欠けていないか、逆に、まだ書きすぎている箇所がないか、ご意見をいただけると助かります。</li>
+</ol></details>
     </div>
-    <p class="note">ゲームの画面には、確認が済むまで「専門家による確認前の下書き」と表示しています。</p>
-  </section>
-
-  <section aria-labelledby="s-options">
-    <p class="eyebrow">公開のかたち（ご提案）</p>
-    <h2 id="s-options">薬理凶室さんの方針に合わせます。</h2>
-    <div class="options">
-      <div class="option"><h3>無料で公開</h3><p>画面とページに原案として薬理凶室さん・番組へのリンクと表記を入れます。</p></div>
-      <div class="option"><h3>有料版にして収益を分配</h3><p>配分や価格は、ご相談のうえで決めさせてください。</p></div>
-      <div class="option"><h3>公式の企画として使う</h3><p>動画・配信・イベントなどで、自由に使っていただけます。</p></div>
-    </div>
-    <p class="note" style="margin-top:14px">番組の名称は使わず、『リトマス審問』として公開します。</p>
-  </section>
-
-  <section aria-labelledby="s-merit">
-    <p class="eyebrow">お役に立てそうなこと</p>
-    <h2 id="s-merit">番組の外でも、死因推理を自分で遊べる場所に。</h2>
-    <ul class="points">
-      <li><strong>話題づくり：</strong>動画や配信で「視聴者が実際に遊べる死因推理」として紹介していただけます。出演者の方に遊んでいただく企画にも使えます。</li>
-      <li><strong>番組の問題のゲーム化：</strong>事件データを差し替えるだけで新しい事件を追加できるため、過去の出題をゲームとして遊べる形にすることもできます。</li>
-      <li><strong>ファンクラブ・イベント：</strong>会員限定の事件や、イベント会場での展示・体験にも使えます。</li>
-      <li><strong>チャンネルへの入り口：</strong>遊び終わった人が科学を学んで帰る構成なので、解説の最後からチャンネルへ案内できます。</li>
-    </ul>
-  </section>
-
-  <section aria-labelledby="s-next">
-    <p class="eyebrow">今後のアップデート</p>
-    <h2 id="s-next">これは試作版です。ご要望をできる限り反映します。</h2>
-    <p>現在の版はプロトタイプで、今後も改良を続けていく予定です。いま考えているのは次のようなものです。</p>
-    <ul class="points">
-      <li><strong>難易度の選択：</strong>最後の死因宣告を、「かんたん」は選択式、「ふつう」は穴埋め（虫食い）式、「むずかしい」は今の自由記述、と選べるようにします。専門知識のないお子さんでも、最後まで楽しめるようにしたいと考えています。</li>
-      <li><strong>チュートリアル：</strong>はじめての方が、遊びながら操作と進め方を覚えられるようにします。</li>
-      <li><strong>審問パートの見直し：</strong>記憶の誤差に所見を当てて正す「反証」を、「解くと死因宣告が有利になる」任意の挑戦にし、答えが分かっている人がそこで足止めされないようにします。</li>
-      <li><strong>事件の追加：</strong>新しい事件を順次増やしていきます。</li>
-    </ul>
-    <p>薬理凶室さんから「こんな機能があると面白い」「こういう形で使いたい」といったご要望があれば、できる限り反映させていただきます。薬理凶室さんにとっても良いコンテンツになれば、とても嬉しいです。</p>
+    <p class="note">公式シリーズとの重なりは、2026年9月25日時点で公開が確認できた28問の字幕で正解を確かめたものです。会員向けの動画や生配信は確かめられていません。事件ごとの科学の点検（出典つき）は、別の資料としてお送りします。</p>
   </section>
 
   <section aria-labelledby="s-ask">
     <p class="eyebrow">ご相談したいこと</p>
     <h2 id="s-ask">3つのご相談</h2>
-    <div class="ask">
-      <h3>ご相談内容</h3>
-      <ol>
-        <li><strong>科学解説の監修</strong> — 3つの事件の設定が実際に起こりうるか、解説の内容が正しいかのご確認（業務としてのご依頼）。</li>
-        <li><strong>名称（ご報告）</strong> — 「ジェーンドゥの死因」は使わず、『リトマス審問』に変更しました。作中で遺体を「ジェーン・ドゥ」と呼んでいる部分も変えたほうがよいか、ご意見をいただけると助かります。</li>
-        <li><strong>公開のかたち</strong> — 無料公開・収益分配・公式企画など、方針のご確認。</li>
-      </ol>
-      <p class="note" style="margin-top:12px">公開の目標: 2026年10月ごろ（ご確認いただけ次第。急ぎません）<br>監修の予算の目安: 3事件で10万円（税別）程度を想定しています。ご提示の料金に合わせます。<br>今回は最初の3事件について監修をお願いしたく、今後追加する事件については、まとめてのご依頼や収益からのお支払いなど、進め方をご相談させてください。</p>
+    <div class="asks">
+      <div class="ask">
+        <h3><span class="n">01</span>監修の範囲（どの事件を見ていただくか）</h3>
+        <p>制作側の案は次のとおりです。先生のお考えを伺えると助かります。</p>
+        <div class="table-wrap">
+          <table class="stack">
+            <thead><tr><th scope="col">事件</th><th scope="col">案</th><th scope="col">理由</th></tr></thead>
+            <tbody>
+              <tr><td data-k="事件">CASE 01・05・06・07・08</td><td data-k="案">しっかり見ていただきたい</td><td data-k="理由">人が亡くなる事件で、医学・法医学の説明が中心</td></tr>
+              <tr><td data-k="事件">CASE 02・03・04</td><td data-k="案">軽く目を通していただく、または対象外</td><td data-k="理由">被害者は「もの」。身近な物理・植物の科学で、小中学校の理科の範囲</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note" style="margin-top:12px">お願いしたいのは「書かれたとおりに現実に起こりうるか」と「解説・クイズ・よくある誤解の説明が正しいか」の2点です。謎解きの設計や演出は含みません。</p>
+      </div>
+
+      <div class="ask">
+        <h3><span class="n">02</span>監修の費用の考え方</h3>
+        <p>先生のご提示の料金に合わせます。進め方として、たとえば次のような形を考えています。どれがよいか、または別の形がよいか、ご意向を伺えると助かります。</p>
+        <div class="options">
+          <div class="option"><h4>事件ごとにお支払い</h4><p>1事件ずつ、先生のご提示の料金でお願いします。</p><!-- 金額: 持ち主が決める --></div>
+          <div class="option"><h4>まとめてお支払い</h4><p>今回の事件をまとめて、一括でお願いします。今後の追加分も同じ形で。</p><!-- 金額: 持ち主が決める --></div>
+          <div class="option"><h4>一部を収益から</h4><p>一部をゲームの収益からお支払いする形（収益の分配）。有料にする場合の案です。</p><!-- 金額: 持ち主が決める --></div>
+        </div>
+        <p class="note">今後も事件を増やしていく予定なので、追加する事件の監修の進め方も、あわせてご相談させてください。</p>
+      </div>
+
+      <div class="ask">
+        <h3><span class="n">03</span>公開のかたち</h3>
+        <p>薬理凶室さんの方針に合わせます。考えられる形は次のようなものです。</p>
+        <ul class="points">
+          <li>無料で公開（画面とページに監修者として先生のお名前と、薬理凶室さんへのリンクを入れる）</li>
+          <li>有料版にする、または一部の事件を有料にして、収益を分配する</li>
+          <li>ファンクラブ会員限定の事件や、イベントでの体験・配信での利用など、薬理凶室さんの企画として使っていただく</li>
+        </ul>
+        <p class="note">正式な公開は10月ごろを目標にしていますが、急ぎません。ご確認いただけ次第で進めます。</p>
+      </div>
+
+      <div class="smallq">
+        <h3>あわせて、小さな確認が2つあります</h3>
+        <ol>
+          <li><strong>作中の呼び名：</strong>題名は変えましたが、作中では今も、名前を失った死者を「ジェーン・ドゥ」と呼んでいます（「ジェーン・ドゥ #01」など）。このまま使ってもよいでしょうか。別の呼び名がよければ変えます。</li>
+          <li><strong>イラストレーターへの伝え方：</strong>イラストの依頼のときに、「くられ先生監修（予定）」のゲームだとお伝えしてもよいでしょうか。</li>
+        </ol>
+      </div>
     </div>
   </section>
 
-  <section aria-labelledby="s-contact" class="contact">
+  <section aria-labelledby="s-play" class="contact">
     <p class="eyebrow">試遊・連絡先</p>
-    <h2 id="s-contact">実際に遊んでいただけます</h2>
-    <p>確認用URL（検索エンジンに載らない設定です）：<br><a class="url" href="https://janedoe-mauve.vercel.app/">https://janedoe-mauve.vercel.app/</a></p>
+    <h2 id="s-play">遊んでいただける場所</h2>
+    <p><strong>AI 判定版（おすすめ）：</strong><br><a class="url" href="https://litmus.fourthplace43.com/">https://litmus.fourthplace43.com/</a><br><span class="note">自由な言い回しの質問を AI が判定します。オンライン対戦もこちらで遊べます。検索エンジンには載らない設定です。</span></p>
+    <p class="note">以前お伝えした Vercel の URL は、4事件のころの古い版のまま残しています。新しい URL に移っていただいたあと、止める予定です。遊んだ記録は、別のサイトなので引き継がれません（お手数ですが、最初からになります）。</p>
+    <h3 style="margin-top:22px">おすすめの遊び方</h3>
+    <ol class="route">
+      <li><strong>CASE 01「たたみかけのタオル」</strong>を難易度「審問官」で（約15分）。操作の説明も、遊びながら出ます。</li>
+      <li><strong>CASE 08「白い花の夕餉」</strong>（殺人事件）を「審問官」で（約30分）。ミスディレクション、質問枠、犯人の名指しをご覧いただけます。</li>
+      <li>よろしければ、どなたかと<strong>オンライン対戦</strong>も。タイトル画面の「対戦」で部屋を作り、6文字のコードを相手に伝えると始められます。</li>
+    </ol>
+    <h3 style="margin-top:22px">連絡先</h3>
     <p>一般社団法人フォースプレイス　代表　四ヶ所伸一（ヨンサン）<br>
       HP：<a class="url" href="https://fourthplace43.com/">https://fourthplace43.com/</a><br>
       X：<a class="url" href="https://x.com/yonsan434343">https://x.com/yonsan434343</a></p>
@@ -330,5 +529,7 @@
 </main>
 
 <footer>
-  <div class="wrap">本資料と試作ゲームに登場する事件・人物はすべて架空です。ゲーム内の解説は医療上の助言ではありません。</div>
+  <div class="wrap">本資料と試作ゲームに登場する事件・人物はすべて架空です。ゲーム内の解説は医療上の助言ではありません。このページは、くられ先生にお送りするためのものです。</div>
 </footer>
+</body>
+</html>

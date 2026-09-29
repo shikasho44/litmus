@@ -36,7 +36,7 @@ describe('regression sets', () => {
   it('exist for every case', () => {
     expect(sets.map((s) => s.caseId).sort()).toEqual([
       'c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper',
-      'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-rose-that-bowed',
+      'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-rose-that-bowed', 'c08-half-folded-towel',
     ]);
   });
 });

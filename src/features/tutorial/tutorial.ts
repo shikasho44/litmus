@@ -33,7 +33,8 @@ export const tutorial = computed<TutorialState>(() => saveData.value.meta.tutori
 
 /**
  * The tutorial case is CASE 01 by its display number (case.json `number`), not by its id: since
- * 2026-09-28 the three short intro cases come first (c05… are CASE 01–03, c01–c04 moved to 04–07).
+ * 2026-09-28 the three short intro cases came first; since 2026-09-29 c08 (a person, short) is CASE 01, then c05–c07
+ * (02–04) and c01–c04 (05–08).
  */
 const isFirstCase = (caseId: string | undefined) => !!caseId && caseList.value?.find((c) => c.id === caseId)?.number === 1;
 

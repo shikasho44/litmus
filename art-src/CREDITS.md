@@ -180,4 +180,33 @@ was inpainted (OpenCV Telea) from its surroundings. No reference images; no peop
 `art-src/bg/c07-bg.png` (x 330–957: the lace-curtained window, the table and two chairs), resized to
 1024x1536, webp q88.
 
-Generation count (whole project): batch 1 = 12, batch 2 = 17, batch 3 = 7, batch 4 = 18 + 9 retakes, c07 bg rework = 1. Total 64.
+
+## CASE 01 human tutorial case (batch 5, 2026-09-29)
+
+The new CASE 01「たたみかけのタオル」(c08): a 62-year-old woman stung by a paper wasp hidden in a bath
+towel, a year after an earlier sting (anaphylaxis). Seven images from ONE `batch_imagegen.py` launch
+(codex-imagegen skill; session `01a0eaa1-e97f-7fe0-8fd3-244b0005710a`, 16 round trips, weekly quota
+21.0% → 21.0%). Prompts: `scripts/art/jobs_batch5.py` (its own quieter `STYLE_C08` / `panel_style()` on
+the shared `NEGATIVE` / `PANEL_NEGATIVE` of `style.py`); jobs `art-src/jobs/batch5-c08.json`; full prompts
+and validation in `art-src/manifest.json`. Spot colour: late-summer tangerine #FF8A3D. The victim is shown
+alive only (the portrait; in the panels from behind or as hands), never lying down; the husband is a
+featureless silhouette. No existing works or artists are named; no reference images were used.
+
+Checked by eye. One retake: the portrait (take 1 put the head too high and left of the bust shard mask,
+x 72–228 / y 52–270 of the 300×400 box). Retake with exact framing numbers in one launch of 1 (session
+`01a0eaaf-6519-7fa3-9cf7-88f54ade3f69`, weekly quota 21.0% → 22.0%); Codex generated it but did not save it
+to its path, so it was taken from its `generated_images` folder (the only image of that session) and
+checked by eye. Take 1 is `art-src/rejected/c08-portrait.take1.png`. The background came back at
+1672×941 and is resized to 1920×1080 by `export_art.py` like the others.
+
+| File | Prompt summary |
+|---|---|
+| `cases/c08/bg.webp` | The second-floor tatami room on a hot early-September afternoon: open glass doors to a balcony with laundry on a pole, a laundry basket, folded towels and one half-folded bath towel, barley tea, a phone face down, air-conditioner and fan. No person, no insect. |
+| `cases/c08/portrait.webp` | Chest-up portrait: a 62-year-old Japanese woman with short grey-streaked hair and laugh lines, pale linen blouse, warm smile; dark navy ground, tangerine rim light. Alive and healthy. |
+| c08 p1 | The summer before: a woman in a straw hat, from behind, holds up her right hand — its back and wrist swollen (tangerine); a paper wasp flies off. |
+| c08 p2 | The balcony: a paper wasp (tangerine) crawls into the fold of a hanging bath towel; a small nest under the eaves. No person. |
+| c08 p3 | Over the shoulder: she gathers the towel off the pole; a tiny tangerine flash of a sting at the wrist; a half-full basket. |
+| c08 p4 | The cool tatami room: she sits among the laundry from behind, a hand at her collar, a phone in the other; tangerine hives on the hand and a dizzy ripple around her head. Upright and alive. |
+| c08 p5 | Evening: the half-folded towel (tangerine) on the tatami beside the basket; a black backlit silhouette of a man at the doorway. Nobody lying anywhere. |
+
+Generation count (whole project): batch 1 = 12, batch 2 = 17, batch 3 = 7, batch 4 = 18 + 9 retakes, c07 bg rework = 1, batch 5 = 7 + 1 retake. Total 72.

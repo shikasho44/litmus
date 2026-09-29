@@ -1,6 +1,6 @@
 {
   "id": "c03-shed-in-snow",
-  "number": 6,
+  "number": 7,
   "title": "雪に残されたもの",
   "titleEn": "WHAT WAS LEFT IN THE SNOW",
   "difficulty": 3,
@@ -31,7 +31,7 @@
     "starterQuestions": ["現場にほかの人の足跡はありましたか？", "何か盗まれていましたか？", "その日の天気は悪かったですか？", "服は破れていましたか？", "けがをしていましたか？"]
   },
   "victim": {
-    "codename": "ジェーン・ドゥ #06",
+    "codename": "ジェーン・ドゥ #07",
     "name": "椎名 遥",
     "nameKana": "しいな はるか",
     "age": 34,

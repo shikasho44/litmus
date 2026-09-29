@@ -2,7 +2,7 @@
 // in a real browser, against the dev API in rules mode.
 //
 //   npm run qa                      CASE 01 full flow at 1440x900 + mint-token smoke of the other cases
-//                                   (CASE 01 = the case whose `number` is 1: c05 since 2026-09-28; c01 is CASE 04)
+//                                   (CASE 01 = the case whose `number` is 1: c08 since 2026-09-29; c05 is CASE 02, c01 is CASE 05)
 //   npm run qa:mobile               the same at 390x844 (touch, DPR 2)
 //   node scripts/qa.mjs --case c02  full flow for another case (id or prefix; 'all' = every case, in number order)
 //   node scripts/qa.mjs --no-smoke  full flow only          --smoke-only   smoke runs only
@@ -20,7 +20,8 @@
 // Smoke (other cases): files → difficulty → intro (skip) → 3 questions, then a dev-minted
 // 'investigated' token (POST /api/admin/mint-token) → inquest → endings → files rank.
 // Difficulty per case (every verdict format runs in the default `npm run qa`):
-//   c05 審問官 (cloze) · c06 見習い (choice) · c07 教授 (free) — the intro cases CASE 01–03 —
+//   c08 審問官 (cloze) — CASE 01, the tutorial —
+//   c05 審問官 (cloze) · c06 見習い (choice) · c07 教授 (free) — the intro cases CASE 02–04 —
 //   c01 審問官 (cloze) · c02 見習い (choice, noise break skipped after round 1) · c03 教授 (free) · c04 審問官 (cloze).
 // Game over: 審問官 on the last light → the case restarts (new token, other cases untouched);
 // 見習い on the last light → back to the start of the inquest with the lights refilled.
@@ -73,7 +74,7 @@ if (!SMOKE_ONLY && !FULL.length) {
 const SMOKES = SMOKE ? CASES.filter((c) => !FULL.includes(c)) : [];
 
 /** Difficulty per case (VERDICT_MODE_BY_DIFFICULTY: easy choice · normal cloze · hard free). */
-const LEVEL = { c01: 'normal', c02: 'easy', c03: 'hard', c04: 'normal', c05: 'normal', c06: 'easy', c07: 'hard' };
+const LEVEL = { c01: 'normal', c02: 'easy', c03: 'hard', c04: 'normal', c05: 'normal', c06: 'easy', c07: 'hard', c08: 'normal' };
 const MODE = { easy: 'choice', normal: 'cloze', hard: 'free' };
 const LIVES = { easy: 10, normal: 3, hard: 3 };
 /** Smoke runs that skip the rest of the noise break after this many rounds. */
@@ -89,6 +90,7 @@ const INCOMPLETE = {
   c05: '牛乳が凍ったから割れた。',
   c06: '日光で雪だるまがとけた。',
   c07: '水が足りなくてしおれた。',
+  c08: 'ハチに刺されて倒れた。',
 };
 
 /**

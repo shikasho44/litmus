@@ -33,7 +33,7 @@ const CASES = Object.fromEntries(
     .filter((d) => /^c\d\d/.test(d))
     .map((dir) => [dir.slice(0, 3), JSON.parse(readFileSync(resolve(root, 'content', 'cases', dir, 'case.json'), 'utf8'))]),
 );
-/** The tutorial case: CASE 01 by its display number (c05 since 2026-09-28), whatever its id. */
+/** The tutorial case: CASE 01 by its display number (c08 since 2026-09-29; c05 before), whatever its id. */
 const FIRST_ID = Object.values(CASES).find((c) => c.number === 1)?.id;
 const SIZES = {
   pc: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },

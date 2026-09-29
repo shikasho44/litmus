@@ -41,22 +41,35 @@ const HOLMA_VOICE = /ですねェ|ですとも|ございま|クックック|ク�
 const KEIGO = /(?:です|ます|でした|ました|ません|でしょう)(?=[。、…！？」』]|$)/u;
 
 describe('content rules', () => {
-  it('loads all seven cases', () => {
+  it('loads all eight cases', () => {
     expect(cases.map((c) => c.id).sort()).toEqual([
       'c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper',
-      'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-rose-that-bowed',
+      'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-rose-that-bowed', 'c08-half-folded-towel',
     ]);
   });
 
-  it('opens with the three short intro cases (CASE 01–03), then the four full cases (04–07)', () => {
+  it('opens with the short human tutorial case (CASE 01), then the three intro cases (02–04), then the four full cases (05–08)', () => {
     const byNumber = [...cases].sort((a, b) => a.number - b.number);
-    expect(byNumber.map((c) => c.number)).toEqual([1, 2, 3, 4, 5, 6, 7]);
-    expect(byNumber.slice(0, 3).map((c) => c.id)).toEqual(['c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-rose-that-bowed']);
-    for (const c of byNumber.slice(0, 3)) {
+    expect(byNumber.map((c) => c.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(byNumber.map((c) => c.id)).toEqual([
+      'c08-half-folded-towel',
+      'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-rose-that-bowed',
+      'c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper',
+    ]);
+    // the codename follows the display number (「ジェーン・ドゥ #01」 is CASE 01)
+    for (const c of byNumber) expect(c.victim.codename, c.id).toBe(`ジェーン・ドゥ #${String(c.number).padStart(2, '0')}`);
+    for (const c of byNumber.slice(0, 4)) {
       expect(c.difficulty, c.id).toBe(1);
       expect(c.estimatedMinutes, c.id).toBeLessThanOrEqual(15);
       expect(c.debate, c.id).toHaveLength(1);
-      // an object soul: its own shard mask and profile rows, no human wording in the science chain.
+    }
+    // CASE 01 (the tutorial, 2026-09-29) is a person: the default bust mask, age and occupation
+    const first = byNumber[0];
+    expect(first.victim.silhouette, first.id).toBeUndefined();
+    expect(first.victim.profile, first.id).toBeUndefined();
+    expect(first.science.chain.map((x) => x.stage), first.id).toContain('人体への影響');
+    for (const c of byNumber.slice(1, 4)) {
+      // an object soul: its own shard mask and profile rows, no human wording in the science chain
       // c07 hides what she is until the verdict (2026-09-29): a shapeless mask instead of the rose.
       if (c.id === 'c07-rose-that-bowed') expect(c.victim.silhouette, c.id).toBe('none');
       else expect(c.victim.silhouette, c.id).toMatch(/^M/);

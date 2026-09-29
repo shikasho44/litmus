@@ -50,6 +50,8 @@ BG_MAP = {
     "c05-bg": PUBLIC / "cases" / "c05" / "bg.webp",
     "c06-bg": PUBLIC / "cases" / "c06" / "bg.webp",
     "c07-bg": PUBLIC / "cases" / "c07" / "bg.webp",
+    # 2026-09-29: c08 is the new CASE 01 (the tutorial); the intro cases moved to CASE 02-04
+    "c08-bg": PUBLIC / "cases" / "c08" / "bg.webp",
 }
 
 
@@ -160,7 +162,7 @@ def export_holma(check_face: bool = False) -> None:
 
 def export_portraits() -> None:
     print("portraits")
-    for cid in ("c01", "c02", "c03", "c04", "c05", "c06", "c07"):
+    for cid in ("c01", "c02", "c03", "c04", "c05", "c06", "c07", "c08"):
         src = ART_SRC / "portraits" / f"{cid}-portrait.png"
         if not src.exists():
             print(f"  missing {src}")

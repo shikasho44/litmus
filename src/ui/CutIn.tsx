@@ -7,7 +7,8 @@ import { RubyText, stripRuby } from './ruby';
 import { ShardPortrait } from './ShardPortrait';
 import './cutin.css';
 
-export type CutInTone = 'formalin' | 'alarm' | 'cyan' | 'amber' | 'violet' | 'bone';
+/** 'litmus': the band develops from acid red to base blue while it holds (反応あり！). */
+export type CutInTone = 'formalin' | 'alarm' | 'cyan' | 'amber' | 'violet' | 'bone' | 'litmus';
 
 export interface CutInProps {
   /** Main line. Furigana notation 「解剖（しらべ）」 renders as ruby. */

@@ -102,7 +102,7 @@ export const DebateStatementSchema = z.object({
 });
 export const DebateRoundSchema = z.object({
   id: id,
-  title: z.string(),                         // e.g. 記憶のノイズ ①
+  title: z.string(),                         // e.g. 記憶の誤差 ①
   intro: z.array(z.string()).min(1),         // Holma/Jane lines before the round
   statements: z.array(DebateStatementSchema).min(3).max(6),
   /** The single correct shot: statement id + the exact noise span text + fact id. */

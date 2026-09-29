@@ -18,7 +18,7 @@ import { openCase } from '../../app/flow';
 import { goto, type SceneProps } from '../../app/router';
 import { audio } from '../../audio';
 import { APP_CONFIG } from '../../config/app';
-import { buildCaseResult, computeRank, detectiveLevel, detectiveTotal, questionPar, questionTerms, rankAdvice, RANK_LABEL, RANK_TITLES, resultPoints, S_CONDITION, S_PLUS_CONDITION, type RankInput } from '../../features/rank';
+import { buildCaseResult, computeRank, detectiveLevel, detectiveTotal, questionPar, questionTerms, rankAdvice, RANK_LABEL, RANK_TITLES, rankTitleOf, resultPoints, S_CONDITION, S_PLUS_CONDITION, type RankInput } from '../../features/rank';
 import { DifficultyBadge } from '../../features/difficulty/Badge';
 import { DIFFICULTY_META } from '../../features/difficulty/meta';
 import { fx } from '../../fx';
@@ -119,7 +119,8 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
   const detail = useMemo(() => computeRank(input), [input]);
   // only explain the rank when the recomputation agrees with the stored one (older saves may lack inputs)
   const advice = useMemo(() => (detail.rank === result.rank ? rankAdvice(input, detail) : null), [input, detail, result.rank]);
-  const title = RANK_TITLES.find((t) => t.title === result.title) ?? RANK_TITLES.find((t) => t.id === detail.titleId)!;
+  // older saves keep the title text of their day (「一撃の審問官」…): show it under its current name
+  const title = rankTitleOf(result.title) ?? RANK_TITLES.find((t) => t.id === detail.titleId)!;
   const rank = result.rank;
   const num = caseNumber(caseId, summary);
   const bg = useImage(summary?.background ?? null);
@@ -195,8 +196,8 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
     { icon: 'star', label: '重要質問率', num: keyRate === null ? '—' : `${keyRate}`, unit: keyRate === null ? undefined : '%', sub: s.answered ? `所見を得た質問 ${s.keyQuestions ?? 0} / ${s.answered}` : '記録なし' },
     { icon: 'hint', label: 'ホルマの囁き', num: `${s.hintsUsed ?? 0}`, sub: 'ヒントを使った回数', tone: (s.hintsUsed ?? 0) === 0 ? 'good' : 'warn' },
     rounds > 0
-      ? { icon: 'shard', label: 'ノイズ・ブレイク', num: `${roundsCleared}/${rounds}`, sub: `撃ち損じ ${s.debateMisses ?? 0}${roundsCleared < rounds ? '・飛ばしたラウンドあり' : ''}`, tone: roundsCleared >= rounds && (s.debateMisses ?? 0) === 0 ? 'good' : undefined }
-      : { icon: 'shard', label: '撃ち損じ', num: `${s.debateMisses ?? 0}`, sub: 'ノイズ・ブレイク', tone: (s.debateMisses ?? 0) === 0 ? 'good' : undefined },
+      ? { icon: 'shard', label: '反証', num: `${roundsCleared}/${rounds}`, sub: `反応なし ${s.debateMisses ?? 0}回${roundsCleared < rounds ? '・飛ばしたラウンドあり' : ''}`, tone: roundsCleared >= rounds && (s.debateMisses ?? 0) === 0 ? 'good' : undefined }
+      : { icon: 'shard', label: '反応なし', num: `${s.debateMisses ?? 0}`, sub: '反証で色が変わらなかった回数', tone: (s.debateMisses ?? 0) === 0 ? 'good' : undefined },
     { icon: 'help', label: '泣きつき', num: `${s.grants ?? 0}`, sub: '所見を借りた回数', tone: (s.grants ?? 0) === 0 ? 'good' : 'warn' },
     {
       icon: 'gavel',
@@ -271,7 +272,7 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
                   <p class="rs-rank__label">
                     審問官ランク <strong>{rank}</strong> ／ {RANK_LABEL[rank].jp}
                   </p>
-                  <p class="rs-rank__title">「{result.title}」</p>
+                  <p class="rs-rank__title">「{rankTitleOf(result.title)?.title ?? result.title}」</p>
                   <div class="rs-rank__holma">
                     <div class="rs-rank__face" aria-hidden="true">
                       <HolmaSprite mood={isTop(rank) || rank === 'A' ? 'laugh' : 'normal'} framing="bust" />

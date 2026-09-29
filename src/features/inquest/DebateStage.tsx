@@ -1,5 +1,5 @@
 /**
- * The flowing statements of a ノイズ・ブレイク round. One band at a time slides in, holds
+ * The flowing statements of a 反証 (litmus test) round. One band at a time slides in, holds
  * (readable), and gives way to the next; the list loops. Locking a target, pausing, a
  * running dialogue or an open drawer halts the flow. A statement strip lets the player jump.
  */

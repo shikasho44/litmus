@@ -90,7 +90,7 @@ export const DEFAULT_LINES: HolmaLines = {
   inquest: {
     open: [{ text: '開廷ですとも！', mood: 'laugh' }],
     roundStart: ['さァ、彼女の記憶を聞いてあげなさい。'],
-    wrongShot: [{ text: 'クックック、的外れですねェ。', mood: 'laugh' }, 'おや、そこではありませんよ。'],
+    wrongShot: [{ text: 'クックック、反応なしですねェ。', mood: 'laugh' }, 'おや、色は変わりませんでしたよ。'],
     grant: ['泣きつかれては仕方ない。これをお持ちなさい。'],
     composureLow: ['集中が切れかけていますよ。'],
     suspended: [{ text: '今日の審問はここまで。捜査に戻りなさい。', mood: 'serious' }],

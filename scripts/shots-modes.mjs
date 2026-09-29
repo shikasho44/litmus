@@ -323,7 +323,7 @@ async function runSize(browser, size) {
     // back to the noise break from the verdict
     await page.click('[data-back-debate]');
     await untilIq(page, (s) => s.phase === 'debate' && s.step === 'play' && s.dlg === 'off' && s.card === 'off', 'back to debate');
-    check(true, `${size}: 「ノイズ・ブレイクに戻る」 reopens the first round`);
+    check(true, `${size}: 「反証に戻る」 reopens the first round`);
     await page.close();
   });
 

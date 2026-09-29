@@ -22,7 +22,7 @@ export interface TitleCardSpec {
 
 /**
  * Split a title into phrases that must not break inside: at full-width spaces and dashes
- * (「記憶のノイズ ①　背後の足音」 → 「記憶のノイズ ①」「背後の足音」), so a narrow screen never
+ * (「記憶の誤差 ①　背後の足音」 → 「記憶の誤差 ①」「背後の足音」), so a narrow screen never
  * strands a lone ① or a final character on its own line.
  */
 export function phrases(text: string): string[] {

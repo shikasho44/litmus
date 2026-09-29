@@ -10,7 +10,7 @@ import { fmtPct, fmtTime } from '../format';
 import { cases, go, pendingAsk } from '../store';
 import { STAGES, type MintResult, type Stage } from '../types';
 
-const COUNTERS = ['質問数', 'ヒント', '論破ミス', '泣きつき', '宣告回数'];
+const COUNTERS = ['質問数', 'ヒント', '反応なし', '泣きつき', '宣告回数'];
 
 function Payload({ token }: { token: string }) {
   const d = decodeToken(token);

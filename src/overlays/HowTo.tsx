@@ -118,7 +118,10 @@ function InquestArt() {
         <span class="howto-shot__arrow" aria-hidden="true">
           <Icon name="chevronRight" size={28} />
         </span>
-        <span class="howto-shot__boom">反証！</span>
+        <span class="howto-shot__boom">
+          <span class="howto-shot__strip" aria-hidden="true" />
+          反応あり！
+        </span>
       </div>
     </div>
   );
@@ -265,16 +268,16 @@ const STEPS: Step[] = [
     ),
   },
   {
-    en: 'NOISE BREAK',
-    title: '記憶のノイズを撃ち抜く（任意）',
+    en: 'LITMUS TEST',
+    title: '記憶の誤差に、所見を当てる（任意）',
     art: () => <InquestArt />,
     body: (
       <>
         <p>
-          審問では、ジェーンが<strong>間違った記憶</strong>を本気で主張します。発言の中で光る<strong>ノイズ</strong>を選び、それを否定できる<strong>所見</strong>で撃ち抜くと、<strong>死因宣告で使える手がかり</strong>がもらえます（選択肢が消える・空欄が埋まる など）。
+          審問では、ジェーンが<strong>間違った記憶</strong>を本気で主張します。発言の中で光る<strong>誤差</strong>を選び、それを否定できる<strong>所見</strong>をリトマス試験紙のように当てます。正しければ色が赤から青へ変わり（<strong>反応あり</strong>）、<strong>死因宣告で使える手がかり</strong>がもらえます（選択肢が消える・空欄が埋まる など）。
         </p>
         <p class="t-sm t-bone2">
-          ノイズ・ブレイクは<strong>任意</strong>です。「議論を飛ばして死因宣告へ」で、すぐに宣告へ進めます。外すと集中力が減り、所見が足りないときは「ホルマに泣きつく」ことも（ランクに響きます）。全部撃ち抜いてSを取れば、最高ランク S+。
+          この<strong>反証</strong>は<strong>任意</strong>です。「反証を飛ばして死因宣告へ」で、すぐに宣告へ進めます。<strong>反応なし</strong>だと集中力が減り、所見が足りないときは「ホルマに泣きつく」ことも（ランクに響きます）。反証を全部、自分の所見で成功させてSを取れば、最高ランク S+。
         </p>
       </>
     ),
@@ -329,7 +332,7 @@ const STEPS: Step[] = [
     body: (
       <>
         <p>
-          事件を解くと、<strong>事件スコア</strong>（100点から、囁き・撃ち損じ・泣きつき・宣告やテストのやり直し・ゲームオーバーの分を引いた点）に難易度の倍率——
+          事件を解くと、<strong>事件スコア</strong>（100点から、囁き・反応なし・泣きつき・宣告やテストのやり直し・ゲームオーバーの分を引いた点）に難易度の倍率——
           <strong>
             {DIFFICULTY_META.easy.jp}×{DIFFICULTY_MULTIPLIER.easy}・{DIFFICULTY_META.normal.jp}×{DIFFICULTY_MULTIPLIER.normal.toFixed(1)}・{DIFFICULTY_META.hard.jp}×{DIFFICULTY_MULTIPLIER.hard}
           </strong>

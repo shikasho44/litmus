@@ -27,7 +27,7 @@ export function summaryMarkdown(s: PlaytestSummary, logs: RunLog[]): string {
   const L: string[] = [];
   L.push(`# AI playtest ${s.meta.createdAt}`, '');
   L.push(`player ${s.meta.player} / judge ${s.meta.judge} / spend $${s.meta.spend.totalUsd} (Jev $${s.meta.spend.jevUsd}, player $${s.meta.spend.llmUsd}) / cap $${s.meta.capUsd} / ${s.meta.completed}/${s.meta.runs} runs`, '');
-  L.push('| run | 人物 | 結果 | 質問 | 宣告までの質問 | ヒント | 所見 | 詰まり(≥5連続) | 矛盾 | 漏洩 | 安全 | 劣化 | 撃ち損じ | 泣きつき | 宣告回数 | 費用 |');
+  L.push('| run | 人物 | 結果 | 質問 | 宣告までの質問 | ヒント | 所見 | 詰まり(≥5連続) | 矛盾 | 漏洩 | 安全 | 劣化 | 反応なし | 泣きつき | 宣告回数 | 費用 |');
   L.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
   for (const m of s.metrics) {
     L.push(

@@ -137,7 +137,7 @@ export function AssistNote({ session: s }: { session: InquestSession }) {
     <div class={`vassist ${a.earned > 0 ? 'has-assist' : ''}`} role="note" data-assists={a.earned}>
       <span class="vassist__k">
         <Icon name="shard" size={15} />
-        ノイズ・ブレイクの手がかり
+        反証の手がかり
         <b class="t-mono">
           {a.earned}/{a.total}
         </b>
@@ -145,12 +145,12 @@ export function AssistNote({ session: s }: { session: InquestSession }) {
       <p class="vassist__t">
         {a.earned > 0
           ? mode === 'choice'
-            ? `撃ち抜いた記憶のおかげで、選択肢が${a.earned}つ消えています。`
+            ? `正した記憶のおかげで、選択肢が${a.earned}つ消えています。`
             : mode === 'cloze'
-              ? `撃ち抜いた記憶のおかげで、空欄が${a.earned}つ埋まっています。`
-              : '撃ち抜いた記憶が、宣告に欠かせない要素を教えてくれます。'
+              ? `正した記憶のおかげで、空欄が${a.earned}つ埋まっています。`
+              : '正した記憶が、宣告に欠かせない要素を教えてくれます。'
           : s.debateSkipped.value
-            ? `議論を飛ばしたので、手がかりはありません（撃ち抜くと、1ラウンドごとに${ASSIST_TEXT[mode].replace('死因宣告で', '')}）。`
+            ? `反証を飛ばしたので、手がかりはありません（反応を出せば、1ラウンドごとに${ASSIST_TEXT[mode].replace('死因宣告で', '')}）。`
             : '手がかりは、まだありません。'}
       </p>
       {revealed.length > 0 && (
@@ -627,7 +627,7 @@ export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, onBackToDeb
           </Button>
           {canGoBack && (
             <Button variant="quiet" icon="shard" onClick={onBackToDebate} sfx="page" data-back-debate>
-              ノイズ・ブレイクに戻る
+              反証に戻る
             </Button>
           )}
         </span>

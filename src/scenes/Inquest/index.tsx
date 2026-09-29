@@ -1,8 +1,9 @@
 /**
  * 死因審問 (INQUEST) — design bible §3-2.
- *   ① ノイズ・ブレイク  (optional) Jane's false memories flow across the stage as diagonal bands; shoot
- *                      the glowing noise with a finding. Composure 5; 2 misses → hint; 泣きつく → grant.
- *                      Each cleared round earns an assist for the verdict; 「議論を飛ばして死因宣告へ」 skips.
+ *   ① 反証 LITMUS TEST (optional) Jane's false memories flow across the stage as diagonal bands; apply
+ *                      a finding to the glowing 誤差 (`noise` in code) like litmus paper — 反応あり (red → blue)
+ *                      or 反応なし. Composure 5; 2 misses → hint; 泣きつく → grant.
+ *                      Each cleared round earns an assist for the verdict; 「反証を飛ばして死因宣告へ」 skips.
  *   ② 死因宣告          in the difficulty's format (choice / cloze / free); element checklist;
  *                      Jane's lights (lives) — each miss puts one out, none left → GAME OVER.
  *   ③ 真相再構成        fill the blank comic frames; Holma narrates the finale → resolution.
@@ -29,7 +30,7 @@ import { HolmaSprite } from '../../ui/HolmaSprite';
 import { Icon } from '../../ui/Icon';
 import { Modal } from '../../ui/Modal';
 import { ShardPortrait } from '../../ui/ShardPortrait';
-import { flyBullet, flyCard } from '../../features/inquest/bullet';
+import { applyCard, flyCard } from '../../features/inquest/litmus';
 import { ComposureMeter } from '../../features/inquest/Composure';
 import { DebateStage } from '../../features/inquest/DebateStage';
 import { EvidenceList, LoadedCard } from '../../features/inquest/EvidenceList';
@@ -123,7 +124,7 @@ export function InquestScene({ params }: SceneProps) {
     s.step.value = 'intro';
     setBandsOn(false);
     cam({ scale: 1.02 }, 0.8);
-    await showCard({ kicker: `NOISE BREAK · ROUND ${i + 1}`, title: r.title, sub: 'ノイズ・ブレイク — 記憶の矛盾を撃ち抜け', badge: `${i + 1}/${n}`, tone: 'alarm' });
+    await showCard({ kicker: `LITMUS TEST · ROUND ${i + 1}`, title: r.title, sub: '反証 — 記憶の誤差に、所見を当てよ', badge: `${i + 1}/${n}`, tone: 'alarm' });
     if (s.disposed) return;
     setBandsOn(true);
     if (!resumed && r.intro.length) await s.say(r.intro.map((t) => ({ speaker: 'holma', text: t, mood: /ククッ|クック/.test(t) ? 'laugh' : undefined })));
@@ -169,7 +170,7 @@ export function InquestScene({ params }: SceneProps) {
     await setupP;
     if (s.disposed) return;
     if (skipped) {
-      await s.say([{ speaker: 'holma', text: '議論は、ここまでで結構——ですか。よろしい。では、宣告を聞きましょう。', mood: 'serious' }]);
+      await s.say([{ speaker: 'holma', text: '反証は、ここまでで結構——ですか。よろしい。では、宣告を聞きましょう。', mood: 'serious' }]);
     } else if (!resumed) {
       let l = pickLine('inquest.verdictPrompt', 'serious');
       for (let k = 0; k < 3 && l.text === VERDICT_PROMPT; k++) l = pickLine('inquest.verdictPrompt', 'serious');
@@ -293,11 +294,11 @@ export function InquestScene({ params }: SceneProps) {
     const from =
       (narrowRef.current ? document.querySelector('[data-loaded-slot]') : document.querySelector(`.iq-mag [data-fact-id="${fact.id}"]`)) ?? document.querySelector('[data-loaded-fact]');
     const to = document.querySelector(`.band[data-statement-id="${t.statementId}"] .noise[data-seg="${t.seg}"]`);
-    audio.sfx('whoosh');
-    fx.speedLines(460, { kind: 'radial', color: 'rgba(198,255,61,0.4)' });
-    cam({ scale: 1.1 }, 0.35, 'power3.in');
-    const flight = flyBullet(from, to, factTitle(fact));
-    const [res] = await Promise.all([s.shoot(), flight.impact]);
+    // the card glides over like a strip of litmus paper and touches the word (no shot, no speed lines)
+    audio.sfx('dip');
+    cam({ scale: 1.08 }, 0.5, 'power2.inOut');
+    const flight = applyCard(from, to, factTitle(fact));
+    const [res] = await Promise.all([s.shoot(), flight.touch]);
     if (s.disposed) return;
     if (!res) {
       void flight.finish(false);
@@ -309,17 +310,17 @@ export function InquestScene({ params }: SceneProps) {
     const cx = r ? r.left + r.width / 2 : undefined;
     const cy = r ? r.top + r.height / 2 : undefined;
     if (res.correct) {
+      // 反応あり: the pad and the word turn from acid red to base blue, and the blue spreads
       void flight.finish(true);
       s.broken.value = t;
       s.target.value = null;
-      s.bark.value = null; // an earlier miss quip must not linger over the 反証！ cut-in
-      audio.sfx('refute');
-      fx.shatter(cx, cy, { color: '#C6FF3D', count: 52 });
-      fx.flash('#FFFFFF', { opacity: 0.6 });
-      fx.shake(1.4);
-      punch(1.16);
-      await s.wait(motionReduced() ? 80 : 380);
-      await fx.cutIn({ text: '反証！', en: 'REFUTATION', tone: 'formalin', hold: 0.75 });
+      s.bark.value = null; // an earlier miss quip must not linger over the 反応あり！ cut-in
+      fx.bloom(cx, cy); // + the 'reaction' sound
+      fx.flash('#3DE0FF', { opacity: 0.22, duration: 0.6 });
+      fx.shake(0.6, 0.3);
+      punch(1.1);
+      await s.wait(motionReduced() ? 80 : 620);
+      await fx.cutIn({ text: '反応あり！', en: 'REACTION!', tone: 'litmus', hold: 0.7 });
       if (s.disposed) return;
       s.step.value = 'success';
       s.busy.value = false;
@@ -343,13 +344,14 @@ export function InquestScene({ params }: SceneProps) {
       else await startRound(false);
       return;
     }
-    // miss
+    // 反応なし: the pad stays red, the card slides off, then a small tag says so above the word
     void flight.finish(false);
     s.target.value = null;
-    audio.sfx('error');
-    fx.shake(1);
-    fx.flash('#FF2E63', { opacity: 0.22 });
-    cam({ scale: 1, rot: 0.6 }, 0.25, 'power2.out');
+    audio.sfx('noReaction');
+    setTimeout(() => !s.disposed && fx.noReaction(to, { sound: false }), motionReduced() ? 0 : 320);
+    fx.shake(0.6, 0.3);
+    fx.flash('#FF2E63', { opacity: 0.14 });
+    cam({ scale: 1, rot: 0.4 }, 0.25, 'power2.out');
     setTimeout(() => cam({ scale: 1.02 }, 0.6), 260);
     s.quip(res.lines[0] ?? pickLine('inquest.wrongShot').text, 'holma', 'laugh');
     // 「減点」 under the composure meter (a pip was just lost there) — clear of the bands and the quip
@@ -387,12 +389,12 @@ export function InquestScene({ params }: SceneProps) {
       });
     } else {
       audio.sfx('reveal');
-      s.quip('その所見なら、もうお持ちですよ。……撃つ場所を、よくお考えなさい。', 'hint', 'normal');
+      s.quip('その所見なら、もうお持ちですよ。……当てる先を、よくお考えなさい。', 'hint', 'normal');
     }
     requestAnimationFrame(() => document.querySelector(`.iq-mag [data-fact-id="${res.fact.id}"]`)?.scrollIntoView({ block: 'nearest', behavior: motionReduced() ? 'auto' : 'smooth' }));
   };
 
-  /** 「議論を飛ばして死因宣告へ」 (confirmed). */
+  /** 「反証を飛ばして死因宣告へ」 (confirmed). */
   const skipDebate = async () => {
     setSkipAsk(false);
     if (s.phase.peek() !== 'debate' || s.busy.peek() || s.dialogue.peek()) return;
@@ -423,9 +425,9 @@ export function InquestScene({ params }: SceneProps) {
   };
 
   /*
-   * keyboard (debate): ↑↓ statements (inside the magazine: findings), ←→ noise, E / 1–9 findings,
-   * Enter fire, Space pause, Esc unlock. Picking a finding by key moves the focus with it (roving),
-   * so a focused magazine row can never swallow the Enter that should fire.
+   * keyboard (反証): ↑↓ statements (inside the findings case: findings), ←→ 誤差, E / 1–9 findings,
+   * Enter 当てる, Space pause, Esc unlock. Picking a finding by key moves the focus with it (roving),
+   * so a focused findings row can never swallow the Enter that should apply the card.
    */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -524,7 +526,7 @@ export function InquestScene({ params }: SceneProps) {
           else if (!s.target.peek()) {
             const k = noiseOf(cur)[0];
             if (k !== undefined) s.setTarget({ statementId: sts[cur].id, seg: k, text: sts[cur].segments[k].text });
-          } else s.quip(touchUiRef.current ? '下の『所見』から一枚選んで装填してください。' : '所見を選んで装填してください（E キー・数字キーで選べます）。', 'hint');
+          } else s.quip(touchUiRef.current ? '下の『所見』から一枚選んでセットしてください。' : '所見を選んでセットしてください（E キー・数字キーで選べます）。', 'hint');
           break;
         }
         case ' ': {
@@ -548,7 +550,7 @@ export function InquestScene({ params }: SceneProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [s, filter]);
 
-  /* cut-ins (開廷 / 反証！ / 死因宣告 …) can be skipped: click, tap, Enter, Space or Esc */
+  /* cut-ins (開廷 / 反応あり！ / 死因宣告 …) can be skipped: click, tap, Enter, Space or Esc */
   useEffect(() => {
     let startedAt = 0;
     let seen = -1;
@@ -604,7 +606,7 @@ export function InquestScene({ params }: SceneProps) {
     return () => ro.disconnect();
   }, [!!dialogue]);
 
-  /* phone: locking a noise with an empty chamber opens the magazine right away */
+  /* phone: choosing a 誤差 with no card set opens the findings drawer right away */
   const tgt = s.target.value;
   useEffect(() => {
     if (!narrow || !tgt || s.selected.peek() || s.step.peek() !== 'play') return;
@@ -919,11 +921,11 @@ export function InquestScene({ params }: SceneProps) {
         <Quip session={s} />
       </div>
 
-      {/* ---------- PC magazine column / phone dock ---------- */}
+      {/* ---------- PC findings case column / phone dock ---------- */}
       {inDebate && !narrow && (
-        <aside class="iq-mag" aria-label="所見（弾）">
+        <aside class="iq-mag" aria-label="所見ケース">
           <div class="iq-mag__head">
-            <span class="iq-mag__en">MAGAZINE</span>
+            <span class="iq-mag__en">FINDINGS CASE</span>
             <h2 class="iq-mag__jp">
               所見 <small>{s.evidence.value.length}</small>
             </h2>
@@ -949,7 +951,7 @@ export function InquestScene({ params }: SceneProps) {
       )}
       {inDebate && narrow && (
         <div class="iq-dock">
-          <button type="button" class="iq-dock__loaded" data-loaded-slot onClick={() => setDrawer(true)} disabled={step === 'firing'} aria-label={`所見を選ぶ（${s.selectedFact.value ? `装填中：${factTitle(s.selectedFact.value)}` : '未装填'}）`}>
+          <button type="button" class="iq-dock__loaded" data-loaded-slot onClick={() => setDrawer(true)} disabled={step === 'firing'} aria-label={`所見を選ぶ（${s.selectedFact.value ? `セット中：${factTitle(s.selectedFact.value)}` : 'まだセットしていません'}）`}>
             <LoadedCard fact={s.selectedFact.value} compact />
             <span class="iq-dock__open" aria-hidden="true">
               <Icon name="chevronDown" size={16} />
@@ -1008,7 +1010,7 @@ export function InquestScene({ params }: SceneProps) {
       )}
 
       {/* ---------- sheets & dialogs ---------- */}
-      <BottomSheet open={drawer} onClose={() => setDrawer(false)} title="所見を装填" en="MAGAZINE" side="bottom">
+      <BottomSheet open={drawer} onClose={() => setDrawer(false)} title="所見をセット" en="FINDINGS CASE" side="bottom">
         <EvidenceList
           facts={s.evidence.value}
           selected={s.selected.value}
@@ -1041,14 +1043,14 @@ export function InquestScene({ params }: SceneProps) {
       <Modal
         open={skipAsk}
         onClose={() => setSkipAsk(false)}
-        title="議論を飛ばしますか？"
-        en="SKIP THE NOISE BREAK"
+        title="反証を飛ばしますか？"
+        en="SKIP THE LITMUS TEST"
         size="sm"
         tone="cyan"
         footer={
           <>
             <Button variant="ghost" sfx="cancel" onClick={() => setSkipAsk(false)} data-autofocus>
-              議論を続ける
+              反証を続ける
             </Button>
             <Button icon="gavel" onClick={() => void skipDebate()} data-skip-confirm>
               死因宣告へ
@@ -1056,9 +1058,9 @@ export function InquestScene({ params }: SceneProps) {
           </>
         }
       >
-        <p class="iq-beg__p">残りのノイズ・ブレイク（{s.openRounds.value.length}ラウンド）を飛ばして、すぐに死因宣告へ進みます。</p>
+        <p class="iq-beg__p">残りの反証（{s.openRounds.value.length}ラウンド）を飛ばして、すぐに死因宣告へ進みます。</p>
         <p class="iq-beg__note">
-          <Icon name="info" size={14} /> 撃ち抜かなかったラウンドの手がかりは、もらえません（1ラウンドごとに{ASSIST_TEXT[s.verdictMode.value].replace('死因宣告で', '')}）。死因宣告の画面から、いつでも議論に戻れます。
+          <Icon name="info" size={14} /> 反応を出さなかったラウンドの手がかりは、もらえません（1ラウンドごとに{ASSIST_TEXT[s.verdictMode.value].replace('死因宣告で', '')}）。死因宣告の画面から、いつでも反証に戻れます。
         </p>
       </Modal>
 

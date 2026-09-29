@@ -62,7 +62,7 @@ const FALLBACK = {
   inquest: {
     open: [{ text: '開廷ですとも！', mood: 'laugh' }],
     roundStart: ['さァ、彼女の記憶を聞きましょう。'],
-    wrongShot: ['外れですねェ。'],
+    wrongShot: ['反応なし、ですねェ。'],
     grant: ['仕方ありません。この所見をお貸ししましょう。'],
     composureLow: ['集中が切れかけていますよ？'],
     suspended: ['審問は中断です。捜査に戻りましょう。'],

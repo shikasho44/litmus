@@ -136,23 +136,23 @@ export function debatePrompt(pub: CasePublic, round: InquestRoundView, evidence:
     return `発言${i + 1}（${who}）「${text}」`;
   });
   const lines = [
-    `【審問 ノイズ・ブレイク】${pub.title}`,
-    'ジェーンの記憶には誤りが混じっています。発言の中の《ノイズ》（《》で囲まれた部分）から、所見と矛盾するものを1つ選び、それを打ち消す所見を撃ちます。',
+    `【審問 反証】${pub.title}`,
+    'ジェーンの記憶には誤りが混じっています。発言の中の《誤差》（《》で囲まれた部分）から、所見と矛盾するものを1つ選び、それを打ち消す所見を当てます（正しければ「反応あり」）。',
     `ラウンド: ${round.title}`,
     ...round.intro,
     '',
     '【発言】',
     ...statements,
     '',
-    '【撃てる所見】',
+    '【当てられる所見】',
     ...evidence.map((f) => `${f.id}: ${f.cardTitle ? `【${f.cardTitle}】` : ''}${f.text}`),
   ];
   if (history.length > 0) {
     lines.push('', '【このラウンドの結果】');
     for (const h of history) {
       if (h.kind === 'grant') lines.push(`・泣きついた → 所見 ${h.granted ?? ''} をもらった。ホルマ: ${h.lines.join(' ')}`);
-      else if (h.kind === 'invalid') lines.push(`・発言${h.statement}の《${h.span}》を${h.fact}で撃とうとしたが、撃てなかった（${h.error ?? '無効'}）`);
-      else lines.push(`・発言${h.statement}の《${h.span}》を${h.fact}で撃った → 外れ。ホルマ: ${h.lines.join(' ')}${h.hint ? `（ヒント: ${h.hint}）` : ''}`);
+      else if (h.kind === 'invalid') lines.push(`・発言${h.statement}の《${h.span}》に${h.fact}を当てようとしたが、当てられなかった（${h.error ?? '無効'}）`);
+      else lines.push(`・発言${h.statement}の《${h.span}》に${h.fact}を当てた → 反応なし。ホルマ: ${h.lines.join(' ')}${h.hint ? `（ヒント: ${h.hint}）` : ''}`);
     }
   }
   void held;

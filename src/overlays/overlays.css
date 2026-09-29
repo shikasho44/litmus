@@ -306,14 +306,34 @@
 .howto-shot__arrow {
   color: var(--alarm);
 }
+/* 反応あり！ on a litmus strip: acid red at the tip, base blue developing across it */
 .howto-shot__boom {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-family: var(--font-display);
-  font-size: var(--fs-2xl);
-  color: var(--bone);
-  background: var(--alarm);
-  padding: 2px 14px;
+  font-size: var(--fs-xl);
+  white-space: nowrap;
+  color: var(--ink);
+  background: linear-gradient(100deg, var(--cyan) 0 40%, #6FA2FF 50%, var(--alarm) 62%) 0 0 / 260% 100% no-repeat, var(--cyan);
+  padding: 2px 14px 2px 10px;
   transform: rotate(-8deg);
   box-shadow: 4px 4px 0 var(--ink);
+  animation: howto-develop 3.2s var(--ease-out) infinite;
+}
+.howto-shot__strip {
+  width: 10px;
+  height: 1.3em;
+  background: linear-gradient(180deg, #F3EEE0 0 55%, var(--alarm) 55%);
+  box-shadow: inset 0 0 0 1px rgba(11, 13, 18, 0.5);
+}
+@keyframes howto-develop {
+  0%, 12% { background-position: 100% 0; }
+  45%, 100% { background-position: 0 0; }
+}
+[data-reduce-motion='true'] .howto-shot__boom {
+  animation: none;
 }
 
 /* art: verdict */
@@ -496,6 +516,19 @@
 [data-layout='narrow'] .howto-nav {
   justify-content: space-between;
   gap: 8px;
+}
+/* phone: the 反応あり！ strip stays compact so the finding card keeps its width */
+[data-layout='narrow'] .howto-shot {
+  gap: 6px;
+}
+[data-layout='narrow'] .howto-shot__boom {
+  gap: 6px;
+  padding: 2px 9px 2px 7px;
+  font-size: var(--fs-md);
+  transform: rotate(-6deg);
+}
+[data-layout='narrow'] .howto-shot__strip {
+  width: 7px;
 }
 @media (pointer: coarse) {
   .howto-dots {

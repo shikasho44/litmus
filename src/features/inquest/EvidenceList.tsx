@@ -1,6 +1,6 @@
 /**
- * 所見の弾倉 — the evidence the player can fire in ノイズ・ブレイク.
- * Category filter + a scannable list of "bullets". Used in the PC magazine column and in the
+ * 所見ケース — the evidence the player can set and apply to a 誤差 in 反証 (the litmus test).
+ * Category filter + a scannable list of findings. Used in the PC findings column and in the
  * phone bottom drawer. Keyboard: the rows are plain buttons (Tab / Enter); E cycles globally.
  */
 import { useMemo, useState } from 'preact/hooks';
@@ -81,7 +81,7 @@ export function EvidenceList({ facts, selected, fresh, onPick, filter: fProp, on
                   class={`evl__row imp-${Math.min(3, f.importance)} ${on ? 'is-on' : ''} ${fresh?.has(f.id) ? 'is-fresh' : ''}`}
                   data-fact-id={f.id}
                   aria-pressed={on}
-                  aria-label={`${factTitle(f)}（${f.category}・${importanceLabel(f.importance)}）${on ? '：装填中' : ''}`}
+                  aria-label={`${factTitle(f)}（${f.category}・${importanceLabel(f.importance)}）${on ? '：セット中' : ''}`}
                   disabled={disabled}
                   onPointerEnter={(e) => e.pointerType === 'mouse' && audio.sfx('hover')}
                   onClick={() => {
@@ -99,7 +99,7 @@ export function EvidenceList({ facts, selected, fresh, onPick, filter: fProp, on
                     ))}
                   </span>
                   {fresh?.has(f.id) && <span class="evl__new">NEW</span>}
-                  {on && <span class="evl__loaded" aria-hidden="true">LOADED</span>}
+                  {on && <span class="evl__loaded" aria-hidden="true">SET</span>}
                 </button>
               </li>
             );
@@ -110,14 +110,14 @@ export function EvidenceList({ facts, selected, fresh, onPick, filter: fProp, on
   );
 }
 
-/** The loaded bullet shown as a specimen card with its full text. */
+/** The set card (所見をセット) shown as a specimen card with its full text. */
 export function LoadedCard({ fact, compact }: { fact: PublicFact | null; compact?: boolean }) {
   if (!fact) {
     return (
       <div class={`loaded is-empty ${compact ? 'loaded--compact' : ''}`}>
-        <span class="loaded__kicker">EMPTY CHAMBER</span>
-        <span class="loaded__title">所見を選んで装填</span>
-        {!compact && <span class="loaded__text">発言の矛盾を示せる所見を、弾として選んでください。</span>}
+        <span class="loaded__kicker">NO CARD SET</span>
+        <span class="loaded__title">所見を選んでセット</span>
+        {!compact && <span class="loaded__text">発言の誤差を正せる所見を、一枚選んでセットしてください。</span>}
       </div>
     );
   }
@@ -125,7 +125,7 @@ export function LoadedCard({ fact, compact }: { fact: PublicFact | null; compact
     <div class={`loaded ${compact ? 'loaded--compact' : ''} imp-${Math.min(3, fact.importance)}`} data-loaded-fact={fact.id}>
       <span class="loaded__kicker">
         <Icon name={resolveIcon(fact.icon, fact.category)} size={13} />
-        {fact.category} · 装填中
+        {fact.category} · セット中
       </span>
       <span class="loaded__title">{factTitle(fact)}</span>
       {!compact && <span class="loaded__text">{fact.text}</span>}

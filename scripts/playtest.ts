@@ -122,10 +122,10 @@ function scriptedPlayer(registry: ContentRegistry): LlmProvider {
       const title = /【事件】(.+?)（/.exec(req.user)?.[1];
       const c = registry.cases.find((x) => x.data.title === title)?.data;
       let out: Record<string, unknown>;
-      if (req.user.includes('【審問 ノイズ・ブレイク】')) {
+      if (req.user.includes('【審問 反証】')) {
         const st = /発言(\d+)（[^）]+）「[^《]*《([^》]+)》/.exec(req.user);
         const fact = /\n(F\d+): /.exec(req.user)?.[1];
-        out = st && fact ? { think: 'とりあえず撃つ', statement: Number(st[1]), span: st[2], fact } : { action: 'grant' };
+        out = st && fact ? { think: 'とりあえず当てる', statement: Number(st[1]), span: st[2], fact } : { action: 'grant' };
       } else if (req.user.includes('【死因宣告】')) {
         out = { think: '宣告', action: 'verdict', verdict: c ? c.truth.summary.slice(0, 180) : '事故だった' };
       } else {

@@ -112,7 +112,7 @@ export interface InquestState {
   suspensions: number;
   /** Jane's lights (やり直し): LIVES_BY_DIFFICULTY at the start of the inquest; each non-correct verdict costs one. */
   lives?: number;
-  /** The player skipped the rest of the noise break (「議論を飛ばして死因宣告へ」). */
+  /** The player skipped the rest of 反証 (「反証を飛ばして死因宣告へ」). */
   debateSkipped?: boolean;
   /** Number of noise-break rounds of the case (for S+). */
   rounds?: number;

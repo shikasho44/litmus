@@ -1,7 +1,7 @@
 /* ==========================================================================
    死因審問 — scene layout. Full-bleed stage (camera: bg + characters), HUD on top.
    --iq-top     height of the top bar
-   --iq-left    PC magazine column (debate only)
+   --iq-left    PC findings case column (.iq-mag, 反証 only)
    --iq-bottom  phone dock (debate only)
    ========================================================================== */
 .iq {
@@ -346,7 +346,7 @@
   backdrop-filter: none;
 }
 
-/* ---------------------------------------------------------------- magazine (PC) */
+/* ---------------------------------------------------------------- findings case (PC, .iq-mag) */
 .iq-mag {
   position: absolute;
   z-index: 8;
@@ -504,7 +504,7 @@
     gap: 10px;
   }
 }
-/* narrower magazine column (≤1360px): keep the fire button on one line */
+/* narrower findings column (≤1360px): keep the 当てる button on one line */
 @media (max-width: 1360px) {
   .iq.is-wide .fire__kbd {
     display: none;
@@ -670,7 +670,7 @@
     gap: 4px;
   }
 }
-/* touch screens in the wide layout (tablets): no keyboard hint on FIRE either */
+/* touch screens in the wide layout (tablets): no keyboard hint on 当てる (TEST) either */
 @media (pointer: coarse) {
   .iq .fire__kbd {
     display: none;

@@ -16,7 +16,7 @@ import type { Plugin } from 'vite';
 export const HTML_ENV_DEFAULTS: Record<string, string> = {
   VITE_APP_TITLE: 'リトマス審問',
   VITE_SITE_DESCRIPTION:
-    '名前を失った魂「ジェーン・ドゥ」の死因を、はい／いいえの質問だけで暴く科学ミステリーADV。リトマス試験紙のように、YESかNOかで真実の色を見分けろ。審問で記憶のノイズを論破し、彼女の名前と、その死の裏にある科学を持ち帰る。',
+    '名前を失った魂「ジェーン・ドゥ」の死因を、はい／いいえの質問だけで暴く科学ミステリーADV。リトマス試験紙のように、YESかNOかで真実の色を見分けろ。審問では記憶の誤差に所見を当てて反証し、彼女の名前と、その死の裏にある科学を持ち帰る。',
   VITE_SITE_URL: '',
   VITE_OFFICIAL_RELEASE_ENABLED: 'false',
 };

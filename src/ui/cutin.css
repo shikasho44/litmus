@@ -16,6 +16,7 @@
 .cutin--amber { --cut-color: var(--amber); --cut-ink: var(--ink); --cut-back: var(--ink); }
 .cutin--violet { --cut-color: var(--violet); --cut-ink: var(--bone); --cut-back: var(--ink); }
 .cutin--bone { --cut-color: var(--bone); --cut-ink: var(--ink); --cut-back: var(--alarm); }
+.cutin--litmus { --cut-color: var(--cyan); --cut-ink: var(--ink); --cut-back: var(--ink); }
 
 .cutin__back,
 .cutin__band {
@@ -148,4 +149,29 @@
   word-break: auto-phrase;
   text-wrap: balance;
   line-height: 1.08;
+}
+
+/* 反応あり！ — the band is a litmus strip: it slams in acid red and develops into base blue
+   (a soft diagonal front sweeps across), like the paper the moment the finding touches it; the far
+   end, never dipped, stays red */
+.cutin--litmus .cutin__band {
+  background:
+    linear-gradient(100deg, var(--cyan) 0%, var(--cyan) 47.5%, #6FA2FF 48.4%, #B07BFF 49.2%, var(--alarm) 50%, var(--alarm) 100%);
+  background-size: 280% 100%;
+  background-position: 100% 0;
+  animation: cut-litmus 0.62s cubic-bezier(0.3, 0.7, 0.2, 1) 0.2s forwards;
+}
+@keyframes cut-litmus {
+  to { background-position: 33% 0; }
+}
+.cutin--litmus .cutin__back {
+  background: var(--ink);
+  box-shadow: 0 0 0 4px var(--bone);
+}
+.cutin--litmus .cutin__text {
+  text-shadow: 5px 5px 0 var(--bone);
+}
+[data-reduce-motion='true'] .cutin--litmus .cutin__band {
+  animation: none;
+  background-position: 33% 0;
 }

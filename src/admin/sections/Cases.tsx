@@ -458,14 +458,14 @@ function DebateTab({ c }: { c: AdminCase }) {
             </ol>
             <KV
               rows={[
-                ['正解の一撃', <span><code>{r.answer.statement}</code> の「<b class="adm-alarm-text">{r.answer.span}</b>」を <b>{factTitle(r.answer.fact)}</b> で撃つ</span>],
+                ['正解の組み合わせ', <span><code>{r.answer.statement}</code> の誤差「<b class="adm-alarm-text">{r.answer.span}</b>」に <b>{factTitle(r.answer.fact)}</b> を当てる</span>],
                 ['別解', r.alsoAccept.length ? <span>{r.alsoAccept.map(factTitle).join(' / ')}</span> : <span class="adm-dim">なし</span>],
                 ['ヒント（2回外すと）', r.hint],
               ]}
             />
             <div class="adm-grid2">
               <div>
-                <p class="adm-sublabel">論破成功</p>
+                <p class="adm-sublabel">反応あり（成功）</p>
                 {r.success.map((l, i) => (
                   <p key={i} class="adm-quote adm-quote--ok">
                     {l}
@@ -473,7 +473,7 @@ function DebateTab({ c }: { c: AdminCase }) {
                 ))}
               </div>
               <div>
-                <p class="adm-sublabel">外したとき</p>
+                <p class="adm-sublabel">反応なし（外れ）</p>
                 {r.wrongShot.map((l, i) => (
                   <p key={i} class="adm-quote adm-quote--bad">
                     {l}

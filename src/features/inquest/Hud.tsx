@@ -1,17 +1,17 @@
-/** Small HUD pieces of the inquest: fire button, instruction strip, skip panel, hint, Holma's quip, phase rail, status panel. */
+/** Small HUD pieces of the inquest: 当てる (test) button, instruction strip, skip panel, hint, Holma's quip, phase rail, status panel. */
 import type { ComponentChildren } from 'preact';
 import { HolmaSprite } from '../../ui/HolmaSprite';
 import { Icon } from '../../ui/Icon';
 import type { InquestSession, Phase } from './session';
 
 /**
- * The noise break is optional: 「議論を飛ばして死因宣告へ」 with what shooting earns, and the
+ * 反証 is optional: 「反証を飛ばして死因宣告へ」 with what a reaction earns, and the
  * assists earned so far (手がかり n/total).
  */
 export function SkipPanel({ session: s, onSkip, disabled, narrow }: { session: InquestSession; onSkip: () => void; disabled?: boolean; narrow?: boolean }) {
   const a = s.assists.value;
   return (
-    <div class={`skipd ${narrow ? 'skipd--narrow' : ''}`} role="group" aria-label="ノイズ・ブレイクは任意です">
+    <div class={`skipd ${narrow ? 'skipd--narrow' : ''}`} role="group" aria-label="反証は任意です">
       {a && a.total > 0 && (
         <span class="skipd__assists" aria-label={`手がかり ${a.earned} / ${a.total}`}>
           <Icon name="shard" size={14} />
@@ -22,10 +22,10 @@ export function SkipPanel({ session: s, onSkip, disabled, narrow }: { session: I
         </span>
       )}
       <button type="button" class="skipd__btn" onClick={onSkip} disabled={disabled} data-skip-debate>
-        <span class="skipd__jp">議論を飛ばして死因宣告へ</span>
+        <span class="skipd__jp">反証を飛ばして死因宣告へ</span>
         <Icon name="skip" size={16} />
       </button>
-      <p class="skipd__note">記憶のノイズを撃ち抜くと、死因宣告で手がかりがもらえます</p>
+      <p class="skipd__note">誤差を正すと、死因宣告の手がかりに</p>
     </div>
   );
 }
@@ -34,12 +34,12 @@ export function FireButton({ session: s, onFire, compact }: { session: InquestSe
   const hasT = !!s.target.value;
   const hasC = !!s.selected.value;
   const ready = s.ready.value && !s.busy.value && !s.dialogue.value && !s.tokenDead.value;
-  const label = !hasT ? 'ノイズを選ぶ' : !hasC ? '所見を選ぶ' : '反証する！';
+  const label = !hasT ? '誤差を選ぶ' : !hasC ? '所見を選ぶ' : '当てる';
   return (
-    <button type="button" class={`fire ${compact ? 'fire--compact' : ''} ${ready ? 'is-ready' : ''}`} disabled={!ready} onClick={onFire} data-fire aria-label={ready ? '反証する（撃つ）' : `撃てません：${label}`}>
+    <button type="button" class={`fire ${compact ? 'fire--compact' : ''} ${ready ? 'is-ready' : ''}`} disabled={!ready} onClick={onFire} data-fire aria-label={ready ? '所見を誤差に当てる' : `まだ当てられません：${label}`}>
       <span class="fire__bg" aria-hidden="true" />
       <span class="fire__en" aria-hidden="true">
-        FIRE
+        TEST
       </span>
       <span class="fire__jp">{label}</span>
       {!compact && (
@@ -55,7 +55,7 @@ export function InstructionStrip({ session: s, narrow }: { session: InquestSessi
   const hasT = !!s.target.value;
   const hasC = !!s.selected.value;
   const stepN = !hasT ? 1 : !hasC ? 2 : 3;
-  const items = narrow ? ['光る言葉をタップ', '所見を選ぶ', '撃つ'] : ['光る言葉（ノイズ）を選ぶ', '反証できる所見を装填', '反証する'];
+  const items = narrow ? ['光る言葉をタップ', '所見を選ぶ', '当てる'] : ['光る言葉（誤差）を選ぶ', '反証できる所見をセット', '当てる'];
   return (
     <div class="istrip" role="note" aria-label="遊び方">
       <ol class="istrip__steps">
@@ -68,7 +68,7 @@ export function InstructionStrip({ session: s, narrow }: { session: InquestSessi
       </ol>
       {!narrow && (
         <span class="istrip__keys" aria-hidden="true">
-          <kbd>↑↓</kbd>発言 <kbd>←→</kbd>ノイズ <kbd>E</kbd>所見 <kbd>Enter</kbd>撃つ <kbd>Space</kbd>停止
+          <kbd>↑↓</kbd>発言 <kbd>←→</kbd>誤差 <kbd>E</kbd>所見 <kbd>Enter</kbd>当てる <kbd>Space</kbd>停止
         </span>
       )}
     </div>
@@ -107,7 +107,7 @@ export function Quip({ session: s }: { session: InquestSession }) {
 }
 
 const RAIL: { id: 'debate' | 'verdict' | 'reconstruction'; jp: string; en: string; opt?: boolean }[] = [
-  { id: 'debate', jp: 'ノイズ・ブレイク', en: 'NOISE BREAK', opt: true },
+  { id: 'debate', jp: '反証', en: 'LITMUS TEST', opt: true },
   { id: 'verdict', jp: '死因宣告', en: 'VERDICT' },
   { id: 'reconstruction', jp: '真相再構成', en: 'RECONSTRUCTION' },
 ];

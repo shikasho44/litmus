@@ -276,6 +276,7 @@ async function runSize(browser, size) {
           bestPoints: 150,
           gameOvers: 1,
           gameOversAtClear: 1,
+          // an old title (renamed 2026-09-29 to 「ためらわぬ指先」): the screen must show the new name
           lastResult: { rank: 'A', title: 'ためらわぬ弾丸', at: Date.now(), elapsedMs: 14 * 60000, playDifficulty: 'easy', prevBest: 'S+', prevBestPoints: 150, stats },
         });
       },
@@ -291,6 +292,7 @@ async function runSize(browser, size) {
     check(!(await has(page, '.rs-deg__up')), `${size}: no rank-up on a revisit`);
     const tiles = await page.evaluate(() => [...document.querySelectorAll('.rs-stat')].map((e) => e.textContent));
     check(tiles.some((t) => /ゲームオーバー1回/.test(t)), `${size}: the verdict tile names the run's game over`);
+    check(/ためらわぬ指先/.test((await text(page, '.rs-rank__title')) ?? ''), `${size}: an old saved title (ためらわぬ弾丸) shows under its new name (${await text(page, '.rs-rank__title')})`);
   });
 
   /* ---- 3. reduced motion: the final state at once ---- */

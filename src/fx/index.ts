@@ -3,8 +3,10 @@
  *
  *   fx.shake(1)                         screen shake of the scene host (strength 0.3–2)
  *   fx.flash('#fff')                    full-screen flash (rate-limited: ≤ 3 per second)
- *   fx.shatter(x, y)                    glass burst at viewport coords (refutation)
- *   await fx.cutIn({ text: '反証！', en: 'REFUTATION', tone: 'alarm', character: 'holma' })
+ *   fx.shatter(x, y)                    glass burst at viewport coords (Jane's shards, the name plate)
+ *   fx.bloom(x, y)                      litmus colour bloom (red → blue) at viewport coords (反応あり)
+ *   fx.noReaction(el)                   small 「反応なし」 tag above an element (~1 s)
+ *   await fx.cutIn({ text: '反応あり！', en: 'REACTION!', tone: 'litmus' })
  *   await fx.stamp('yes')               transient judgement stamp over the stage
  *   fx.speedLines(600)                  radial speed lines
  *   fx.glitch(el)                       one-shot glitch on an element
@@ -56,7 +58,21 @@ export interface PenaltyRequest {
   place: PenaltyPlace;
 }
 
+/** A litmus bloom (反応あり): a red spot that develops into a spreading blue one, at viewport coords. */
+export interface BloomRequest {
+  id: number;
+  x: number;
+  y: number;
+}
+/** 「反応なし」: a tag that pops above the tested word (the anchor) and drifts off. */
+export interface ReactionTagRequest {
+  id: number;
+  anchor: Element | null;
+}
+
 export const cutInQueue = signal<CutInRequest | null>(null);
+export const bloomQueue = signal<BloomRequest[]>([]);
+export const reactionTagQueue = signal<ReactionTagRequest[]>([]);
 export const penaltyQueue = signal<PenaltyRequest[]>([]);
 export const penaltyAnnounce = signal('');
 export const stampQueue = signal<StampRequest[]>([]);
@@ -124,6 +140,33 @@ export const fx = {
     if (opts.sound !== false) audio.sfx('shatter');
     if (motionReduced()) return;
     fxRefs.shatter?.burst(x ?? c.x, y ?? c.y, opts);
+  },
+
+  /**
+   * Litmus colour bloom (the 反証 succeeded): a red spot at (x, y) develops into a blue one that
+   * spreads, with two thin ripples. Skipped with reduced motion (the word itself turns blue).
+   */
+  bloom(x?: number, y?: number, opts: { sound?: boolean } = {}) {
+    const c = stageCenter();
+    if (opts.sound !== false) audio.sfx('reaction');
+    if (motionReduced()) return;
+    bloomQueue.value = [...bloomQueue.peek().slice(-1), { id: ++seq, x: x ?? c.x, y: y ?? c.y }];
+  },
+
+  _bloomDone(id: number) {
+    bloomQueue.value = bloomQueue.peek().filter((b) => b.id !== id);
+  },
+
+  /** 「反応なし」 above `anchor` (the tested word) for about a second — a plain fade with reduced motion. */
+  noReaction(anchor: Element | string | null | undefined, opts: { sound?: boolean } = {}) {
+    const el = (typeof anchor === 'string' ? document.querySelector(anchor) : anchor) ?? null;
+    if (opts.sound !== false) audio.sfx('noReaction');
+    fxAnnounce.value = '反応なし';
+    reactionTagQueue.value = [...reactionTagQueue.peek().slice(-1), { id: ++seq, anchor: el }];
+  },
+
+  _reactionTagDone(id: number) {
+    reactionTagQueue.value = reactionTagQueue.peek().filter((r) => r.id !== id);
   },
 
   cutIn(opts: { text: string; lead?: string; en?: string; tone?: CutInTone; character?: 'holma' | 'jane' | null; mood?: HolmaMood; hold?: number; sound?: boolean }): Promise<void> {
@@ -254,6 +297,8 @@ export const fx = {
     stampQueue.peek().forEach((s) => s.resolve());
     stampQueue.value = [];
     penaltyQueue.value = [];
+    bloomQueue.value = [];
+    reactionTagQueue.value = [];
     speedLinesOn.value = null;
   },
 };

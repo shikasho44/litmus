@@ -339,7 +339,7 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 ## 6. 進行トークンと秘密の守り方
 
 - 形式 `j1.<payload base64url>.<HMAC-SHA256 base64url>`。payload は
-  `{v, c: 事件id, u: 開示所見, m: 科学メモ, n: [質問数, ヒント, 論破ミス, 泣きつき, 宣告回数], rm: ラウンド別ミス, r: 突破ラウンド, f: 解決1|再構成2|nearCore4, k?: 確認済みの spoilerLevel 4 所見, t: 発行秒}`。
+  `{v, c: 事件id, u: 開示所見, m: 科学メモ, n: [質問数, ヒント, 反証の外れ（反応なし）, 泣きつき, 宣告回数], rm: ラウンド別ミス, r: 突破ラウンド, f: 解決1|再構成2|nearCore4, k?: 確認済みの spoilerLevel 4 所見, t: 発行秒}`。
   `k` は空なら省く（旧トークンは `[]` として読む）。
   `q`（省略可能、2026-09-28）: 質問枠に数えた数 `spent`。`asked` と同じなら省く（旧トークンは `spent = asked`）。`asked` より大きいと不正なトークン。
   `vs`（省略可能、2026-09-27）: オンライン対戦の部屋の結びつけ `<部屋コード>.<nonce>.<プレイヤーid>.<e|n|h>`（`server/engine/room-binding.ts`）。
@@ -406,7 +406,7 @@ spoilerLevel ≤2 の所見文とカード名）に `leakTerms` が無い / 画�
 - `AskAnswer.line` は複数の一言を `\n` で連結していることがある（前置き・本体・所見入手・核心接近）。`white-space: pre-line` で表示。
 - はい／いいえで答えられない質問（「なぜ倒れたの？」「どこに当たったんですか」「犯人は誰？」）は `answerClass: 'vague'` で、`line` は疑問詞ごとの言い直し方（『〜のせいですか？』のような型。事件の中身は含まない）。書き直し案を札にして出す API はまだ無い。
 - `AskAnswer.nearCore`: この答えで核心に迫った瞬間だけ `true`（§2 開示の規則）。ホルマの驚き・破片の明滅はこれで出す（台詞本文の照合は不要）。`progress.nearCore` は「もう核心の近くにいる」状態。
-- `ShotResponse.speaker`: `'jane'` = `lines` は正しく撃てたときのジェーンの記憶（突破済みラウンドへの再射撃も同じ）、`'holma'` = 外れ・ヒント・泣きつきのホルマの台詞。
+- `ShotResponse.speaker`: `'jane'` = `lines` は所見を正しく当てた（反応あり）ときのジェーンの記憶（突破済みラウンドにもう一度当てたときも同じ）、`'holma'` = 外れ・ヒント・泣きつきのホルマの台詞。
 - `SolutionResponse.reviewStatus`: 事件の `reviewStatus`。`human-reviewed` 以外なら科学解説に「専門家確認前の下書き」を出す。
 - `AskAnswer.notice`: `'support'`（安全フィルター。真剣な台詞の横に相談窓口カード https://www.mhlw.go.jp/mamorouyokokoro/ を出す。スタンプや茶化し演出は出さない）/ `'degraded'`（簡易判定で答えた。控えめな印）。安全フィルターの返答は `answers` が1つだけ（質問文はメッセージ全体）。
 - 複数質問は `answers[]` に分割された順で返る。`question` は分割後の原文（先頭の「それと」「あと」は除去済み）。

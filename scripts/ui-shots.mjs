@@ -356,7 +356,7 @@ try {
     await shot(page, `fx-stamp-${tag}`);
     await wait(1000);
     await page.evaluate(() => {
-      window.__JD.fx.cutIn({ text: '反証！', en: 'REFUTATION', tone: 'alarm', character: 'holma', mood: 'laugh' });
+      window.__JD.fx.cutIn({ text: '反応あり！', en: 'REACTION!', tone: 'litmus' });
     });
     await wait(520);
     await shot(page, `fx-cutin-${tag}`);
@@ -391,7 +391,7 @@ try {
           jd.audio.bgm(id, 0.2);
           await w(700);
         }
-        for (const n of ['hover', 'confirm', 'cancel', 'error', 'stamp', 'finding', 'findingCore', 'shatter', 'whoosh', 'cutin', 'gavel', 'heartbeat', 'page', 'open', 'close', 'toggle', 'refute', 'reveal', 'send']) {
+        for (const n of ['hover', 'confirm', 'cancel', 'error', 'stamp', 'finding', 'findingCore', 'shatter', 'whoosh', 'cutin', 'gavel', 'heartbeat', 'page', 'open', 'close', 'toggle', 'refute', 'reveal', 'send', 'dip', 'reaction', 'noReaction']) {
           jd.audio.sfx(n, { answerClass: 'yes' });
           await w(40);
         }

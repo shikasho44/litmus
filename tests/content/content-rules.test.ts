@@ -257,7 +257,7 @@ describe('prologue (content/prologue.json)', () => {
 
   it('introduces the rules, the optional debate, the three difficulties and the fade-out', () => {
     const all = lines.map((l) => l.text).join('\n');
-    for (const w of ['嘘をつけません', '訊かれたことにしか答えません', 'ノイズ・ブレイク', '見習い', '審問官', '教授', '選択式', '穴埋め式', '自由記述', '消えて']) expect(all, w).toContain(w);
+    for (const w of ['嘘をつけません', '訊かれたことにしか答えません', '反証', '見習い', '審問官', '教授', '選択式', '穴埋め式', '自由記述', '消えて']) expect(all, w).toContain(w);
   });
 });
 

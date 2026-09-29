@@ -159,8 +159,17 @@ function GalleryBody() {
           <Button size="sm" variant="ghost" onClick={() => fx.cutIn({ text: '所見入手', en: 'NEW FINDING', tone: 'formalin' })}>
             cutIn formalin
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => fx.cutIn({ text: '反証！', en: 'REFUTATION', tone: 'alarm', character: 'holma', mood: 'laugh' })}>
+          <Button size="sm" variant="ghost" onClick={() => fx.cutIn({ text: '開廷ですとも！', en: 'INQUEST · IN SESSION', tone: 'alarm', character: 'holma', mood: 'laugh' })}>
             cutIn alarm + holma
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => fx.cutIn({ text: '反応あり！', en: 'REACTION!', tone: 'litmus' })}>
+            cutIn litmus
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => fx.bloom()}>
+            bloom
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => fx.noReaction('.gal__row')}>
+            noReaction
           </Button>
           <Button size="sm" variant="ghost" onClick={() => fx.shatter()}>
             shatter

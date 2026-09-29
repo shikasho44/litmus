@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CaseProgress } from '../../state/types';
-import { allRoundsCleared, computeRank, formatPenalty, keyRateTarget, PENALTY_RULES, penaltyPoints, penaltyStep, questionPar, rankAdvice, RANK_TITLES, type CountPenaltyId, type RankInput } from './rank';
+import { allRoundsCleared, computeRank, formatPenalty, keyRateTarget, PENALTY_RULES, penaltyPoints, penaltyStep, questionPar, rankAdvice, RANK_TITLES, rankTitleOf, type CountPenaltyId, type RankInput } from './rank';
 import { buildCaseResult, collectRankInput, quizMisses, runGameOvers } from './stats';
 
 const base = (over: Partial<RankInput> = {}): RankInput => ({
@@ -26,7 +26,7 @@ describe('computeRank', () => {
     const r = computeRank(base());
     expect(r.rank).toBe('S');
     expect(r.score).toBe(100);
-    expect(r.title).toBe('一撃の審問官');
+    expect(r.title).toBe('誤差ゼロの審問官');
     expect(r.penalties).toEqual([]);
   });
 
@@ -197,7 +197,7 @@ describe('rankAdvice', () => {
       const fixed = { ...inp, hintsUsed: a.blockers.some((b) => b.id === 'hints') ? 0 : inp.hintsUsed, debateMisses: a.blockers.some((b) => b.id === 'misses') ? 0 : inp.debateMisses };
       expect(computeRank(fixed).rank).toBe('S');
     }
-    expect(a.line).toMatch(/囁き1回|撃ち損じ4回/);
+    expect(a.line).toMatch(/囁き1回|反応なし4回/);
   });
 
   it('falls back to the next rank up, then to the heaviest penalties', () => {
@@ -453,5 +453,23 @@ describe('question budget (shared/budget.ts) as the question par', () => {
       elapsedMs: 0,
     });
     expect(again.score).toBe(rank.score);
+  });
+});
+
+describe('rankTitleOf (titles renamed for the 反証 wording, 2026-09-29)', () => {
+  it('finds a title by its current text', () => {
+    expect(rankTitleOf('誤差ゼロの審問官')?.id).toBe('one-shot');
+    expect(rankTitleOf('完全無欠の審問官')?.id).toBe('flawless');
+  });
+  it('shows an old saved title under its new name', () => {
+    expect(rankTitleOf('一撃の審問官')?.title).toBe('誤差ゼロの審問官');
+    expect(rankTitleOf('ためらわぬ弾丸')?.title).toBe('ためらわぬ指先');
+  });
+  it('returns nothing for an unknown or missing title', () => {
+    expect(rankTitleOf('知らない称号')).toBeUndefined();
+    expect(rankTitleOf(undefined)).toBeUndefined();
+  });
+  it('no title uses the shooting words any more', () => {
+    for (const t of RANK_TITLES) expect(`${t.title}${t.comment}`, t.id).not.toMatch(/撃|弾|ノイズ/u);
   });
 });

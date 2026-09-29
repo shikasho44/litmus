@@ -1,6 +1,6 @@
 /**
- * One statement of ノイズ・ブレイク: a diagonal band that slides across the stage.
- * Noise spans ([[…]] in the case file) are real buttons — the targets.
+ * One statement of 反証 (the litmus test): a diagonal band that slides across the stage.
+ * 誤差 spans ([[…]] in the case file; `noise` in the code) are real buttons — the words to test.
  */
 import { gsap } from 'gsap';
 import { useLayoutEffect, useRef } from 'preact/hooks';
@@ -101,7 +101,7 @@ export interface StatementBandProps {
 
 type StatementSegment = InquestStatementView['segments'][number];
 
-/** Characters that may not start a line (they follow the noise) / end one (they precede it). */
+/** Characters that may not start a line (they follow the 誤差) / end one (they precede it). */
 const NO_START = /^[。、，．,.！？!?…‥」』）)〕］\]｝}〉》ー〜～ァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎゕゖ]+/;
 const NO_END = /[「『（(〔［\[｛{〈《]+$/;
 
@@ -185,10 +185,10 @@ export function StatementBand({ statement, index, total, pos, leaving, holdMs, h
           <div class="band__who">
             {jane ? <JaneChip size={38} /> : <HolmaChip size={38} />}
             <span class="band__name">{jane ? 'ジェーン・ドゥ' : 'ホルマ'}</span>
-            {/* phone: the LOCK tag lives in the header row, never on top of the name or counter */}
+            {/* phone: the SAMPLE tag lives in the header row, never on top of the name or counter */}
             {locked && (
               <span class="band__lock" aria-hidden="true">
-                LOCK
+                SAMPLE
               </span>
             )}
             <span class="band__idx">
@@ -214,7 +214,7 @@ export function StatementBand({ statement, index, total, pos, leaving, holdMs, h
                   tabIndex={leaving || !interactive ? -1 : 0}
                   aria-disabled={!interactive ? 'true' : undefined}
                   aria-pressed={isT}
-                  aria-label={`ノイズ「${seg.text}」${isT ? '（照準中）' : ''}`}
+                  aria-label={`誤差「${seg.text}」${isT ? '（選択中）' : ''}${isB ? '（反応あり）' : ''}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (!interactive) return;
@@ -236,10 +236,10 @@ export function StatementBand({ statement, index, total, pos, leaving, holdMs, h
                       <i />
                       <i />
                       <i />
-                      <b>LOCK</b>
+                      <b>SAMPLE</b>
                     </span>
                   )}
-                  {isB && <span class="noise__crack" aria-hidden="true" />}
+                  {isB && <span class="noise__stain" aria-hidden="true" />}
                 </span>
               );
               // An opening bracket before / a stop after the noise travels with it: a line never

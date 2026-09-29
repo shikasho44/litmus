@@ -22,7 +22,10 @@ export type SfxName =
   | 'toggle'
   | 'refute'
   | 'reveal'
-  | 'send';
+  | 'send'
+  | 'dip'
+  | 'reaction'
+  | 'noReaction';
 
 export type Speaker = 'holma' | 'jane' | 'narration' | 'system';
 
@@ -139,6 +142,30 @@ export function playSfx(name: SfxName, opts: { answerClass?: AnswerClass } = {})
       break;
     case 'whoosh':
       sweep(o, t, 0.32, { vel: 0.22, from: 300, to: 3200, q: 1.2, shape: 'swell', wet: 0.1 });
+      break;
+    // --- the inquest's 反証 (litmus test): a paper glide, the colour change, no colour change ---
+    case 'dip':
+      // the finding card leaves the case: a papery glide and a soft touch
+      sweep(o, t, 0.26, { vel: 0.14, from: 900, to: 4200, q: 0.9, shape: 'swell', wet: 0.05 });
+      tick(o, t + 0.24, { vel: 0.22, pitch: 2200 });
+      break;
+    case 'reaction': {
+      // 反応あり: a drop lands (a quick upward "plip"), then the colour develops — a rising
+      // glassy chord that opens up, with a soft low bump for weight (no gunshot, no shatter)
+      duckBgm(-4, 0.5);
+      tone(o, t, 520, 0.12, 'sine', 0.3, 2.2, 0.2);
+      tone(o, t + 0.01, 1040, 0.08, 'sine', 0.08, 1.6, 0.3);
+      kick(o, t, { vel: 0.42, tone: 110 });
+      [67, 71, 74, 79, 83, 86].forEach((m, i) => bell(o, t + 0.07 + i * 0.045, m, { vel: 0.1, decay: 1.6, partials: GLOCK, wet: 0.5 }));
+      [55, 62, 67].forEach((m) => tone(o, t + 0.06, mtof(m), 0.7, 'triangle', 0.045, 1.0, 0.4));
+      sweep(o, t + 0.05, 0.8, { vel: 0.07, from: 1200, to: 9000, shape: 'swell', wet: 0.5 });
+      break;
+    }
+    case 'noReaction':
+      // 反応なし: the paper touches and nothing happens — two dull, damped taps going down
+      pluck(o, t, 57, { vel: 0.16, decay: 0.12, type: 'triangle', cutoff: 1400 });
+      pluck(o, t + 0.13, 52, { vel: 0.14, decay: 0.2, type: 'triangle', cutoff: 1100 });
+      sweep(o, t + 0.02, 0.22, { vel: 0.06, from: 1600, to: 500, q: 0.8, shape: 'fall', wet: 0 });
       break;
     case 'cutin':
       duckBgm(-4, 0.4);

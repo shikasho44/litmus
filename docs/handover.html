@@ -227,7 +227,7 @@
 
   <div class="grid-3">
     <div class="card fo"><div class="tag">01 · ASK</div><h4>訊く快感</h4><p>自由に打った質問に、ホルマが巨大なスタンプで「はい」「いいえ」を叩きつける。所見を得るたびに、ガラスの破片でできた彼女の姿が灯っていく。</p></div>
-    <div class="card al"><div class="tag">02 · REFUTE</div><h4>論破する快感</h4><p>審問では、集めた所見を弾にして、彼女の誤った記憶（ノイズ）を撃ち抜く。最後は自分の言葉で死因を宣告し、コマ漫画で真相を組み直す。</p></div>
+    <div class="card al"><div class="tag">02 · REFUTE</div><h4>反証する快感</h4><p>審問では、彼女の誤った記憶の中で光る「誤差」に、集めた所見をリトマス試験紙のように当てる。正しければ赤が青に変わり、記憶が一つ正される。最後は自分の言葉で死因を宣告し、コマ漫画で真相を組み直す。</p></div>
     <div class="card cy"><div class="tag">03 · LEARN</div><h4>知って帰る満足</h4><p>名前と顔が戻ったあと、その死の裏にある科学を図解で学び、確認テストで記憶に定着させる。事故を防ぐための知識として持ち帰る。</p></div>
   </div>
 
@@ -238,7 +238,7 @@
     <span class="s">事件ファイル</span><span class="ar">→</span>
     <span class="s">導入</span><span class="ar">→</span>
     <span class="s hl">捜査（自由質問）</span><span class="ar">→</span>
-    <span class="s in">ノイズ・ブレイク</span><span class="ar">→</span>
+    <span class="s in">反証</span><span class="ar">→</span>
     <span class="s in">死因宣告</span><span class="ar">→</span>
     <span class="s in">真相再構成</span><span class="ar">→</span>
     <span class="s">身元回復</span><span class="ar">→</span>
@@ -277,6 +277,11 @@
     <li>各事件の制作ノート: <code>content/cases/c05-*/NOTES.md</code> ほか。質問の上限（予算）の目安は 25／25／30問。</li>
   </ul>
 
+  <h3>2026-09-29 の変更（審問の用語と演出）</h3>
+  <ul>
+    <li><b>「撃つ」から「リトマスの反証」へ</b>: オーナーが「撃つ・弾・ノイズ・ブレイク」はダンガンロンパに近すぎると感じたので、審問①を「反証（LITMUS TEST）」に。光る語は「誤差」、所見は弾ではなく試験紙のように「当てる」もの。正しければ誤差が赤から青へ変わって「反応あり！」、外れは「反応なし」。称号は「誤差ゼロの審問官」「ためらわぬ指先」に。エンジン・API・セーブの識別子（<code>noise</code>・<code>shot</code> など）は変えていない。docs/decisions.md 2026-09-29。</li>
+  </ul>
+
   <h3>事件（7件・すべて架空）</h3>
   <p class="note">番号は画面の CASE 番号。（ ）内は事件の id。</p>
   <div class="case"><div class="no">01</div><div><h4>背のびした牛乳びん</h4><div class="en">THE BOTTLE ON TIPTOE · 入門 · 物理（c05）</div><p>夏休みの朝、冷凍庫の中で牛乳びんにひびが入り、口から白い柱がのびていた。水は凍ると体積が約1割ふえる——ほとんどの液体とは反対の性質。となりの半分のびんが無事だった理由。約10分。</p></div></div>
@@ -291,12 +296,12 @@
 <!-- ============================================================ 02 -->
 <section id="gallery">
   <h2><span class="en">02 · SCREENS</span>画面</h2>
-  <p class="note">2026-09-25 の自動通しプレイ（<code>npm run qa</code> / <code>qa:mobile</code>）で撮った写真。クリックで原寸。ネタバレ（c01 の真相と名前）を含みます。</p>
+  <p class="note">2026-09-25 の自動通しプレイ（<code>npm run qa</code> / <code>qa:mobile</code>）で撮った写真。クリックで原寸。ネタバレ（c01 の真相と名前）を含みます。04・12 の審問は 2026-09-29 に演出を変える前の画面です。</p>
   <div class="gallery">
     <figure><a href="img/01-title.jpg"><img src="img/01-title.jpg" alt="タイトル画面。左に題字とメニュー、右に指示棒を持つホルマ、背後にガラス片の女性の影" loading="lazy" /></a><figcaption><b>01</b>タイトル。キービジュアルとメニュー</figcaption></figure>
     <figure><a href="img/02-files.jpg"><img src="img/02-files.jpg" alt="事件ファイル。足首タグ型のカードが3枚" loading="lazy" /></a><figcaption><b>02</b>事件ファイル（トゥタグ型のカード）</figcaption></figure>
     <figure><a href="img/03-investigation.jpg"><img src="img/03-investigation.jpg" alt="捜査画面。左に捜査ノート、中央にジェーンの破片とホルマ、下に会話と入力欄" loading="lazy" /></a><figcaption><b>03</b>捜査。はい／いいえのスタンプ、所見カード、捜査ノート</figcaption></figure>
-    <figure><a href="img/04-noise-break.jpg"><img src="img/04-noise-break.jpg" alt="ノイズ・ブレイク。斜めの発言の帯に光る語、左に所見の弾倉" loading="lazy" /></a><figcaption><b>04</b>審問①ノイズ・ブレイク（光る語を所見で撃つ）</figcaption></figure>
+    <figure><a href="img/04-noise-break.jpg"><img src="img/04-noise-break.jpg" alt="審問①反証。斜めの発言の帯に光る誤差、左に所見のカード" loading="lazy" /></a><figcaption><b>04</b>審問①反証（光る誤差に所見を当てる）</figcaption></figure>
     <figure><a href="img/05-verdict.jpg"><img src="img/05-verdict.jpg" alt="死因宣告。宣告書に要素不足のスタンプ、要素のチェックリスト" loading="lazy" /></a><figcaption><b>05</b>審問②死因宣告（要素ごとに判定）</figcaption></figure>
     <figure><a href="img/06-reconstruction.jpg"><img src="img/06-reconstruction.jpg" alt="真相再構成。5コマの漫画と、ホルマの語り" loading="lazy" /></a><figcaption><b>06</b>審問③真相再構成（5コマ漫画）</figcaption></figure>
     <figure><a href="img/07-identity.jpg"><img src="img/07-identity.jpg" alt="身元回復。肖像と名前" loading="lazy" /></a><figcaption><b>07</b>身元回復。名前と顔が戻る</figcaption></figure>
@@ -307,7 +312,7 @@
   <div class="gallery sp">
     <figure><a href="img/10-sp-title.jpg"><img src="img/10-sp-title.jpg" alt="スマホのタイトル画面" loading="lazy" /></a><figcaption><b>10</b>タイトル</figcaption></figure>
     <figure><a href="img/11-sp-investigation.jpg"><img src="img/11-sp-investigation.jpg" alt="スマホの捜査画面" loading="lazy" /></a><figcaption><b>11</b>捜査</figcaption></figure>
-    <figure><a href="img/12-sp-inquest.jpg"><img src="img/12-sp-inquest.jpg" alt="スマホのノイズ・ブレイク" loading="lazy" /></a><figcaption><b>12</b>ノイズ・ブレイク</figcaption></figure>
+    <figure><a href="img/12-sp-inquest.jpg"><img src="img/12-sp-inquest.jpg" alt="スマホの審問①反証" loading="lazy" /></a><figcaption><b>12</b>反証</figcaption></figure>
     <figure><a href="img/13-sp-science.jpg"><img src="img/13-sp-science.jpg" alt="スマホの科学解剖" loading="lazy" /></a><figcaption><b>13</b>科学解剖</figcaption></figure>
   </div>
   <p class="note">全場面の写真は <code>qa/flow/</code>（git には入らない。<code>npm run qa</code> で撮り直せる）。場面ごとの細かい写真は <code>qa/investigation/</code>・<code>qa/inquest/</code>・<code>qa/ending/</code>・<code>qa/ui/</code>・<code>qa/admin/</code>。</p>
@@ -461,7 +466,7 @@
   <ul>
     <li><strong>真相と所見</strong>（1件 41〜45枚）。所見ごとに重要度・ネタバレの段階・キーワード・判定用のメモ（「〜と訊かれたら一部そう」など）。</li>
     <li><strong>想定質問</strong>（1件 211〜357問）。人が付けた正解ラベルつき。rules 判定の土台で、ベンチの問題集でもある。</li>
-    <li><strong>審問</strong>（2ラウンドの発言とノイズ、正解の所見と別解、外したとき・ヒントの台詞）、<strong>死因宣告の要素</strong>（直接死因・きっかけ・仕組み・状況）と誤った主張、<strong>再構成</strong>の5コマと選択肢。</li>
+    <li><strong>審問</strong>（2ラウンドの発言と誤差、正解の所見と別解、外したとき・ヒントの台詞）、<strong>死因宣告の要素</strong>（直接死因・きっかけ・仕組み・状況）と誤った主張、<strong>再構成</strong>の5コマと選択肢。</li>
     <li><strong>科学解剖</strong>（因果の鎖、図解、よくある誤解、身を守るために、出典3件以上）と確認テスト。答えの語（<code>leakTerms</code>）は公開してよい文に出ないよう <code>npm run validate</code> が検査。</li>
   </ul>
 
@@ -561,7 +566,7 @@
   <ul>
     <li>c02 の心電図の図解が「心室細動」などの答えの語を画面のコードに直書きしていた → 事件データ（解決後にだけ届く）へ移した。ビルドの漏洩検査の例外が 0 件に。</li>
     <li>死因宣告の問いかけ「…あなたの言葉で。」が PC 幅で「あな／たの」と語の途中で折り返していた → 句ごとに折り返すようにした。</li>
-    <li>ノイズ・ブレイクで、外した直後に正しく撃つと、外れのからかいの一言が「反証！」の上に残っていた → 正解の瞬間に消すようにした。</li>
+    <li>審問①（当時の名前はノイズ・ブレイク。いまの反証）で、外した直後に正しく当てると、外れのからかいの一言が正解のカットイン（当時は「反証！」、いまは「反応あり！」）の上に残っていた → 正解の瞬間に消すようにした。</li>
     <li>プロローグと遊び方の「所見ひとつで破片がひとつ灯る」が実際（大事な所見ほど多く灯る）と違っていた → 文を直した。</li>
     <li>スマホの自動通しプレイが真相再構成で止まっていた（コマを選ぶと次の空白へ進む新しい画面の動きに、検査の台本が追いついていなかった）→ <code>scripts/qa.mjs</code> を直し、3事件ともスマホで最後まで通るようになった。</li>
     <li><code>.env.example</code> に画面側の設定（<code>VITE_SITE_URL</code>・<code>VITE_OFFICIAL_RELEASE_ENABLED</code>・<code>VITE_INCLUDE_ADMIN</code> など）を追記。</li>
@@ -573,7 +578,7 @@
     <li><strong>秘密</strong>: 開発用の鍵でトークンを偽造して真相を読む攻撃を再現し、塞いだ（本番は鍵が無ければ 503）。ブラウザへ出る形にしか秘密が通らないことをテストで確認。</li>
     <li><strong>安全</strong>: 全想定質問で安全フィルターの誤検知 0、安全の想定質問 53/53。</li>
     <li><strong>ビルドの中身</strong>: 管理画面は <code>ADMIN_TOKEN</code> があるときだけ入る（静的版には入らない）、CSP 違反 0、Markdown・答えの語の混入 0。</li>
-    <li><strong>声と文</strong>: ホルマの口調・ジェーンの台詞の長さ・ヒントに答えの語を使わない・外れの台詞が「的か弾か」を明かさない、などを事件データのテストで毎回検査。</li>
+    <li><strong>声と文</strong>: ホルマの口調・ジェーンの台詞の長さ・ヒントに答えの語を使わない・外れの台詞が「誤差と所見のどちらが違うか」を明かさない、などを事件データのテストで毎回検査。</li>
   </ul>
 </section>
 

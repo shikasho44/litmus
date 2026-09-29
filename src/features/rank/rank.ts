@@ -15,11 +15,11 @@
  * 22/30/38 by case difficulty, every question 0.6 beyond it) so older records still explain.
  *
  *   S ≥ 88 (and no hints / no grants) · A ≥ 70 · B ≥ 50 · C otherwise
- *   S+ = S, and every noise-break round of the case cleared by the player's own shots (none
- *        skipped — the noise break is optional — and no begging Holma for evidence)
+ *   S+ = S, and every 反証 round of the case cleared with the player's own findings (none
+ *        skipped — 反証 is optional — and no begging Holma for evidence)
  *
  * Each rank comes with a one-line title in Holma's voice, chosen by the run's most telling
- * trait (e.g. no misses → 「ためらわぬ弾丸」, hints used → 「囁きに耳を貸す者」).
+ * trait (e.g. no misses → 「ためらわぬ指先」, hints used → 「囁きに耳を貸す者」).
  */
 import type { Rank } from '../../state/types';
 import { casePar, overBudgetPoints } from '../../../shared/budget';
@@ -56,7 +56,7 @@ export interface RankInput {
   elapsedMs: number;
   /** The case's estimated play time; defaults to 10 + 5 × difficulty minutes. */
   estimatedMinutes?: number;
-  /** Noise-break rounds of the case (0 / unknown = no S+). */
+  /** 反証 (debate) rounds of the case (0 / unknown = no S+). */
   debateRounds?: number;
   /** Rounds the player cleared (skipped ones are not). */
   debateCleared?: number;
@@ -106,12 +106,12 @@ export const RANK_LABEL: Record<Rank, { jp: string; en: string }> = {
 
 /** All titles (13). Order inside a rank = priority when several apply; the last one is the default. */
 export const RANK_TITLES: RankTitle[] = [
-  { id: 'flawless', rank: 'S+', title: '完全無欠の審問官', comment: 'すべての記憶を、ご自分の弾で。……私の出番は、ありませんでしたねェ。' },
-  { id: 'one-shot', rank: 'S', title: '一撃の審問官', comment: '迷いのない一撃。……少々、つまらないくらいですねェ。' },
+  { id: 'flawless', rank: 'S+', title: '完全無欠の審問官', comment: 'すべての記憶を、ご自分の所見で。……私の出番は、ありませんでしたねェ。' },
+  { id: 'one-shot', rank: 'S', title: '誤差ゼロの審問官', comment: '誤差なし、迷いなし。……少々、つまらないくらいですねェ。' },
   { id: 'silent', rank: 'S', title: '寡黙な解剖医', comment: '言葉少なに、急所だけを。お見事ですとも。' },
   { id: 'ace', rank: 'S', title: '零番の切り札', comment: 'この部屋の切り札は、どうやらあなたのようで。' },
   { id: 'probe', rank: 'A', title: '鋭利なプローブ', comment: '訊くたびに、何かを掘り当てる。良い指先です。' },
-  { id: 'unwavering', rank: 'A', title: 'ためらわぬ弾丸', comment: 'ノイズを撃ち抜く手に、震えはありませんでしたねェ。' },
+  { id: 'unwavering', rank: 'A', title: 'ためらわぬ指先', comment: '誤差に所見を当てる指先に、震えはありませんでしたねェ。' },
   { id: 'observer', rank: 'A', title: '慎重な観察者', comment: '石橋を叩いて、叩いて、渡る。嫌いではありませんよ。' },
   { id: 'whisper', rank: 'B', title: '囁きに耳を貸す者', comment: '私の囁き、お役に立ちましたか？　クックック。' },
   { id: 'tenacious', rank: 'B', title: '粘り強い書記官', comment: '何度でも言い直す。その粘り、記録しておきますとも。' },
@@ -149,6 +149,16 @@ export function keyRateTarget(difficulty: number): number {
   return 0.5 - 0.05 * (d - 1); // .50 / .45 / .40
 }
 
+/** Titles renamed on 2026-09-29 (the 反証 wording): saves keep the old text, the screen shows the new name. */
+const LEGACY_TITLE_IDS: Record<string, string> = { 一撃の審問官: 'one-shot', ためらわぬ弾丸: 'unwavering' };
+
+/** The title a stored result names — by its text, or by its old text from before a rename. */
+export function rankTitleOf(text: string | undefined): RankTitle | undefined {
+  if (!text) return undefined;
+  const id = LEGACY_TITLE_IDS[text];
+  return RANK_TITLES.find((t) => t.title === text || (id && t.id === id));
+}
+
 /** The penalties that grow with a count of events (hint used, shot missed, …). */
 export type CountPenaltyId = 'hints' | 'misses' | 'grants' | 'verdict' | 'suspensions' | 'gameOvers' | 'quiz';
 
@@ -158,7 +168,7 @@ export type CountPenaltyId = 'hints' | 'misses' | 'grants' | 'verdict' | 'suspen
  */
 export const PENALTY_RULES: Record<CountPenaltyId, { label: string; per: (d: number) => number; cap?: number }> = {
   hints: { label: 'ホルマの囁き', per: (d) => 9 - d }, // 8 / 7 / 6 per hint
-  misses: { label: 'ノイズ・ブレイクの失敗', per: (d) => 4.5 - 0.5 * d, cap: 20 }, // 4 / 3.5 / 3
+  misses: { label: '反証の反応なし', per: (d) => 4.5 - 0.5 * d, cap: 20 }, // 4 / 3.5 / 3
   grants: { label: '泣きつき', per: (d) => 11 - d }, // 10 / 9 / 8
   verdict: { label: '死因宣告のやり直し', per: (d) => 7 - d * 0.5 - 0.5, cap: 24 }, // 6 / 5.5 / 5
   suspensions: { label: '審問の中断', per: () => 5 },
@@ -316,7 +326,7 @@ function withoutPenalty(input: RankInput, id: PenaltyId): RankInput {
   }
 }
 
-/** 「囁き1回」「撃ち損じ2回」… — the player's own numbers, not points. */
+/** 「囁き1回」「反応なし2回」… — the player's own numbers, not points. */
 export function penaltyText(id: PenaltyId, input: RankInput): string {
   switch (id) {
     case 'questions': {
@@ -328,7 +338,7 @@ export function penaltyText(id: PenaltyId, input: RankInput): string {
     case 'hints':
       return `囁き${n(input.hintsUsed)}回`;
     case 'misses':
-      return `撃ち損じ${n(input.debateMisses)}回`;
+      return `反応なし${n(input.debateMisses)}回`;
     case 'grants':
       return `泣きつき${n(input.grants)}回`;
     case 'verdict':
@@ -345,7 +355,7 @@ export function penaltyText(id: PenaltyId, input: RankInput): string {
 }
 
 export const S_CONDITION = `減点${100 - RANK_THRESHOLDS.S}点以内、囁きと泣きつきなし`;
-export const S_PLUS_CONDITION = 'Sのうえ、議論を全部撃ち抜く';
+export const S_PLUS_CONDITION = 'Sのうえ、反証を全部、自分の所見で成功させる';
 
 /**
  * Names the 1–2 heaviest penalties whose removal would have lifted the run to S (or, when S
@@ -362,7 +372,7 @@ export function rankAdvice(input: RankInput, result: RankResult = computeRank(in
   }
   if (result.rank === 'S') {
     if (n(input.debateRounds) > 0 && !allRoundsCleared(input))
-      return { line: 'ノイズ・ブレイクを全部撃ち抜いていれば、S+でしたねェ。', target: 'S+', blockers: [], sCondition: S_CONDITION };
+      return { line: '反証を全部、ご自分の所見で成功させていれば、S+でしたねェ。', target: 'S+', blockers: [], sCondition: S_CONDITION };
     if (!sorted.length) return { line: '減点なし。……文句のつけようがありませんねェ。', blockers: [], sCondition: S_CONDITION };
     return { line: `強いて言えば、${join([sorted[0].id])}。……贅沢な悩みですとも。`, blockers: pack([sorted[0].id]), sCondition: S_CONDITION };
   }
@@ -370,7 +380,7 @@ export function rankAdvice(input: RankInput, result: RankResult = computeRank(in
   const reaches = (ids: PenaltyId[], target: Rank) => {
     const fixed = ids.reduce((inp, id) => withoutPenalty(inp, id), input);
     const r = computeRank(fixed).rank;
-    // (S+ also needs the noise break: reaching S counts for the 'S' target either way)
+    // (S+ also needs every 反証 round: reaching S counts for the 'S' target either way)
     return r === target || better(r, target);
   };
   const find = (target: Rank): PenaltyId[] | null => {

@@ -7,9 +7,9 @@
 どれだけ集められるか。大人から子供まで、いろんな立場とモデルで確かめる。
 
 ■ 「足りる」の測り方
-  審問（ノイズ・ブレイク）は事件ごとに数ラウンドあり、各ラウンドは撃ち抜くのに使える所見が決まっている
+  審問（反証）は事件ごとに数ラウンドあり、各ラウンドは誤差に当てて反応が出る所見が決まっている
   （case.json の debate[].answer.fact と alsoAccept）。
-  **最初に審問を開いた時点までに手に入れた所見**で、何ラウンド分を撃てたかを数える（= 審問カバー率）。
+  **最初に審問を開いた時点までに手に入れた所見**で、何ラウンド分を反証できたかを数える（= 審問カバー率）。
   あわせて次も記録する。
     ・審問を開くまでの質問数、ヒント数
     ・審問中に「救済」（詰まったときにゲームが所見を渡す grant）を使った回数
@@ -98,7 +98,7 @@ th{font-weight:normal;color:var(--sub)}.ok{background:var(--ok)}.mid{background:
 .wrap{overflow-x:auto}p{line-height:1.7}</style></head><body><main>
 <h1>リトマス審問：何も知らない人が、審問に足りる所見を集められるか</h1>
 <p>AIに年齢・立場の違う9人を演じさせ、事件の導入文だけを見せて、はい／いいえの質問で遊ばせた（最大40問）。
-<b>太字</b>は「最初に審問を開いた時点の所見で撃てたラウンド数／全ラウンド数」。
+<b>太字</b>は「最初に審問を開いた時点の所見で反証できたラウンド数／全ラウンド数」。
 緑＝全ラウンド分そろっていて救済なし、黄＝1ラウンド足りない、赤＝2ラウンド以上足りない。
 「救済」は、審問で詰まったときにゲームが所見を渡した回数。下段は死因宣告の最終結果。</p>"""]
     for m in models:
@@ -112,7 +112,7 @@ th{font-weight:normal;color:var(--sub)}.ok{background:var(--ok)}.mid{background:
         h.append("<tr><th>足りた</th>" + "".join(
             f"<td>{sum(1 for p, _ in personas if idx.get((c, p, m), {}).get('enough'))}/{sum(1 for p, _ in personas if (c, p, m) in idx)}</td>" for c in cids) + "<td></td></tr></table></div>")
     # ラウンドごと：どの所見が集まりにくいか（全モデル・全人物をまとめて）
-    h.append("<h2>ラウンドごとの到達率（審問を開いた時点で、撃てる所見を持っていた割合）</h2><table><tr><th>事件</th><th>ラウンド</th><th>撃ち抜く発言</th><th>撃てる所見</th><th>到達</th></tr>")
+    h.append("<h2>ラウンドごとの到達率（審問を開いた時点で、当てられる所見を持っていた割合）</h2><table><tr><th>事件</th><th>ラウンド</th><th>誤差のある発言</th><th>当てる所見</th><th>到達</th></tr>")
     for c in cids:
         cr = [r for r in rows if r["case"] == c]
         for rid, info in cases[c]["rinfo"].items():

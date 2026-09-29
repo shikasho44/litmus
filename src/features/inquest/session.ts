@@ -1,7 +1,7 @@
 /**
  * InquestSession — the state machine behind the 死因審問 scene.
  *
- *   loading → opening → debate (rounds… — optional: 「議論を飛ばして死因宣告へ」) → verdict → reconstruction → finale → done
+ *   loading → opening → debate (rounds… — optional: 「反証を飛ばして死因宣告へ」) → verdict → reconstruction → finale → done
  *                          └ composure 0 → suspended → back to investigation
  *                                                         verdict: lights 0 → gameover
  *
@@ -158,7 +158,7 @@ export class InquestSession {
   misses = signal(0);
   grants = signal(0);
   suspensions = signal(0);
-  /** The noise that was just broken (drawn shattered). */
+  /** The 誤差 that just reacted (drawn developed blue). */
   broken = signal<Target | null>(null);
   /** Fact ids that just joined the evidence (NEW badge). */
   freshFacts = signal<Set<string>>(new Set());
@@ -512,7 +512,7 @@ export class InquestSession {
       const penalty = res.correct ? 0 : penaltyStep('misses', missesBefore, this.caseLevel());
       return { correct: res.correct, lines: res.lines, speaker: res.speaker, hint: res.hint, penalty };
     } catch (e) {
-      const { msg } = this.fail(e, '反証');
+      const { msg } = this.fail(e, '所見の判定');
       this.quip(msg, 'warn');
       return null;
     }
@@ -576,7 +576,7 @@ export class InquestSession {
     setStage(this.caseId, 'investigation');
   }
 
-  /** 「議論を飛ばして死因宣告へ」: the rounds left give no assists. */
+  /** 「反証を飛ばして死因宣告へ」: the rounds left give no assists. */
   skipDebate() {
     batch(() => {
       this.debateSkipped.value = true;

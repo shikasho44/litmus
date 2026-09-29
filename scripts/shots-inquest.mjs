@@ -429,7 +429,7 @@ async function runCase(browser, key, sizeKey, opts = {}) {
       // cut-ins can be skipped (Enter)
       await page.keyboard.press('Enter');
       await tick(page, 260);
-      if (await page.$('.fx-cutin')) problems.push(`${tag}: Enter did not skip the 反証！ cut-in`);
+      if (await page.$('.fx-cutin')) problems.push(`${tag}: Enter did not skip the 反応あり！ cut-in`);
     }
     await until(page, (s) => s.step === 'success' && s.dlg === 'on', { advance: false, label: 'success lines' });
     await page.evaluate(() => window.__JD.skipText());
@@ -753,7 +753,7 @@ async function runBadToken(browser, key, sizeKey, where) {
     await tick(page, 600);
     await shot(page, `${tag}-01-dialog`);
     if (!(await page.$('.modal[role="alertdialog"]'))) problems.push(`${tag}: the bad-token dialog is not an alertdialog`);
-    if (await page.$('[data-fire]:not([disabled])')) problems.push(`${tag}: FIRE stays enabled behind the bad-token dialog`);
+    if (await page.$('[data-fire]:not([disabled])')) problems.push(`${tag}: 当てる (TEST) stays enabled behind the bad-token dialog`);
     if (await page.$('[data-verdict-submit]:not([disabled])')) problems.push(`${tag}: 宣告 stays enabled behind the bad-token dialog`);
     const toTitle = where === 'verdict';
     await page.click(toTitle ? '[data-badtoken-title]' : '[data-badtoken-restart]');

@@ -287,6 +287,13 @@ export const CaseSchema = z.object({
      */
     silhouette: z.union([z.enum(['bust', 'none']), z.string().regex(/^[Mm][\d\s.,MmLlHhVvCcSsQqTtAaZz-]+$/)]).optional(),
     /**
+     * PUBLIC, optional (added 2026-09-29). The picture the lit shards show until the solve, for a
+     * case whose portrait would give the victim away piece by piece (c07: the player does not know
+     * yet whether she was a person or a rose). Default: the portrait. After the verdict the
+     * ceremony and the record always show `portrait` (it comes with the solution).
+     */
+    shardPortrait: z.string().optional(),
+    /**
      * The rows under the restored name, replacing 「年齢 29歳」「職業 …」 — e.g. an object soul's
      * [{label:'生まれて', value:'4年'}, {label:'役目', value:'宅配の牛乳びん'}]. SECRET until solved.
      */

@@ -40,7 +40,8 @@ export function toSummary(c: Case): CaseSummary {
     codename: c.victim.codename,
     background: c.assets.background,
     accent: c.assets.accent,
-    portrait: c.victim.portrait,
+    // what the shards show before the solve (the solution sends the real portrait)
+    portrait: c.victim.shardPortrait ?? c.victim.portrait,
   };
   if (c.victim.silhouette && c.victim.silhouette !== 'bust') s.silhouette = c.victim.silhouette;
   if (c.contentWarning) s.contentWarning = c.contentWarning;

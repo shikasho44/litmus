@@ -1,4 +1,5 @@
 // 反証 (litmus test) staging shots — the inquest's core moment, desktop 1280×800 and phone 390×844:
+//   00 the round card (LITMUS TEST · ROUND 1)
 //   01 a statement with its 誤差 glowing        02 the 誤差 chosen (SAMPLE), 02b a card set (当てる ready)
 //   03 the set card gliding to the word          04 反応なし (a wrong card: the pad stays red)
 //   05 反応あり: the red → blue bloom            06 the 「反応あり！」 cut-in (developed blue)
@@ -235,8 +236,12 @@ async function litmus(size) {
   console.log(`[litmus] ${CASE} ${size}`);
   await withPage(size, async (page) => {
     await open(page, CASE_ID);
+    // 00 — the round card: LITMUS TEST · ROUND 1 / 反証 — 記憶の誤差に、所見を当てよ
+    await until(page, (st) => st.card === 'on', { label: 'round card' });
+    await tick(page, 800);
+    await shot(page, `${size}-00-round-card`, 300);
+    check(/LITMUS TEST/.test((await text(page, '.tcard__kicker')) ?? ''), `${size}: round card kicker LITMUS TEST`);
     await until(page, (st) => st.phase === 'debate' && st.step === 'play' && st.dlg === 'off' && !st.cut && st.card === 'off', { label: 'debate play' });
-    // round card (seen on the way): LITMUS TEST · ROUND 1
     const i = round.statements.findIndex((s) => s.id === statement);
     await page.click(`.debate__dot >> nth=${i}`);
     await untilSel(page, `.band[data-statement-id="${statement}"]`);

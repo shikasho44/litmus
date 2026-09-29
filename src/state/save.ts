@@ -11,6 +11,8 @@
 import { batch, computed, effect, signal } from '@preact/signals';
 import { APP_CONFIG } from '../config/app';
 import { resultPoints } from '../features/rank/points';
+import { sanitizeExamples } from '../features/examples/examples';
+import { runModeOf } from './runMode';
 import type { Difficulty, ProgressSnapshot, ProgressToken, PublicFact, ScienceMemoView } from '../../shared/api';
 import { prefersReducedMotion, START_MUTED } from '../lib/env';
 import {
@@ -19,6 +21,7 @@ import {
   type CaseResult,
   type CaseStage,
   type CaseStatus,
+  type FirstClear,
   type InquestState,
   type LogEntry,
   type Rank,
@@ -148,6 +151,24 @@ function sanitizeCase(id: string, c: unknown): CaseProgress | null {
       isObj(c.restored) && typeof c.restored.name === 'string' && c.restored.name
         ? { name: c.restored.name.slice(0, 40), kana: str(c.restored.kana).slice(0, 60) }
         : undefined,
+    examples: sanitizeExamples(c.examples),
+    clearMs: typeof c.clearMs === 'number' && Number.isFinite(c.clearMs) ? Math.max(0, c.clearMs) : undefined,
+    firstClear: sanitizeFirstClear(c.firstClear),
+    ownWords: c.ownWords === true ? true : undefined,
+  };
+}
+
+/** A stored first-clear record, or undefined (never invented for older saves). */
+function sanitizeFirstClear(v: unknown): FirstClear | undefined {
+  if (!isObj(v) || !RANKS.includes(v.rank) || !DIFFICULTIES.includes(v.difficulty)) return undefined;
+  if (typeof v.clearMs !== 'number' || !Number.isFinite(v.clearMs) || v.clearMs < 0) return undefined;
+  return {
+    at: num(v.at, 0, 0),
+    difficulty: v.difficulty,
+    clearMs: v.clearMs,
+    spent: num(v.spent, 0, 0),
+    ...(typeof v.budget === 'number' && Number.isFinite(v.budget) ? { budget: v.budget } : {}),
+    rank: v.rank,
   };
 }
 
@@ -384,19 +405,46 @@ export const betterRank = (a: Rank | undefined, b: Rank | undefined): Rank | und
 /**
  * Seal a run: best rank, best 獲得度数 (a replay only ever raises it, so the 名探偵度数 total
  * cannot be farmed), and the game-over mark (the next run's game overs are counted from here).
+ *
+ * The FIRST clear (2026-09-29) is written once and never overwritten: only when the case had no
+ * clear before (a case cleared before the record existed gets none) and never by a special run
+ * (online versus — its copy is thrown away anyway, but the result must not say 「初見」).
  */
 export function completeCase(caseId: string, result: CaseResult) {
   const points = resultPoints(result).total;
-  updateCase(caseId, (c) => ({
-    ...c,
-    stage: 'complete',
-    completed: true,
-    clears: c.clears + 1,
-    bestRank: betterRank(c.bestRank, result.rank),
-    bestPoints: Math.max(c.bestPoints ?? 0, points),
-    gameOversAtClear: c.gameOvers ?? 0,
-    lastResult: { ...result, stats: { ...result.stats, points }, prevBest: c.bestRank, prevBestPoints: c.bestPoints },
-  }));
+  const special = !!runModeOf(caseId);
+  updateCase(caseId, (c) => {
+    const first = !special && !c.firstClear && c.clears === 0 && !c.completed && typeof result.clearMs === 'number';
+    const firstClear: FirstClear | undefined = first
+      ? {
+          at: result.at,
+          difficulty: result.playDifficulty ?? 'normal',
+          clearMs: result.clearMs!,
+          spent: result.stats?.spent ?? result.stats?.asked ?? 0,
+          ...(typeof result.stats?.budget === 'number' ? { budget: result.stats.budget } : {}),
+          rank: result.rank,
+        }
+      : c.firstClear;
+    return {
+      ...c,
+      stage: 'complete',
+      completed: true,
+      clears: c.clears + 1,
+      bestRank: betterRank(c.bestRank, result.rank),
+      bestPoints: Math.max(c.bestPoints ?? 0, points),
+      gameOversAtClear: c.gameOvers ?? 0,
+      ...(firstClear ? { firstClear } : {}),
+      ...(c.ownWords || result.stats?.examplesUsed === 0 ? { ownWords: true } : {}),
+      lastResult: { ...result, stats: { ...result.stats, points }, prevBest: c.bestRank, prevBestPoints: c.bestPoints, ...(first ? { firstClear: true } : {}) },
+    };
+  });
+}
+
+/** The verdict was accepted: the run's clear time is the play time so far (kept once set). */
+export function markCleared(caseId: string) {
+  const c = saveData.peek().cases[caseId];
+  if (!c || typeof c.clearMs === 'number') return;
+  updateCase(caseId, { clearMs: c.elapsedMs });
 }
 
 /** Remember the restored victim identity (the ceremony has revealed it). */
@@ -406,7 +454,7 @@ export function setRestored(caseId: string, name: string, kana: string) {
   updateCase(caseId, (c) => ({ ...c, restored: { name, kana } }));
 }
 
-/** Start the case over (keeps best rank / points, clear count, the restored name, the chosen difficulty and the game-over counters). */
+/** Start the case over (keeps best rank / points, clear count, the first clear, the restored name, the chosen difficulty and the game-over counters; the 質問の例 cards and the clear time start over). */
 export function resetCase(caseId: string) {
   updateCase(caseId, (c) => ({
     ...freshCase(caseId),
@@ -419,6 +467,8 @@ export function resetCase(caseId: string) {
     ...(c.difficulty ? { difficulty: c.difficulty } : {}),
     ...(c.gameOvers ? { gameOvers: c.gameOvers } : {}),
     ...(c.gameOversAtClear ? { gameOversAtClear: c.gameOversAtClear } : {}),
+    ...(c.firstClear ? { firstClear: c.firstClear } : {}),
+    ...(c.ownWords ? { ownWords: true } : {}),
   }));
 }
 

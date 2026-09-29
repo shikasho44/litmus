@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CaseProgress } from '../../state/types';
-import { allRoundsCleared, computeRank, formatPenalty, keyRateTarget, PENALTY_RULES, penaltyPoints, penaltyStep, questionPar, rankAdvice, RANK_TITLES, rankTitleOf, type CountPenaltyId, type RankInput } from './rank';
+import { allRoundsCleared, computeRank, formatPenalty, keyRateTarget, PENALTY_RULES, penaltyPoints, penaltyStep, questionPar, rankAdvice, RANK_TITLES, rankTitleOf, RUN_DISTINCTIONS, runDistinctions, type CountPenaltyId, type RankInput } from './rank';
 import { buildCaseResult, collectRankInput, quizMisses, runGameOvers } from './stats';
 
 const base = (over: Partial<RankInput> = {}): RankInput => ({
@@ -428,15 +428,15 @@ describe('question budget (shared/budget.ts) as the question par', () => {
         clears: 0,
         snapshot: { unlocked: [], memos: [], asked: 30, ...(spent === undefined ? {} : { spent }), hintsUsed: 0, debateCleared: [], debateMisses: 0, verdictAttempts: 1, solved: true, reconstructed: true, progress: 1, nearCore: true },
       }) as CaseProgress;
-    expect(collectRankInput(p('normal', 26), { difficulty: 1 })).toMatchObject({ asked: 30, spent: 26, budget: 29, overCost: 1.5, overCap: 24 });
-    expect(collectRankInput(p('easy', 26), { difficulty: 1 })).toMatchObject({ budget: 35, overCost: 0 });
-    expect(collectRankInput(p('hard', 26), { difficulty: 3 })).toMatchObject({ budget: 42, overCost: 1.5 });
+    expect(collectRankInput(p('normal', 26), { difficulty: 1 })).toMatchObject({ asked: 30, spent: 26, budget: 22, overCost: 1.5, overCap: 24 });
+    expect(collectRankInput(p('easy', 26), { difficulty: 1 })).toMatchObject({ budget: 29, overCost: 0 });
+    expect(collectRankInput(p('hard', 26), { difficulty: 3 })).toMatchObject({ budget: 30, overCost: 1.5 });
     expect(collectRankInput(p('hard', 26), { difficulty: 1, questionBudget: { hard: 8 } })).toMatchObject({ budget: 8 });
     // a snapshot from before the budget: spent = asked
     expect(collectRankInput(p('normal'), { difficulty: 1 }).spent).toBe(30);
     // stored stats recompute to the same result
     const { result, rank } = buildCaseResult(p('normal', 33), { difficulty: 1 });
-    expect(result.stats).toMatchObject({ asked: 30, spent: 30, budget: 29, budgetCost: 1.5, budgetCap: 24 });
+    expect(result.stats).toMatchObject({ asked: 30, spent: 30, budget: 22, budgetCost: 1.5, budgetCap: 24 });
     const again = computeRank({
       difficulty: 1,
       asked: result.stats.asked,
@@ -471,5 +471,25 @@ describe('rankTitleOf (titles renamed for the 反証 wording, 2026-09-29)', () =
   });
   it('no title uses the shooting words any more', () => {
     for (const t of RANK_TITLES) expect(`${t.title}${t.comment}`, t.id).not.toMatch(/撃|弾|ノイズ/u);
+  });
+});
+
+describe('寡黙な解剖医 and the distinctions (2026-09-29)', () => {
+  const s = (over: Partial<RankInput>) =>
+    computeRank({ difficulty: 1, asked: 10, answered: 10, keyQuestions: 8, hintsUsed: 0, debateMisses: 1, grants: 0, verdictAttempts: 1, elapsedMs: 0, ...over });
+  it('寡黙 is measured against the smaller of the par and the run budget', () => {
+    // par 22, budget 15 → at most 10 counted questions
+    expect(s({ spent: 10, asked: 10, budget: 15, overCost: 1.5, overCap: 24 }).titleId).toBe('silent');
+    expect(s({ spent: 11, asked: 11, answered: 11, budget: 15, overCost: 1.5, overCap: 24 }).titleId).toBe('ace');
+    // a roomy budget does not loosen it beyond the par (22 × 0.7 → 15)
+    expect(s({ spent: 15, asked: 15, answered: 15, keyQuestions: 12, budget: 40, overCost: 1.5, overCap: 24 }).titleId).toBe('silent');
+    expect(s({ spent: 16, asked: 16, answered: 16, keyQuestions: 12, budget: 40, overCost: 1.5, overCap: 24 }).titleId).toBe('ace');
+  });
+  it('素手の審問官: only when the run recorded that it used no example card', () => {
+    expect(runDistinctions({ examplesUsed: 0 }).map((d) => d.id)).toEqual(['own-words']);
+    expect(runDistinctions({ examplesUsed: 1 })).toEqual([]);
+    expect(runDistinctions({})).toEqual([]);
+    expect(runDistinctions(undefined)).toEqual([]);
+    for (const d of RUN_DISTINCTIONS) expect(`${d.title}${d.comment}`).not.toMatch(/撃|弾|ノイズ/u);
   });
 });

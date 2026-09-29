@@ -430,6 +430,58 @@
   color: var(--bone-2);
 }
 
+/* 初回の解決 (the case's first clear, kept forever) and the 初見 badge when this run is it */
+.rs-first {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 6px 0 0;
+  font-size: var(--fs-xs);
+}
+.rs-first__k {
+  color: var(--bone-3);
+  font-weight: 700;
+}
+.rs-first__v {
+  color: var(--bone);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.rs-first__badge {
+  padding: 1px 8px;
+  border: 1px solid var(--formalin);
+  border-radius: 2px;
+  color: var(--formalin);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  transform: rotate(-3deg);
+}
+
+/* a distinction beside the rank title (素手の審問官: solved without a 質問の例 card) */
+.rs-distinction {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin: 4px 0 2px;
+  padding: 3px 10px;
+  border: 1px solid rgba(198, 255, 61, 0.35);
+  background: rgba(198, 255, 61, 0.06);
+  font-size: var(--fs-xs);
+}
+.rs-distinction > .icon {
+  color: var(--formalin);
+}
+.rs-distinction__name {
+  color: var(--formalin);
+  font-weight: 700;
+}
+.rs-distinction__note {
+  color: var(--bone-2);
+}
+
 /* S+ — the seal gains a second ring and a small superscript plus */
 .rs-rank__letter.is-plus {
   display: inline-flex;

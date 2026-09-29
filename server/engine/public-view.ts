@@ -5,9 +5,10 @@
  * verdictModes are shown at the verdict (verdictSetupView) without the `correct` flags / answers.
  */
 import type { Case, Fact, VerdictModes } from '../../shared/case-schema.js';
-import type { CasePublic, CaseSummary, PublicFact, ReconstructionView, ScienceMemoView, SolutionResponse, InquestRoundView, VerdictMode, VerdictSetupResponse } from '../../shared/api.js';
+import type { CasePublic, CaseSummary, ExampleQuestion, PublicFact, ReconstructionView, ScienceMemoView, SolutionResponse, InquestRoundView, VerdictMode, VerdictSetupResponse } from '../../shared/api.js';
 import { shardWeights } from './state.js';
 import { hashString } from './lines.js';
+import { normalize } from './normalize.js';
 
 export function publicFact(f: Fact): PublicFact {
   const out: PublicFact = { id: f.id, text: f.text, category: f.category, importance: f.importance };
@@ -64,7 +65,30 @@ export function toPublic(c: Case): CasePublic {
     hintCount: c.hints.length,
     holmaLines: { idle: [...c.holmaLines.idle], nearCore: [...c.holmaLines.nearCore] },
     ...(c.nudges && c.nudges.length > 0 ? { nudges: [...c.nudges] } : {}),
+    examples: exampleView(c),
   };
+}
+
+/**
+ * The 「質問の例」 pool: starters, then the extra examples (duplicates dropped). Each carries the
+ * reachable finding ids its probe lists — ids only, so the browser can skip a card whose findings
+ * the player already has without learning anything about them.
+ */
+export function exampleView(c: Case): ExampleQuestion[] {
+  const reachable = new Set(c.facts.filter((f) => f.spoilerLevel < 4).map((f) => f.id));
+  const probes = new Map(c.probes.map((p) => [normalize(p.q), p]));
+  const seen = new Set<string>();
+  const out: ExampleQuestion[] = [];
+  const add = (q: string, starter: boolean) => {
+    const n = normalize(q);
+    if (!n || seen.has(n)) return;
+    seen.add(n);
+    const facts = (probes.get(n)?.facts ?? []).filter((id) => reachable.has(id));
+    out.push({ q, ...(starter ? { starter: true } : {}), ...(facts.length ? { facts } : {}) });
+  };
+  c.intro.starterQuestions.forEach((q) => add(q, true));
+  (c.intro.exampleQuestions ?? []).forEach((q) => add(q, false));
+  return out;
 }
 
 /** Parses `きっと[[毒]]を盛られた` into segments. Unbalanced brackets stay plain text. */

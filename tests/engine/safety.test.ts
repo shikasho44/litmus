@@ -78,7 +78,7 @@ describe('detectSafety', () => {
         const h = detectSafety(p.q);
         if (h) hits.push(`${loaded.data.id}: ${p.q} [${h.rule}] (${p.answer})`);
       }
-      for (const q of loaded.data.intro.starterQuestions) if (detectSafety(q)) hits.push(`${loaded.data.id} starter: ${q}`);
+      for (const q of [...loaded.data.intro.starterQuestions, ...(loaded.data.intro.exampleQuestions ?? [])]) if (detectSafety(q)) hits.push(`${loaded.data.id} starter: ${q}`);
     }
     expect(hits, hits.join('\n')).toEqual([]);
     if (reg.list(true).length > 0) expect(checked).toBeGreaterThan(20);

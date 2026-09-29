@@ -493,6 +493,22 @@ button.ev:disabled {
 }
 /* best-rank stamp: its own cell at the end of the facts row (clear of the hole, the codename
    and the restored name) */
+/* the first clear (初見: difficulty and clear time), kept forever */
+.tag__first {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 8px 0 0;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.tag__first-k {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.14em;
+  color: var(--paper-ink-2);
+}
 .tag__facts:has(.tag__facts-rank) {
   grid-template-columns: auto 1fr auto auto;
 }

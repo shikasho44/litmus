@@ -246,6 +246,7 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
     ['intro.time', c.intro.time],
     ...c.intro.narration.map((t, i) => [`intro.narration[${i}]`, t] as [string, string]),
     ...c.intro.starterQuestions.map((t, i) => [`intro.starterQuestions[${i}]`, t] as [string, string]),
+    ...(c.intro.exampleQuestions ?? []).map((t, i) => [`intro.exampleQuestions[${i}]`, t] as [string, string]),
     ...c.intro.jane.map((t, i) => [`intro.jane[${i}]`, t] as [string, string]),
     ...c.intro.holma.map((t, i) => [`intro.holma[${i}]`, t] as [string, string]),
     // sent with the public case view (idle / near-core flavour during the investigation)
@@ -269,6 +270,16 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
     if (qb.normal !== undefined && qb.hard !== undefined && qb.normal < qb.hard) warnings.push(`questionBudget: normal (${qb.normal}) is smaller than hard (${qb.hard})`);
   }
   if (c.nudges && new Set(c.nudges).size !== c.nudges.length) warnings.push('nudges: duplicate lines (each is said at most once per run)');
+
+  // ── example questions (the 「質問の例」 cards, 2026-09-29) ─────────────
+  // Each one is a probe, so the rules self-consistency below checks the judge answers it as labelled.
+  const exampleSeen = new Set(c.intro.starterQuestions.map((q) => normalize(q)));
+  (c.intro.exampleQuestions ?? []).forEach((q, i) => {
+    const n = normalize(q);
+    if (!probeByNorm.has(n)) errors.push(`intro.exampleQuestions[${i}] "${q}" has no probe (add one so the rules judge's answer is checked)`);
+    if (exampleSeen.has(n)) warnings.push(`intro.exampleQuestions[${i}] "${q}" repeats a starter or another example`);
+    exampleSeen.add(n);
+  });
 
   // ── probe kinds ───────────────────────────────────────────────
   const kinds: Partial<Record<ProbeKind, number>> = {};

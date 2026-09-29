@@ -42,6 +42,21 @@
       "溺れたのですか？",
       "病気でしたか？",
       "部屋は暑かったですか？"
+    ],
+    "exampleQuestions": [
+      "食卓で見つかりましたか？",
+      "色はあざやかでしたか？",
+      "彼女は若いですか？",
+      "彼女とそっくりなものは、ほかにもありましたか？",
+      "お母さんは喜びましたか？",
+      "足もとは水につかっていましたか？",
+      "息苦しかったですか？",
+      "水に薬が入っていましたか？",
+      "食卓の形は関係ありますか？",
+      "雨が降っていましたか？",
+      "家に猫はいましたか？",
+      "水は冷たかったですか？",
+      "電気はついていましたか？"
     ]
   },
   "victim": {
@@ -2241,6 +2256,34 @@
       "kind": "irrelevant"
     },
     {
+      "q": "雨が降っていましたか？",
+      "answer": "irrelevant",
+      "facts": [],
+      "kind": "irrelevant",
+      "note": "質問の例（exampleQuestions）。天気は渇きと関係しない。"
+    },
+    {
+      "q": "家に猫はいましたか？",
+      "answer": "irrelevant",
+      "facts": [],
+      "kind": "irrelevant",
+      "note": "質問の例（exampleQuestions）。家の動物は渇きと関係しない。"
+    },
+    {
+      "q": "水は冷たかったですか？",
+      "answer": "irrelevant",
+      "facts": [],
+      "kind": "irrelevant",
+      "note": "質問の例（exampleQuestions）。水の温度は渇きと関係しない。"
+    },
+    {
+      "q": "電気はついていましたか？",
+      "answer": "irrelevant",
+      "facts": [],
+      "kind": "irrelevant",
+      "note": "質問の例（exampleQuestions）。部屋の明かりは渇きと関係しない。"
+    },
+    {
       "q": "お店の人の名前は関係ありますか？",
       "answer": "irrelevant",
       "facts": [],
@@ -3700,9 +3743,9 @@
     "同じ日に、同じところから来た者が、ほかにもいたとしたら？"
   ],
   "questionBudget": {
-    "easy": 48,
-    "normal": 38,
-    "hard": 30
+    "easy": 26,
+    "normal": 20,
+    "hard": 16
   },
   "leakTerms": [
     "空気が入",

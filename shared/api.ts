@@ -60,6 +60,19 @@ export interface CasePublic extends CaseSummary {
   holmaLines?: { idle: string[]; nearCore: string[] };
   /** Case-authored free nudges (Holma's 「ひとりごと」, shared/budget.ts). Absent = fall back to holmaLines.idle / starters. */
   nudges?: string[];
+  /**
+   * The 「質問の例」 card pool (2026-09-29, src/features/examples): the starter questions (starter:
+   * true) and then the case's extra examples. `facts` = the finding ids the question is about (ids
+   * only, from its probe), so a card whose findings the player already holds is never dealt.
+   * Absent (an older server) = the starters alone.
+   */
+  examples?: ExampleQuestion[];
+}
+
+export interface ExampleQuestion {
+  q: string;
+  starter?: boolean;
+  facts?: string[];
 }
 
 /* ------------------------------------------------------------------ */

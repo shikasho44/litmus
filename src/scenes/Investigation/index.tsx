@@ -30,6 +30,7 @@ import { canChangeDifficulty, DIFFICULTY_META } from '../../features/difficulty/
 import { maybeStartTutorial, replayTutorial } from '../../features/tutorial/tutorial';
 import { caseDifficulty } from '../../state/save';
 import { caseBudget } from '../../features/budget/budget';
+import { useExampleTable } from '../../features/examples/store';
 import '../../features/investigation/investigation.css';
 
 const SIDE_PREF = 'janedoe:notebook-side';
@@ -80,8 +81,12 @@ export function InvestigationScene({ params }: SceneProps) {
   const [hintOpen, setHintOpen] = useState(false);
   const [inquest, setInquest] = useState<{ line: ResolvedLine; low: boolean } | null>(null);
   const inputId = `iv-input-${caseId}`;
-  const cachedStarters = useRef<string[]>([]);
-  cachedStarters.current = pub?.starterQuestions ?? [];
+  /** 質問の例: the cards dealt over investigation time (src/features/examples). */
+  const table = useExampleTable(caseId, pub, progress, true, (added) => {
+    ctl.announce.value = `質問の例が届きました：${added.join('、')}`;
+  });
+  const cachedCards = useRef<string[]>([]);
+  cachedCards.current = table.cards;
 
   /* ---------- boot ---------- */
   useEffect(() => {
@@ -131,9 +136,10 @@ export function InvestigationScene({ params }: SceneProps) {
   /* ---------- notebook ---------- */
   const sheetOpen = overlay.value?.name === 'sheet';
   const notebookOpen = narrow ? sheetOpen : sideOpen;
-  /** Notebook empty state: an example question fills the input (never sends). */
+  /** Notebook empty state: an example card fills the input (never sends). */
   const pickQuestion = (q: string) => {
     ctl.inputText.value = q.slice(0, 200);
+    ctl.examplePick.value = q;
     ctl.touch();
     audio.sfx('page');
     if (overlay.peek()?.name === 'sheet') closeOverlay();
@@ -149,7 +155,7 @@ export function InvestigationScene({ params }: SceneProps) {
       title: '捜査ノート',
       en: 'NOTEBOOK',
       side: 'bottom',
-      render: () => <Notebook caseId={caseId} arriving={ctl.arriving} variant="sheet" starters={cachedStarters.current} onPickQuestion={pickQuestion} />,
+      render: () => <Notebook caseId={caseId} arriving={ctl.arriving} variant="sheet" starters={cachedCards.current} onPickQuestion={pickQuestion} />,
     });
   const toggleNotebook = () => {
     ctl.touch();
@@ -233,8 +239,6 @@ export function InvestigationScene({ params }: SceneProps) {
     return () => clearInterval(iv);
   }, [ctl, menuOpen, hintOpen, inquest, closed]);
 
-  const log = progress?.log ?? [];
-  const empty = !log.some((e) => e.kind === 'question');
   const newFacts = unseenFacts(progress, ctl.arriving.value).length;
   const bottomHeight = vh < 780 ? 290 : 370;
 
@@ -265,7 +269,7 @@ export function InvestigationScene({ params }: SceneProps) {
         background={pub?.background}
         tone="formalin"
         stageClass="iv__stage"
-        side={<Notebook caseId={caseId} arriving={ctl.arriving} variant="side" onCollapse={toggleNotebook} starters={pub?.starterQuestions} onPickQuestion={pickQuestion} />}
+        side={<Notebook caseId={caseId} arriving={ctl.arriving} variant="side" onCollapse={toggleNotebook} starters={table.cards} onPickQuestion={pickQuestion} />}
         sideOpen={sideOpen}
         top={
           <TopBar
@@ -287,8 +291,8 @@ export function InvestigationScene({ params }: SceneProps) {
         dock={
           <InputDock
             ctl={ctl}
-            starters={pub?.starterQuestions ?? []}
-            empty={empty}
+            cards={table.cards}
+            nextInMs={table.nextInMs}
             disabled={!pub}
             inputId={inputId}
             budget={budget}

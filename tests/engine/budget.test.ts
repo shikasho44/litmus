@@ -22,17 +22,17 @@ function signRaw(payload: Record<string, unknown>): string {
 describe('budget numbers (shared/budget.ts)', () => {
   it('par and the default budgets per case difficulty and play difficulty', () => {
     expect([1, 2, 3].map(casePar)).toEqual([22, 30, 38]);
-    expect([1, 2, 3].map((d) => questionBudget(d, 'easy'))).toEqual([35, 48, 61]);
-    expect([1, 2, 3].map((d) => questionBudget(d, 'normal'))).toEqual([29, 39, 49]);
-    expect([1, 2, 3].map((d) => questionBudget(d, 'hard'))).toEqual([24, 33, 42]);
+    expect([1, 2, 3].map((d) => questionBudget(d, 'easy'))).toEqual([29, 39, 49]);
+    expect([1, 2, 3].map((d) => questionBudget(d, 'normal'))).toEqual([22, 30, 38]);
+    expect([1, 2, 3].map((d) => questionBudget(d, 'hard'))).toEqual([18, 24, 30]);
     // junk difficulties fall back (case 1..3 clamped, play → normal)
-    expect(questionBudget(9, undefined)).toBe(49);
-    expect(questionBudget(Number.NaN, 'hard')).toBe(24);
+    expect(questionBudget(9, undefined)).toBe(38);
+    expect(questionBudget(Number.NaN, 'hard')).toBe(18);
   });
 
   it('a case override wins per difficulty and is clamped to the minimum', () => {
     expect(questionBudget(1, 'hard', { hard: 8 })).toBe(8);
-    expect(questionBudget(1, 'normal', { hard: 8 })).toBe(29);
+    expect(questionBudget(1, 'normal', { hard: 8 })).toBe(22);
     expect(questionBudget(1, 'easy', { easy: 1 })).toBe(BUDGET_TUNING.minBudget);
   });
 

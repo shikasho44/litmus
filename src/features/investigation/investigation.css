@@ -1231,6 +1231,59 @@
   color: var(--ink);
   border-color: var(--formalin);
 }
+/* 質問の例 (src/features/examples): each card slides in as it is dealt; the one in the input is marked */
+.dock__chip {
+  animation: dock-card-in 0.42s var(--ease-out) both;
+}
+.dock__chip.is-picked {
+  border-color: var(--formalin);
+  box-shadow: inset 0 0 0 1px var(--formalin);
+}
+@keyframes dock-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.dock__chip-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 4px;
+  color: var(--mute);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.dock__examples {
+  position: relative;
+}
+.dock__examples-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(198, 255, 61, 0.16);
+  color: var(--formalin);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+.dock__examples.has-new::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--formalin);
+  box-shadow: 0 0 0 2px rgba(20, 24, 33, 0.92);
+}
 .dock__row {
   display: flex;
   align-items: flex-end;
@@ -1383,6 +1436,21 @@
 }
 [data-layout='narrow'] .dock__examples-label {
   display: none;
+}
+[data-layout='narrow'] .dock__examples-count {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 16px;
+}
+[data-layout='narrow'] .dock__examples.has-new::after {
+  top: 3px;
+  left: 4px;
+  right: auto;
 }
 [data-layout='narrow'] .dock__input {
   min-height: 46px;
@@ -2072,7 +2140,9 @@
 [data-reduce-motion='true'] .ivs__jane.is-glinting .shards,
 [data-reduce-motion='true'] .ivs__near,
 [data-reduce-motion='true'] .ivs__ff,
-[data-reduce-motion='true'] .dock__alert {
+[data-reduce-motion='true'] .dock__alert,
+[data-reduce-motion='true'] .dock__chips,
+[data-reduce-motion='true'] .dock__chip {
   animation: none !important;
 }
 

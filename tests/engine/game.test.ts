@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../shared/api';
 import { evaluateVerdict } from '../../server/engine/verdict';
-import { optionOrder } from '../../server/engine/public-view';
+import { optionOrder, solutionView, toPublic, toSummary } from '../../server/engine/public-view';
 import { fixtureCase, FIXTURE_ID, makeService } from './helpers';
 
 const caseId = FIXTURE_ID;
@@ -28,6 +28,16 @@ describe('public views', () => {
     expect(pub.shardWeights.F15).toBeUndefined();
     expect(pub.hintCount).toBe(3);
     expect(await code(svc.getCase('c00-nope'))).toBe('bad_request');
+  });
+
+  it('shows the shards a stand-in picture before the solve when the case sets victim.shardPortrait (2026-09-29)', () => {
+    const c = fixtureCase();
+    expect(toSummary(c).portrait).toBe(c.victim.portrait);
+    const veiled = { ...c, victim: { ...c.victim, shardPortrait: 'cases/c90/shards.webp' } };
+    expect(toSummary(veiled).portrait).toBe('cases/c90/shards.webp');
+    expect(toPublic(veiled).portrait).toBe('cases/c90/shards.webp');
+    // the solution (ceremony, record) still brings the real portrait
+    expect(solutionView(veiled, new Set()).victim.portrait).toBe(c.victim.portrait);
   });
 });
 

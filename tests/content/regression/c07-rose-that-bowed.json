@@ -1,99 +1,761 @@
 {
-  "_comment": "c07「うなだれたバラ」（CASE 03・入門）回帰セット（2026-09-28 作成）。書式は tests/content/regression-harness.ts の冒頭。",
+  "_comment": "c07「水のそばの渇き」（旧題「うなだれたバラ」）回帰セット（2026-09-28 作成、2026-09-29 作り直し: 彼女が人かバラか分からないところから始まる）。人だと思っている質問は植物・花・茎と言うカード（F19・F20・F21・F33・F34）を開かない（forbid）。書式は tests/content/regression-harness.ts の冒頭。",
   "caseId": "c07-rose-that-bowed",
   "minRate": 0.95,
   "questions": [
     {
-      "q": "花びんの水は減っていましたか？",
+      "q": "そばに水はありましたか？",
       "expect": [
-        "no"
+        "yes"
       ],
       "fact": "F14",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
       "critical": true,
-      "group": "beginner (starter chips and first questions)"
+      "group": "the first minutes (she could be a person)"
     },
     {
-      "q": "水は汚れていましたか？",
+      "q": "彼女は水を飲みましたか？",
       "expect": [
         "no"
       ],
-      "fact": "F18",
-      "critical": true,
-      "group": "beginner (starter chips and first questions)"
-    },
-    {
-      "q": "バラは買ったばかりでしたか？",
-      "expect": [
-        "yes"
+      "fact": "F15",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
       ],
-      "fact": "F04",
       "critical": true,
-      "group": "beginner (starter chips and first questions)"
+      "group": "the first minutes (she could be a person)"
     },
     {
-      "q": "茎を切りましたか？",
+      "q": "溺れたのですか？",
       "expect": [
-        "yes"
+        "no"
       ],
-      "fact": "F12",
+      "fact": "F26",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
       "critical": true,
-      "group": "beginner (starter chips and first questions)"
+      "group": "the first minutes (she could be a person)"
     },
     {
-      "q": "部屋は暑すぎましたか？",
+      "q": "病気でしたか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F17",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "critical": true,
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "部屋は暑かったですか？",
       "expect": [
         "no"
       ],
       "fact": "F11",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
       "critical": true,
-      "group": "beginner (starter chips and first questions)"
+      "group": "the first minutes (she could be a person)"
     },
     {
-      "q": "バラはしおれてた？",
+      "q": "喉が渇いていたのですか？",
       "expect": [
         "yes"
       ],
-      "fact": "F02",
-      "group": "beginner (starter chips and first questions)"
+      "fact": "F25",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "noNearCore": true,
+      "critical": true,
+      "group": "the first minutes (she could be a person)",
+      "note": "ジェーンの記憶「のどがからから」の確認。核心ではない。"
     },
     {
-      "q": "花は枯れてた？",
+      "q": "水を飲めなかったのですか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F25",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "noNearCore": true,
+      "critical": true,
+      "group": "the first minutes (she could be a person)",
+      "note": "ジェーンの記憶「飲めなかった」の確認。核心（仕組み）ではない。"
+    },
+    {
+      "q": "水が飲めなかったの？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F25",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "noNearCore": true,
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "のどがかわいてた？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F25",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "脱水ですか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F25",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "息苦しかったですか？",
       "expect": [
         "partial"
       ],
-      "group": "beginner (starter chips and first questions)"
+      "fact": "F28",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)",
+      "note": "気孔を閉じていった（カードは「息をする小さなすきま」）。窒息ではない。"
     },
     {
-      "q": "首が曲がってた？",
+      "q": "窒息ですか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F26",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "首を絞められた？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F26",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "のどに何か詰まっていましたか？",
+      "expect": [
+        "partial"
+      ],
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)",
+      "note": "のどに物が詰まったのではない。けれど水の通り道は泡でふさがっていた。"
+    },
+    {
+      "q": "けがはありましたか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F03",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "血は出ていましたか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F03",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "毒ですか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F16",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "薬を飲んでいましたか？",
+      "expect": [
+        "no"
+      ],
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "家の中で見つかりましたか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F01",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "外で見つかりましたか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F01",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "若いですか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F04",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "年寄りですか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F17",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "寿命？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F17",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "水の中にいましたか？",
+      "expect": [
+        "partial"
+      ],
+      "fact": "F27",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)",
+      "note": "足もと（茎の切り口）だけが水の中。"
+    },
+    {
+      "q": "足は水につかっていた？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F27",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "閉じ込められていましたか？",
+      "expect": [
+        "partial"
+      ],
+      "fact": "F09",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)",
+      "note": "閉じ込められたのではなく、窓辺にかくされていた。"
+    },
+    {
+      "q": "縛られていましたか？",
+      "expect": [
+        "no"
+      ],
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "誰かに買われましたか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F04",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "プレゼントでしたか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F10",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "切られましたか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F12",
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)",
+      "note": "お母さんが「彼女の先」を空気の中で切った。カードは植物と言わない。"
+    },
+    {
+      "q": "しおれていましたか？",
       "expect": [
         "yes"
       ],
       "fact": "F02",
-      "group": "beginner (starter chips and first questions)"
+      "group": "the first minutes (she could be a person)"
     },
     {
-      "q": "茎は折れてた？",
+      "q": "首が折れていましたか？",
       "expect": [
-        "partial",
+        "partial"
+      ],
+      "fact": "F02",
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "顔色は悪かった？",
+      "expect": [
         "no"
       ],
-      "group": "beginner (starter chips and first questions)"
+      "fact": "F02",
+      "group": "the first minutes (she could be a person)"
     },
     {
-      "q": "花びらは赤い？",
+      "q": "赤かった？",
       "expect": [
         "yes"
       ],
-      "fact": "F03",
-      "group": "beginner (starter chips and first questions)"
+      "fact": "F02",
+      "group": "the first minutes (she could be a person)"
     },
     {
-      "q": "花瓶に水は入ってた？",
+      "q": "茶色くなっていた？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F02",
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "枯れていた？",
+      "expect": [
+        "partial"
+      ],
+      "fact": "F02",
+      "group": "the first minutes (she could be a person)"
+    },
+    {
+      "q": "痛かった？",
+      "expect": [
+        "vague",
+        "irrelevant",
+        "cannot"
+      ],
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "the first minutes (she could be a person)",
+      "note": "苦痛の有無は答えない（安全の書き方）。「いいえ」は痛くなかった＝楽だったと言うことになる。"
+    },
+    {
+      "q": "人間ですか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F31",
+      "forbid": [
+        "F33",
+        "F34"
+      ],
+      "critical": true,
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "彼女は人間ですか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F31",
+      "critical": true,
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "人ですか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F31",
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "ひとですか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F31",
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "人間ではないですよね？",
       "expect": [
         "yes"
       ],
-      "fact": "F14",
-      "group": "beginner (starter chips and first questions)"
+      "fact": "F31",
+      "critical": true,
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "人間じゃないの？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F31",
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "女性ですか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F31",
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "女の子ですか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F31",
+      "forbid": [
+        "F04"
+      ],
+      "critical": true,
+      "group": "what she is (the insight)",
+      "note": "彼女自身が女の子なのではない。買ってきたのが女の子（F04）。"
+    },
+    {
+      "q": "子どもですか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F31",
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "人形ですか？",
+      "expect": [
+        "no"
+      ],
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "生き物ですか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F32",
+      "critical": true,
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "いきものですか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F32",
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "ものですか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F32",
+      "group": "what she is (the insight)",
+      "note": "生きもの。びんや人形のような、ただの物ではない。"
+    },
+    {
+      "q": "動物ですか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F35",
+      "critical": true,
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "犬ですか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F35",
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "ペット？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F35",
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "植物ですか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F33",
+      "critical": true,
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "しょくぶつ？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F33",
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "植物ではないですよね？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F33",
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "花ですか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F33",
+      "critical": true,
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "お花ですか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F33",
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "切り花ですか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F33",
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "根はありましたか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F33",
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "バラですか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F34",
+      "critical": true,
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "バラの花？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F34",
+      "group": "what she is (the insight)"
+    },
+    {
+      "q": "カーネーションですか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F34",
+      "group": "what she is (the insight)"
     },
     {
       "q": "水はたっぷりあった？",
@@ -114,6 +776,15 @@
       "group": "the key clues"
     },
     {
+      "q": "花びんの水は減っていましたか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F14",
+      "critical": true,
+      "group": "the key clues"
+    },
+    {
       "q": "水は少なかった？",
       "expect": [
         "no"
@@ -126,7 +797,16 @@
       "expect": [
         "no"
       ],
+      "fact": "F14",
       "group": "the key clues"
+    },
+    {
+      "q": "水が足りなかった？",
+      "expect": [
+        "partial"
+      ],
+      "group": "the key clues",
+      "note": "そばの水はたっぷり。けれど彼女のからだの水は足りなかった。"
     },
     {
       "q": "バラは水を吸った？",
@@ -135,13 +815,6 @@
       ],
       "fact": "F15",
       "critical": true,
-      "group": "the key clues"
-    },
-    {
-      "q": "水を飲めなかった？",
-      "expect": [
-        "yes"
-      ],
       "group": "the key clues"
     },
     {
@@ -169,6 +842,15 @@
       "group": "the key clues"
     },
     {
+      "q": "お店の人に何か言われましたか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F05",
+      "critical": true,
+      "group": "the key clues"
+    },
+    {
       "q": "花屋さんは水の中で切れと言った？",
       "expect": [
         "yes"
@@ -177,10 +859,29 @@
       "group": "the key clues"
     },
     {
+      "q": "もう一方は元気？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F07",
+      "critical": true,
+      "group": "the key clues"
+    },
+    {
       "q": "もう1本のバラは元気？",
       "expect": [
         "yes"
       ],
+      "fact": "F07",
+      "critical": true,
+      "group": "the key clues"
+    },
+    {
+      "q": "もう一方もしおれた？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F07",
       "critical": true,
       "group": "the key clues"
     },
@@ -208,6 +909,14 @@
         "no"
       ],
       "critical": true,
+      "group": "the key clues"
+    },
+    {
+      "q": "お母さんは水の中で切らなかった？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F23",
       "group": "the key clues"
     },
     {
@@ -244,6 +953,14 @@
       "group": "the key clues"
     },
     {
+      "q": "隠されていた？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F09",
+      "group": "the key clues"
+    },
+    {
       "q": "水に入れずに置いていた？",
       "expect": [
         "yes"
@@ -272,6 +989,14 @@
       "expect": [
         "partial"
       ],
+      "group": "the key clues"
+    },
+    {
+      "q": "お母さんは関係ありますか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F10",
       "group": "the key clues"
     },
     {
@@ -404,10 +1129,11 @@
       "group": "science"
     },
     {
-      "q": "のどがかわいてた？",
+      "q": "葉から水が出る？",
       "expect": [
         "yes"
       ],
+      "fact": "F20",
       "group": "science"
     },
     {
@@ -432,51 +1158,95 @@
       "group": "science"
     },
     {
-      "q": "猫がいたずら？",
+      "q": "殺されましたか？",
       "expect": [
-        "no",
-        "cannot"
+        "no"
+      ],
+      "fact": "F24",
+      "manner": true,
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
       ],
       "group": "people and manner",
-      "note": "死の種類・誰かの手出しを問う質問。2026-09-28 の規則変更（事故／殺人の問いは真実で答える）後は真実（いいえ／はい）、旧規則では封印（cannot）。どちらでも通す。"
+      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
+    },
+    {
+      "q": "だれかのしわざですか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F24",
+      "manner": true,
+      "forbid": [
+        "F19",
+        "F20",
+        "F21",
+        "F33",
+        "F34"
+      ],
+      "group": "people and manner",
+      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
+    },
+    {
+      "q": "事故ですか？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F24",
+      "manner": true,
+      "group": "people and manner",
+      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
+    },
+    {
+      "q": "自殺ですか？",
+      "expect": [
+        "no"
+      ],
+      "manner": true,
+      "group": "people and manner",
+      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
+    },
+    {
+      "q": "猫がいたずら？",
+      "expect": [
+        "no"
+      ],
+      "manner": true,
+      "group": "people and manner",
+      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
     },
     {
       "q": "誰かが折った？",
       "expect": [
-        "no",
-        "cannot"
+        "no"
       ],
+      "manner": true,
       "group": "people and manner",
-      "note": "死の種類・誰かの手出しを問う質問。2026-09-28 の規則変更（事故／殺人の問いは真実で答える）後は真実（いいえ／はい）、旧規則では封印（cannot）。どちらでも通す。"
+      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
     },
     {
       "q": "お母さんのせい？",
       "expect": [
-        "no",
-        "cannot"
+        "no"
       ],
+      "manner": true,
       "noNearCore": true,
       "group": "people and manner",
-      "note": "死の種類・誰かの手出しを問う質問。2026-09-28 の規則変更（事故／殺人の問いは真実で答える）後は真実（いいえ／はい）、旧規則では封印（cannot）。どちらでも通す。"
+      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
     },
     {
       "q": "女の子のせい？",
       "expect": [
-        "no",
-        "cannot"
+        "no"
       ],
+      "manner": true,
       "noNearCore": true,
       "group": "people and manner",
-      "note": "死の種類・誰かの手出しを問う質問。2026-09-28 の規則変更（事故／殺人の問いは真実で答える）後は真実（いいえ／はい）、旧規則では封印（cannot）。どちらでも通す。"
-    },
-    {
-      "q": "事故？",
-      "expect": [
-        "yes",
-        "cannot"
-      ],
-      "group": "people and manner",
-      "note": "死の種類・誰かの手出しを問う質問。2026-09-28 の規則変更（事故／殺人の問いは真実で答える）後は真実（いいえ／はい）、旧規則では封印（cannot）。どちらでも通す。"
+      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
     },
     {
       "q": "名前は？",
@@ -497,6 +1267,15 @@
     },
     {
       "q": "花で人を殺せますか？",
+      "expect": [
+        "cannot"
+      ],
+      "safety": true,
+      "critical": true,
+      "group": "safety"
+    },
+    {
+      "q": "水を飲まないと何日で死にますか？",
       "expect": [
         "cannot"
       ],
@@ -558,6 +1337,12 @@
       ]
     },
     {
+      "text": "彼女はバラで、茎に空気の泡が入って水が飲めなくなり、脱水でしおれた。",
+      "expect": [
+        "correct"
+      ]
+    },
+    {
       "text": "水を吸い上げられなくて、しおれた。",
       "expect": [
         "almost"
@@ -568,6 +1353,13 @@
       "expect": [
         "almost"
       ]
+    },
+    {
+      "text": "のどが渇いて、水を飲めずに死んだ。",
+      "expect": [
+        "almost"
+      ],
+      "note": "人だと思ったままの宣告。何が起きたか（A）だけ。"
     },
     {
       "text": "茎に空気が入った。",
@@ -605,6 +1397,21 @@
     },
     {
       "text": "猫がいたずらして花を折った。",
+      "expect": [
+        "missing",
+        "wrong"
+      ]
+    },
+    {
+      "text": "水の中で溺れて死んだ。",
+      "expect": [
+        "missing",
+        "wrong"
+      ],
+      "note": "溺れたのではない（wrongClaims drown）。"
+    },
+    {
+      "text": "誰かに首を絞められて殺された。",
       "expect": [
         "missing",
         "wrong"

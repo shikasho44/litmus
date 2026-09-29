@@ -227,6 +227,7 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
     const images: [string, string | undefined][] = [
       ['assets.background', c.assets.background],
       ['victim.portrait', c.victim.portrait],
+      ['victim.shardPortrait', c.victim.shardPortrait],
       ...c.reconstruction.panels.map((p) => [`panel ${p.id}.image`, p.image] as [string, string | undefined]),
     ];
     for (const [where, path] of images) {

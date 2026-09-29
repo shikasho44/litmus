@@ -8,18 +8,23 @@
  *   - Holma's glass eye is amber (琥珀色), never red (changed 2026-09-24).
  *   - Case 3 is 「雪に残されたもの」 / WHAT WAS LEFT IN THE SNOW, and its pre-verdict text does not
  *     say the clothes were 「脱ぎ捨て」 (the wearer's own act — it would hint the first reversal).
+ *   - c07 (2026-09-29) starts without telling whether "she" is a person or a rose: nothing the
+ *     player sees before asking (card, intro, starting findings, hint 1, idle lines, nudges, the
+ *     debate) names a flower, a vase or a plant, her shard mask is shapeless and her lit shards
+ *     show a stand-in picture (victim.shardPortrait), not the rose.
  *   - Every case documents the safety filter with ≥ 8 authored SAFETY probes (cannot, kind meta).
  *   - 2026-09-25 content fixes (critics + AI playtest): hints carry no leak term; wrong-shot lines
  *     do not name a noise; choice options are balanced (the right one is never the only longest);
  *     Jane's lines fit a phone; no "painless death" wording; the science text is だ・である with
  *     「」 and half-width %; the line bank keeps VOICE.md's answer / ェァ / wrong-shot rules.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { Case } from '../../shared/case-schema';
 import { normalize } from '../../server/engine/normalize';
+import { toSummary } from '../../server/engine/public-view';
 import { contentRegistry } from './regression-harness';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -51,8 +56,10 @@ describe('content rules', () => {
       expect(c.difficulty, c.id).toBe(1);
       expect(c.estimatedMinutes, c.id).toBeLessThanOrEqual(15);
       expect(c.debate, c.id).toHaveLength(1);
-      // an object soul: its own shard mask and profile rows, no human wording in the science chain
-      expect(c.victim.silhouette, c.id).toMatch(/^M/);
+      // an object soul: its own shard mask and profile rows, no human wording in the science chain.
+      // c07 hides what she is until the verdict (2026-09-29): a shapeless mask instead of the rose.
+      if (c.id === 'c07-rose-that-bowed') expect(c.victim.silhouette, c.id).toBe('none');
+      else expect(c.victim.silhouette, c.id).toMatch(/^M/);
       expect(c.victim.profile?.length, c.id).toBeGreaterThan(0);
       expect(c.science.chain.map((x) => x.stage), c.id).not.toContain('人体への影響');
     }
@@ -265,6 +272,54 @@ describe('Holma’s eye is amber', () => {
   it('the line bank and VOICE.md call it amber', () => {
     expect(read('holma-lines.json')).toContain('琥珀色のガラス玉');
     expect(read('VOICE.md')).toContain('琥珀色');
+  });
+});
+
+describe('c07 keeps what she is a secret until the player asks (2026-09-29)', () => {
+  const c7 = cases.find((c) => c.id === 'c07-rose-that-bowed')!;
+  // 言葉 / 屋根 are not leaves or roots
+  const PLANT = /花|植物|茎|(?<!言)葉|(?<!屋)根|つぼみ|バラ|ばら|薔薇|かびん|rose|flower|vase|plant|petal|stem|bloom|bouquet/iu;
+
+  it('the case card, intro, starting findings, hint 1, idle lines, nudges and the debate name no flower, vase or plant', () => {
+    const pre: [string, string][] = [
+      ['title', c7.title],
+      ['titleEn', c7.titleEn],
+      ...c7.categories.map((t, i): [string, string] => [`categories[${i}]`, t]),
+      ['contentWarning', c7.contentWarning ?? ''],
+      ['intro.summary', c7.intro.summary],
+      ['intro.location', c7.intro.location],
+      ['intro.time', c7.intro.time],
+      ...c7.intro.narration.map((t, i): [string, string] => [`intro.narration[${i}]`, t]),
+      ...c7.intro.jane.map((t, i): [string, string] => [`intro.jane[${i}]`, t]),
+      ...c7.intro.holma.map((t, i): [string, string] => [`intro.holma[${i}]`, t]),
+      ...c7.intro.starterQuestions.map((t, i): [string, string] => [`intro.starterQuestions[${i}]`, t]),
+      ...c7.hints.filter((h) => h.level === 1).map((h): [string, string] => ['hint 1', h.text]),
+      ...c7.holmaLines.idle.map((t, i): [string, string] => [`holmaLines.idle[${i}]`, t]),
+      ...c7.holmaLines.nearCore.map((t, i): [string, string] => [`holmaLines.nearCore[${i}]`, t]),
+      ...(c7.nudges ?? []).map((t, i): [string, string] => [`nudges[${i}]`, t]),
+      ...c7.facts.filter((f) => f.visibleFromStart).flatMap((f): [string, string][] => [[`${f.id}.text`, f.text], [`${f.id}.cardTitle`, f.cardTitle ?? '']]),
+      ...c7.debate.flatMap((r): [string, string][] =>
+        [r.title, ...r.intro, ...r.statements.map((s) => s.text), ...r.success, ...r.wrongShot, r.hint].map((t): [string, string] => [`debate ${r.id}`, t]),
+      ),
+    ];
+    const bad = pre.filter(([, t]) => PLANT.test(t)).map(([w, t]) => `${w}: ${t}`);
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+
+  it('her shard mask is shapeless before the solve (not a rose, not a person)', () => {
+    expect(c7.victim.silhouette).toBe('none');
+  });
+
+  it('her lit shards show the dawn dining room, not the rose portrait (victim.shardPortrait)', () => {
+    const shards = c7.victim.shardPortrait;
+    expect(shards).toBeTruthy();
+    expect(shards).not.toBe(c7.victim.portrait);
+    expect(toSummary(c7).portrait).toBe(shards);
+    expect(existsSync(resolve(here, '../../public', shards!))).toBe(true);
+  });
+
+  it('the rose and vase words are leak terms (never in public text, never in a model reply before the player holds them)', () => {
+    for (const t of ['バラ', '薔薇', '花びん', '花瓶', '切り花']) expect(c7.leakTerms).toContain(t);
   });
 });
 

@@ -26,7 +26,7 @@ export interface CaseSummary {
   codename: string;
   background: string;
   accent: string;
-  portrait: string;       // shown only through the shard mask until solved
+  portrait: string;       // shown only through the shard mask until solved (case-schema victim.shardPortrait when the case sets one)
   /** Shard mask until solved: 'bust' (default) · 'none' · an SVG path in the 300×400 box (case-schema victim.silhouette). */
   silhouette?: string;
   contentWarning?: string;

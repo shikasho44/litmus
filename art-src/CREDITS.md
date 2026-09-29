@@ -151,7 +151,7 @@ checked by eye).
 | c06 p2 | Close-up: yellow sunlight on the dark scarf, drops of melt water under it, sunken charcoal eyes, icicles behind. |
 | c06 p3 | The thin-necked snowman's head fallen beside its body and scarf; the other snowman standing; only boot prints. |
 | c06 p4 | Gloved hands only: a black cloth sunk into the sunny snow, a white cloth still on the surface. |
-| `cases/c07/bg.webp` | A dining table at dawn: a red rose bowing its head in a vase full of water, a blank folded card, next door a rose upright on a windowsill. |
+| `cases/c07/bg.webp` | **Replaced 2026-09-29** (see below). Was: a dining table at dawn with the bowed rose in its vase (now `art-src/rejected/c07-bg.rose-visible.png`). |
 | `cases/c07/portrait.webp` | Still life: a long-stemmed red rose in full bloom with leaves and thorns; red rim light. |
 | c07 p1 | A flower shop: a girl from behind receives two paper-wrapped roses; the florist's hands show cutting a stem inside a bucket of water. |
 | c07 p2 | A child's room: the paper-wrapped rose hidden on a sunny windowsill, no water. |
@@ -159,3 +159,25 @@ checked by eye).
 | c07 p4 | Next morning: the rose bowed in the full vase; through the window, the other rose upright next door. |
 
 Generation count (whole project): batch 1 = 12, batch 2 = 17, batch 3 = 7, batch 4 = 18 + 9 retakes. Total 63.
+
+## c07 background without the rose (2026-09-29)
+
+c07 now starts without telling whether "she" is a person or a rose (docs/decisions.md 2026-09-29), so
+its background may not show a flower, a vase or a plant. One image, generated with the codex-imagegen
+skill's `batch_imagegen.py` (one launch, codex-cli session `01a0ea95-1945-72a0-8ace-fde80d0db9e6`,
+5 round trips, weekly quota 21.0% → 21.0%); job `art-src/jobs/c07-bg-neutral.json`, full prompt in
+`art-src/manifest.json`. Same intro-case style (ink navy, bone white, cold teal, rose red #E8435A as the
+single accent). Returned at 1672x941, cover-resized to 1920x1080 (`export_art.py` helpers). Retouched
+locally: a darker red blotch in the sunrise light on the left chair seat, which could read as a stain,
+was inpainted (OpenCV Telea) from its surroundings. No reference images; no people, animals or text.
+
+| File | Prompt summary |
+|---|---|
+| `cases/c07/bg.webp` | A quiet Japanese dining room at dawn seen from the doorway: a bare wooden table (a folded napkin, an empty wooden tray), four chairs with one pulled back, a plain geometric lace curtain, a blank clock face, plain white dishes on a sideboard, the next house's roof in the window; a thin streak of rose-red sunrise light. No flowers, vase, plants, animals or people. |
+
+`cases/c07/shards.webp` (not generated): the picture c07's lit shards show before the solve
+(`victim.shardPortrait`), so the rose portrait does not appear piece by piece. A 627x941 crop of
+`art-src/bg/c07-bg.png` (x 330–957: the lace-curtained window, the table and two chairs), resized to
+1024x1536, webp q88.
+
+Generation count (whole project): batch 1 = 12, batch 2 = 17, batch 3 = 7, batch 4 = 18 + 9 retakes, c07 bg rework = 1. Total 64.

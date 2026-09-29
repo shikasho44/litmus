@@ -438,7 +438,10 @@
     {"q": "男のせいで最後に全力で投げたのですか？", "expect": ["no"], "critical": true, "group": "red herring: the man → last pitch", "note": "責めの問いは いいえ（誰のせいでもない）。"},
     {"q": "弟がしょげていたせいで死んだのですか？", "expect": ["no"], "critical": true, "noNearCore": true, "group": "red herring: the man → last pitch", "note": "弟を責める形。F55 の はい に吸わせない（F54）。"},
     {"q": "弟が落ち込んでいたせいですか？", "expect": ["no"], "critical": true, "group": "red herring: the man → last pitch"},
-    {"q": "しょげていた弟のせいで死んだの？", "expect": ["no"], "critical": true, "group": "red herring: the man → last pitch"}
+    {"q": "しょげていた弟のせいで死んだの？", "expect": ["no"], "critical": true, "group": "red herring: the man → last pitch"},
+    {"q": "指のけがで捕れなかったの？", "expect": ["no"], "noNearCore": true, "group": "bandage pay-off (2026-09-30)", "note": "絆創膏は弟の弁当の卵焼きでのやけど。捕球には関係ない。"},
+    {"q": "お弁当は彼女が作っていた？", "expect": ["yes"], "fact": "F39", "noNearCore": true, "group": "bandage pay-off (2026-09-30)"},
+    {"q": "絆創膏は関係ある？", "expect": ["irrelevant", "no"], "noNearCore": true, "group": "bandage pay-off (2026-09-30)"}
   ],
   "verdicts": [
     {"text": "土手で口論した男が戻ってきて、彼女の胸を殴った。その衝撃で心臓が止まった。", "expect": ["missing", "wrong"], "note": "赤いニシン（W-assault）。"},

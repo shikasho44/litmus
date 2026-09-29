@@ -157,7 +157,10 @@
     {"q":  "彼女は慌てて摘みましたか？", "expect":  ["no"], "group":  "inquest reachability (2026-09-28)"},
     {"q":  "彼女は花を見て摘みましたか？", "expect":  ["yes"], "fact":  "F25", "group":  "inquest reachability (2026-09-28)"},
     {"q":  "スケッチ帳に何か書いてありましたか？", "expect":  ["yes"], "fact":  "F26", "group":  "inquest reachability (2026-09-28)"},
-    {"q":  "採り違えですか？", "expect":  ["no"], "fact":  "F49", "manner":  true, "group":  "inquest reachability (2026-09-28)", "note":  "死の種類の問いは答える（F53）。籠の中身 F49 も示す。"}
+    {"q":  "採り違えですか？", "expect":  ["no"], "fact":  "F49", "manner":  true, "group":  "inquest reachability (2026-09-28)", "note":  "死の種類の問いは答える（F53）。籠の中身 F49 も示す。"},
+    {"q": "おじいさんは、あの沢はやめとけと言った？", "expect": ["yes"], "fact": "F21", "noNearCore": true, "group": "prologue set-ups (2026-09-30)", "note": "導入のナレーションで出る。"},
+    {"q": "朝、老人は怒っていましたか？", "expect": ["yes"], "fact": "F21", "noNearCore": true, "group": "prologue set-ups (2026-09-30)"},
+    {"q": "友人の名前はひかる？", "expect": ["yes"], "fact": "F37", "noNearCore": true, "group": "prologue set-ups (2026-09-30)", "note": "別れの言葉に出る名前（F37）。"}
   ],
   "verdicts": [
     {"text": "トリカブト中毒。編集者が盛り付けのときに、彼女の小鉢にだけ刻んだトリカブトの葉を混ぜた。", "expect": ["correct"]},

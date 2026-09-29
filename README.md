@@ -144,6 +144,7 @@ npx tsc --noEmit && npx vitest run && npm run validate && npx vite build && npm 
 | `docs/versus.md` | オンライン対戦（部屋・API・不正の防ぎ方・セーブの守り方・部屋の置き場所 D1／Upstash） |
 | `docs/design-bible.md` | 設計の正本（世界観・人物・流れ・画面・音・事件） |
 | `docs/decisions.md` | 決めたこと・仮定したことの記録（日付つき） |
+| `docs/dev-history.md` | **開発記録**（なぜ今の形になったか。持ち主の判断 J-01〜 の一覧、年表、方針の変遷）。原文の発言録は `docs/history/` |
 | `docs/engine.md` | 判定エンジン・API・トークン・環境変数 |
 | `docs/ai.md` | AI（Jev・LLM）の選定と測定結果、費用 |
 | `docs/playtest-report.md` | AI に15回遊ばせた報告 |

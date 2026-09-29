@@ -173,7 +173,8 @@ describe.skipIf(cases.length === 0)('real cases', () => {
           if (p.answer === 'cannot' && detectMeta(p.q, normalize(p.q), true) !== 'askAnswer') wrong.push(`${c.id}: ${p.q} is a manner question labelled cannot`);
         }
       }
-      for (const q of c.intro.starterQuestions) if (detectManner(q)) wrong.push(`${c.id} starter: ${q} (asking the manner is the player's own idea)`);
+      for (const q of [...c.intro.starterQuestions, ...(c.intro.exampleQuestions ?? [])]) if (detectManner(q)) wrong.push(`${c.id} starter: ${q} (asking the manner is the player's own idea)`);
+      for (const q of c.intro.exampleQuestions ?? []) if (s && detectCulprit(q, s)) wrong.push(`${c.id} example: ${q} (an example card must not be a sealed culprit question)`);
     }
     expect(wrong, wrong.join('\n')).toEqual([]);
     expect(manner).toBeGreaterThan(100);

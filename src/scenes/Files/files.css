@@ -145,6 +145,14 @@
   color: var(--bone-3);
   margin-left: 2px;
 }
+.files__stats .files__stats-first dt {
+  font-family: var(--font-body);
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+.files__stats .files__stats-first dd {
+  font-variant-numeric: tabular-nums;
+}
 /* first-visit tip: one compact, dismissible chip (it used to be a banner that pushed the
    case tags below the fold). z-index keeps it above the tags' hanging strings. */
 .files__tip {

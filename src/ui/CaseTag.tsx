@@ -1,5 +1,7 @@
 import type { CaseSummary } from '../../shared/api';
-import type { CaseStatus, Rank, RestoredIdentity } from '../state/types';
+import type { CaseStatus, FirstClear, Rank, RestoredIdentity } from '../state/types';
+import { DIFFICULTY_META } from '../features/difficulty/meta';
+import { formatClearTime } from '../state/hooks';
 import { CASE_STATUS_LABEL } from '../state/types';
 import { audio } from '../audio';
 import { Icon } from './Icon';
@@ -19,6 +21,8 @@ export interface CaseTagProps {
   onFocusCase?: () => void;
   /** The victim's name once the identity ceremony has played (solved / complete). */
   restored?: RestoredIdentity;
+  /** The case's first clear (difficulty and clear time), when it was recorded. */
+  firstClear?: Pick<FirstClear, 'difficulty' | 'clearMs'>;
 }
 
 /**
@@ -44,7 +48,7 @@ const ACTION: Record<CaseStatus, { jp: string; en: string }> = {
 };
 
 /** Toe-tag case card for the 事件ファイル screen. */
-export function CaseTag({ summary: c, status, bestRank, bestPoints, onOpen, onSecondary, secondaryLabel, index = 0, onFocusCase, restored }: CaseTagProps) {
+export function CaseTag({ summary: c, status, bestRank, bestPoints, onOpen, onSecondary, secondaryLabel, index = 0, onFocusCase, restored, firstClear }: CaseTagProps) {
   const num = String(c.number).padStart(2, '0');
   const { body, hook } = splitHook(c.summary);
   const identified = !!restored && (status === 'solved' || status === 'complete');
@@ -132,6 +136,14 @@ export function CaseTag({ summary: c, status, bestRank, bestPoints, onOpen, onSe
             </div>
           )}
         </dl>
+        {firstClear && (
+          <p class="tag__first" aria-label={`初回の解決：${DIFFICULTY_META[firstClear.difficulty].jp}、${formatClearTime(firstClear.clearMs)}`}>
+            <span class="tag__first-k">初見</span>
+            <span>
+              {DIFFICULTY_META[firstClear.difficulty].jp}・{formatClearTime(firstClear.clearMs)}
+            </span>
+          </p>
+        )}
         {c.contentWarning && (
           <p class="tag__warning">
             <Icon name="info" size={14} />

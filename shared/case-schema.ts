@@ -268,6 +268,13 @@ export const CaseSchema = z.object({
     jane: z.array(z.string()).min(2),        // Jane Doe's fragmented first words
     holma: z.array(z.string()).min(2),       // Holma's opening lines
     starterQuestions: z.array(z.string()).min(3).max(6), // suggestion chips for newcomers
+    /**
+     * PUBLIC, optional (added 2026-09-29). More example questions for the 「質問の例」 cards, dealt
+     * over time with the starters (src/features/examples): a mix of ones that lead to findings and
+     * dead ends (いいえ / 関係ない). Each must be a probe (the validator checks the rules judge
+     * answers it as labelled) and is checked for leakTerms like every public line.
+     */
+    exampleQuestions: z.array(z.string().min(2)).max(24).optional(),
   }),
 
   /** SECRET until solved (except codename & look). */

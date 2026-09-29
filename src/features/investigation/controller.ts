@@ -18,6 +18,9 @@
  * floats as 「減点 −n」 by the counter, and Holma may speak up unasked (budget remarks, free
  * nudges) — saved as 'nudge' log entries. 教授: the declared limit goes with every question and
  * a used-up budget refuses to send.
+ *
+ * 質問の例 (src/features/examples): a card fills the input (never sends); `examplePick` remembers
+ * which card the input came from, and once that question has been answered the card is used.
  */
 import { batch, signal } from '@preact/signals';
 import type { AnswerClass } from '../../../shared/case-schema';
@@ -35,6 +38,7 @@ import { STAMP_META } from '../../ui/Stamp';
 import { toast } from '../../ui/Toast';
 import { ensureToken, restartCaseAfterBadToken, shardProgress } from './caseData';
 import { caseBudget, planRemarks, turnPenalty, type BudgetView, type RemarkLineKey } from '../budget/budget';
+import { recordExampleUse } from '../examples/store';
 
 export interface PendingQuestion {
   id: string;
@@ -182,6 +186,8 @@ export function createController(caseId: string) {
   const chipHold = signal<Set<string>>(new Set());
   /** A bad token is waiting for the player's decision (dialog). */
   const tokenTrouble = signal<TokenTrouble | null>(null);
+  /** The 質問の例 card the input text came from (null once the player clears the input). */
+  const examplePick = signal<string | null>(null);
 
   let skipping = false;
   let seq = 0;
@@ -453,7 +459,9 @@ export function createController(caseId: string) {
     }
 
     const qid = newLogId();
+    const pick = examplePick.peek();
     batch(() => {
+      examplePick.value = null;
       transient.value = [];
       pending.value = { id: qid, text };
       asking.value = true;
@@ -477,6 +485,8 @@ export function createController(caseId: string) {
     } catch (e) {
       if (disposed) return false;
       await handleError(e, text);
+      // the question is back in the input: so is the card it came from
+      if (pick && ctlInputHas(text)) examplePick.value = pick;
       return false;
     }
     if (disposed) return false;
@@ -512,6 +522,7 @@ export function createController(caseId: string) {
         res.answers.flatMap((a) => a.memos),
       );
       setToken(caseId, res.token, res.progress);
+      recordExampleUse(caseId, pub.peek(), text, pick);
       pending.value = null;
       asking.value = false;
     });
@@ -585,6 +596,10 @@ export function createController(caseId: string) {
     const l = pickLine('error.network');
     transient.value = [{ id: `t${++seq}`, kind: 'network', line: l.text, mood: l.mood, retryText: text }];
     announce.value = `ホルマ：${l.text}`;
+  }
+
+  function ctlInputHas(text: string) {
+    return inputText.peek().trim() === text.trim();
   }
 
   function retry(text?: string) {
@@ -721,6 +736,7 @@ export function createController(caseId: string) {
     ffHint,
     chipHold,
     tokenTrouble,
+    examplePick,
     // actions
     setPub,
     syncFromSave,

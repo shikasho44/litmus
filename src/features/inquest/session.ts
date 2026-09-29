@@ -44,7 +44,8 @@ import { caseList } from '../../lib/cases';
 import { pickLine } from '../../lib/lines';
 import { penaltyStep } from '../rank/rank';
 import { runGameOvers } from '../rank/stats';
-import { addFacts, caseDifficulty, getCaseProgress, resetCase, setInquest, setStage, setToken, updateCase } from '../../state/save';
+import { addFacts, caseDifficulty, getCaseProgress, markCleared, resetCase, setInquest, setStage, setToken, updateCase } from '../../state/save';
+import { commitCaseTimers } from '../../state/hooks';
 import type { InquestPhase, InquestState } from '../../state/types';
 import { parseCloze } from './cloze';
 
@@ -776,6 +777,11 @@ export class InquestSession {
           this.choice.value = null;
         }
       });
+      if (!miss) {
+        // the clear time: investigation start → this accepted verdict (docs/decisions.md 2026-09-29)
+        commitCaseTimers();
+        markCleared(this.caseId);
+      }
       this.persist({
         lastVerdict: { result: view.result, matched: view.matched, labels: view.labels, text, notes, ...(view.required ? { required: view.required } : {}) },
         ...(mode === 'free' ? { verdictDraft: text } : {}),

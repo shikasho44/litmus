@@ -13,9 +13,17 @@ export function useCaseStatus(caseId: string | undefined) {
   return useComputed<CaseStatus>(() => caseStatus(caseId ? saveData.value.cases[caseId] : undefined));
 }
 
+/** The running case timers' commit functions (commitCaseTimers flushes them all). */
+const timerCommits = new Set<() => void>();
+
+/** Write every running case timer's pending time now (before a clear time is read). */
+export function commitCaseTimers() {
+  timerCommits.forEach((f) => f());
+}
+
 /**
  * Advances CaseProgress.elapsedMs while the component is mounted and the tab is visible.
- * Writes every 5 s (and on unmount / hide) to keep autosave cheap.
+ * Writes every 5 s (and on unmount / hide / commitCaseTimers) to keep autosave cheap.
  */
 export function useCaseTimer(caseId: string | undefined, active = true) {
   useEffect(() => {
@@ -35,6 +43,7 @@ export function useCaseTimer(caseId: string | undefined, active = true) {
       }
     };
     const iv = setInterval(commit, 5000);
+    timerCommits.add(commit);
     const onVis = () => {
       if (document.visibilityState === 'hidden') commit();
       else last = performance.now();
@@ -42,10 +51,20 @@ export function useCaseTimer(caseId: string | undefined, active = true) {
     document.addEventListener('visibilitychange', onVis);
     return () => {
       clearInterval(iv);
+      timerCommits.delete(commit);
       document.removeEventListener('visibilitychange', onVis);
       commit();
     };
   }, [caseId, active]);
+}
+
+/** 「12分34秒」 / 「1時間02分」 — a clear time in words (the result screen, the case tag). */
+export function formatClearTime(ms: number): string {
+  const s = Math.max(0, Math.floor((Number.isFinite(ms) ? ms : 0) / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return h > 0 ? `${h}時間${String(m).padStart(2, '0')}分` : `${m}分${String(sec).padStart(2, '0')}秒`;
 }
 
 export function formatElapsed(ms: number): string {

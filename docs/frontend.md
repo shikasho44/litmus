@@ -182,8 +182,10 @@ Font scale drives `html { font-size }` → use `rem` for text, px for geometry.
 
 Design: bible §3-1b, docs/decisions.md 2026-09-28. **All numbers live in `shared/budget.ts`
 (`BUDGET_TUNING`)** — budget = round(par × factor), par = 14 + 8 × case difficulty; 見習い guide
-×1.6 (no cost), 審問官 soft ×1.3 (1.5 事件スコア per counted question beyond it, cap 24), 教授 hard
-×1.1 (closes the questioning). A case may override exact budgets (`CaseSummary.questionBudget`).
+×1.3 (no cost), 審問官 soft ×1.0 (1.5 事件スコア per counted question beyond it, cap 24), 教授 hard
+×0.8 (closes the questioning). A case may override exact budgets (`CaseSummary.questionBudget`);
+since 2026-09-29 every published case does (a provisional first pass, docs/decisions.md 2026-09-29;
+the factors were ×1.6 / ×1.3 / ×1.1 before).
 
 - **Counting is the server's**: `ProgressSnapshot.spent` (parts answered yes/no/partial/irrelevant
   without a meta kind; ≤ `asked`, which keeps counting everything). Old snapshots lack it →
@@ -211,6 +213,53 @@ Design: bible §3-1b, docs/decisions.md 2026-09-28. **All numbers live in `share
   「31 /29問 — 質問枠 29問・2問超過・数えない質問 3」.
 - Lines: `investigation.budget.*` and `investigation.nudge.{ready,starter}` in
   `content/holma-lines.json` (fallbacks in `src/lib/lines.ts`; `{q}` = the starter question).
+- 「寡黙な解剖医」: counted questions ≤ `SILENT_SHARE` (0.7) × min(par, the run's budget).
+
+## 2c. 質問の例 cards — `src/features/examples`
+
+Design: bible §3-1b, docs/decisions.md 2026-09-29. **All numbers live in `EXAMPLE_TUNING`**
+(`examples.ts`): at most 3 cards; 見習い / 審問官 start with 2 and get one every 60 s of
+investigation time; 教授 starts with none, the first at 2:00, then every 90 s; the first 2 dealt
+come from the starter questions.
+
+- Pool: `CasePublic.examples` (server `exampleView`: the starters, then `intro.exampleQuestions`,
+  each with the reachable finding ids its probe lists — ids only). An older server without it →
+  the starters (`examplePool`).
+- `examples.ts` (pure, tested): `dealsAt(play, ms)`, `nextDealAt`, `exampleOrder(pool, seed)`,
+  `advanceExamples(state, play, pool, ctx)` (drops cards whose question was asked or whose findings
+  are all held, then runs every deal due by `state.ms`; a deal with 3 cards on the table is
+  skipped, so a used slot refills on the next deal), `useExample(state, text, picked)`,
+  `sanitizeExamples`.
+- State: `CaseProgress.examples {seed, ms, dealt, shown, used}` — reset with the run (resetCase),
+  so a reload neither resets the clock nor reshuffles. In a versus race it lives in the race copy.
+- `store.ts`: `useExampleTable(caseId, pub, progress, active, onDeal)` — the clock (1 s interval,
+  only while the investigation scene is mounted and the tab is visible; written every 5 s, at each
+  deal and on hide / unmount) and the visible cards + ms to the next deal;
+  `recordExampleUse(caseId, pub, text, picked)` — called by `controller.ask()` once the answer is
+  saved: the card last put into the input (`ctl.examplePick`) is used, even if edited; a question
+  typed by hand is never a used card (a card with the same words just leaves the table).
+- `InputDock` takes `cards` and `nextInMs`: `.dock__chip[data-example-card]` (fills the input,
+  never sends; `.is-picked` while it is in the input), `[data-example-next]` 「質問の例まで 2:00」 /
+  「次の例 0:45」. The row stays open (the 「質問の例」 button folds it, remembered per viewer in
+  `janedoe:examples-open`; a card dealt while folded lights `.has-new`). Cards slide in
+  (`dock-card-in`, off with reduced motion). The notebook's empty state lists the same cards.
+- Result: `stats.examplesUsed` (absent for runs without a table); `runDistinctions(stats)` →
+  「素手の審問官」 (`RUN_DISTINCTIONS`, `[data-distinction]`) when 0. `CaseProgress.ownWords` keeps it.
+
+## 2d. First clear and clear time
+
+- `markCleared(caseId)` (save.ts) keeps `CaseProgress.clearMs` = `elapsedMs` when the verdict is
+  accepted (the inquest session calls it after `commitCaseTimers()` flushes the running timers).
+  `buildCaseResult` stores it as `CaseResult.clearMs` (a run solved before it existed falls back to
+  its play time).
+- `completeCase` writes `CaseProgress.firstClear {at, difficulty, clearMs, spent, budget, rank}`
+  only when the case had never been cleared and the run is not a special one (`runModeOf`: online
+  versus), and marks that result `firstClear: true`. Never overwritten; resetCase keeps it; a case
+  cleared before 2026-09-29 gets none.
+- Result: the 「解決タイム」 tile (older records: 「所要時間」), `[data-first-clear]`
+  「初回の解決：審問官・12分34秒・A」 + 「初見」 badge. Files: `.tag__first` on the case tag and
+  `[data-first-total]` 「初見タイム合計」 in the header stats (`formatClearTime` / `formatElapsed`
+  in state/hooks.ts).
 
 ---
 

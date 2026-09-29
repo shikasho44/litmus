@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { detectiveTotal } from '../features/rank/points';
 import { buildCaseResult } from '../features/rank/stats';
-import { completeCase, freshCase, getCaseProgress, resetAll, resetCase, sanitize, saveData, updateCase } from './save';
+import { completeCase, freshCase, getCaseProgress, markCleared, resetAll, resetCase, sanitize, saveData, updateCase } from './save';
+import { caseRunMode } from './runMode';
 import type { CaseResult, Rank } from './types';
 
 const ID = 'c01-test';
@@ -91,5 +92,77 @@ describe('sanitize — the new optional case fields', () => {
     expect(c.gameOversAtClear).toBe(2);
     const inProgress = sanitize(blob({ completed: false, lastResult: run('A', 80, 'hard') })).cases[ID];
     expect(inProgress.bestPoints).toBeUndefined();
+  });
+});
+
+describe('first clear and clear time (2026-09-29)', () => {
+  const timed = (rank: Rank, clearMs: number, play: CaseResult['playDifficulty'] = 'normal', extra: Record<string, number> = {}): CaseResult => ({
+    ...run(rank, 80, play, { spent: 12, budget: 15, ...extra }),
+    clearMs,
+  });
+
+  it('the first clear is recorded once and never overwritten; the run says 初見 only then', () => {
+    completeCase(ID, timed('A', 754_000, 'easy'));
+    let c = getCaseProgress(ID)!;
+    expect(c.firstClear).toMatchObject({ difficulty: 'easy', clearMs: 754_000, spent: 12, budget: 15, rank: 'A' });
+    expect(c.lastResult?.firstClear).toBe(true);
+    expect(c.lastResult?.clearMs).toBe(754_000);
+    resetCase(ID);
+    expect(getCaseProgress(ID)!.firstClear?.clearMs).toBe(754_000);
+    completeCase(ID, timed('S+', 300_000, 'hard'));
+    c = getCaseProgress(ID)!;
+    expect(c.firstClear).toMatchObject({ difficulty: 'easy', clearMs: 754_000, rank: 'A' });
+    expect(c.lastResult?.firstClear).toBeUndefined();
+    expect(c.lastResult?.clearMs).toBe(300_000);
+    expect(c.bestRank).toBe('S+');
+  });
+
+  it('a case cleared before the record existed gets none (nothing is invented)', () => {
+    updateCase(ID, { completed: true, clears: 1, bestRank: 'B' });
+    completeCase(ID, timed('S', 200_000));
+    expect(getCaseProgress(ID)!.firstClear).toBeUndefined();
+    expect(getCaseProgress(ID)!.lastResult?.firstClear).toBeUndefined();
+  });
+
+  it('markCleared keeps the play time at the accepted verdict; resetCase starts it over', () => {
+    updateCase(ID, { elapsedMs: 61_000 });
+    markCleared(ID);
+    updateCase(ID, { elapsedMs: 90_000 });
+    markCleared(ID);
+    expect(getCaseProgress(ID)!.clearMs).toBe(61_000);
+    expect(buildCaseResult(getCaseProgress(ID), { difficulty: 1 }).result.clearMs).toBe(61_000);
+    resetCase(ID);
+    expect(getCaseProgress(ID)!.clearMs).toBeUndefined();
+  });
+
+  it('a run solved without a 質問の例 card is remembered (ownWords); a run that used one is not', () => {
+    completeCase(ID, timed('A', 1000, 'normal', { examplesUsed: 2 }));
+    expect(getCaseProgress(ID)!.ownWords).toBeUndefined();
+    resetCase(ID);
+    completeCase(ID, timed('A', 1000, 'normal', { examplesUsed: 0 }));
+    expect(getCaseProgress(ID)!.ownWords).toBe(true);
+    resetCase(ID);
+    expect(getCaseProgress(ID)!.ownWords).toBe(true);
+  });
+
+  it('an online versus run never writes a first clear', () => {
+    caseRunMode.value = { caseId: ID, lockDifficulty: true };
+    try {
+      completeCase(ID, timed('S', 100_000));
+      expect(getCaseProgress(ID)!.firstClear).toBeUndefined();
+      expect(getCaseProgress(ID)!.lastResult?.firstClear).toBeUndefined();
+    } finally {
+      caseRunMode.value = null;
+    }
+  });
+
+  it('sanitize keeps a valid record and drops a broken one', () => {
+    const blob = (c: Record<string, unknown>) => ({ version: 1, settings: {}, meta: {}, cases: { [ID]: { ...freshCase(ID), ...c } } });
+    const ok = { at: 5, difficulty: 'hard', clearMs: 1234, spent: 9, budget: 12, rank: 'S' };
+    expect(sanitize(blob({ firstClear: ok })).cases[ID].firstClear).toEqual(ok);
+    expect(sanitize(blob({ firstClear: { ...ok, rank: 'Z' } })).cases[ID].firstClear).toBeUndefined();
+    expect(sanitize(blob({ firstClear: { ...ok, clearMs: -1 } })).cases[ID].firstClear).toBeUndefined();
+    expect(sanitize(blob({ clearMs: 'x' })).cases[ID].clearMs).toBeUndefined();
+    expect(sanitize(blob({ examples: { seed: 3, ms: 70_000, dealt: 3, shown: ['a？'], used: ['b？'] } })).cases[ID].examples).toEqual({ seed: 3, ms: 70_000, dealt: 3, shown: ['a？'], used: ['b？'] });
   });
 });

@@ -8,9 +8,12 @@
  *
  *   par(case difficulty d)  = parBase + parPerLevel × d          → 22 / 30 / 38 (the old rank par)
  *   budget(d, play)         = round(par × factor[play])            (a case may override: questionBudget)
- *     見習い easy    guide  ×1.6 → 35 / 48 / 61  no limit, no cost — a counter and gentle words
- *     審問官 normal  soft   ×1.3 → 29 / 39 / 49  beyond it every counted question costs 1.5 事件スコア
- *     教授   hard    hard   ×1.1 → 24 / 33 / 42  when it runs out the investigation closes
+ *     見習い easy    guide  ×1.3 → 29 / 39 / 49  no limit, no cost — a counter and gentle words
+ *     審問官 normal  soft   ×1.0 → 22 / 30 / 38  beyond it every counted question costs 1.5 事件スコア
+ *     教授   hard    hard   ×0.8 → 18 / 24 / 30  when it runs out the investigation closes
+ *   2026-09-29 (owner: "I could never use them up, especially on 教授"): the factors were
+ *   1.6 / 1.3 / 1.1, and every published case now sets its own questionBudget (content/cases).
+ *   A provisional first pass — to be tuned from play.
  *
  * What counts ("charged"): a question part answered はい / いいえ / 一部そう / 関係ない that is
  * not small talk (the engine's meta kinds). 「具体的に」「答えられない」, hint / how-to / answer
@@ -41,9 +44,9 @@ export const BUDGET_TUNING = {
   parBase: 14,
   parPerLevel: 8,
   rules: {
-    easy: { kind: 'guide', factor: 1.6, overCost: 0, overCap: 0, nudges: 4, nudgeOn: { stuck: true, low: true } },
-    normal: { kind: 'soft', factor: 1.3, overCost: 1.5, overCap: 24, nudges: 3, nudgeOn: { stuck: true, low: true } },
-    hard: { kind: 'hard', factor: 1.1, overCost: 1.5, overCap: 24, nudges: 1, nudgeOn: { stuck: false, low: true } },
+    easy: { kind: 'guide', factor: 1.3, overCost: 0, overCap: 0, nudges: 4, nudgeOn: { stuck: true, low: true } },
+    normal: { kind: 'soft', factor: 1.0, overCost: 1.5, overCap: 24, nudges: 3, nudgeOn: { stuck: true, low: true } },
+    hard: { kind: 'hard', factor: 0.8, overCost: 1.5, overCap: 24, nudges: 1, nudgeOn: { stuck: false, low: true } },
   } satisfies Record<Difficulty, BudgetRule>,
   /** 'low' once at most this share of the budget is left (and at least 1 question). */
   lowShare: 0.25,

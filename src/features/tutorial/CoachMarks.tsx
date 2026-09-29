@@ -53,7 +53,8 @@ const verdictMode = () => ($('.vpanel') as HTMLElement | null)?.dataset.verdictM
 const STEPS: Record<TutStepId, StepDef> = {
   ask: {
     title: '質問してみましょう',
-    text: () => `まずは質問を。「はい／いいえ」で答えられる問いを打って、送信してくださいな。${narrow() ? '' : '下の'}「質問の例」を押しても構いませんよ。`,
+    // 質問の例 cards may not be on the table yet (教授 starts without them)
+    text: () => `まずは質問を。「はい／いいえ」で答えられる問いを打って、送信してくださいな。${$('.dock__chip') ? `${narrow() ? '' : '下の'}「質問の例」を押しても構いませんよ。` : ''}`,
     target: () => first('.iv .dock'),
     ready: invSettled,
   },

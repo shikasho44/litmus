@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { LogEntry } from '../../state/types';
 import { budgetFor, caseBudget, counterText, nextDirection, planRemarks, spentOf, stuckStreak, turnPenalty, type RemarkLineKey, type TurnInput } from './budget';
 
-const c1 = { difficulty: 1 };
+// the remark / counter logic is tested on fixed budgets (29 / 35 / 24, the defaults before 2026-09-29)
+const c1 = { difficulty: 1, questionBudget: { easy: 35, normal: 29, hard: 24 } };
 let seq = 0;
 const q = (text: string): LogEntry => ({ id: `q${++seq}`, at: 0, kind: 'question', text });
 const a = (unlocked: string[] = [], extra: Partial<Extract<LogEntry, { kind: 'answer' }>> = {}): LogEntry => ({

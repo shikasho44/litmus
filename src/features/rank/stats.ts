@@ -72,12 +72,15 @@ export function buildCaseResult(p: CaseProgress | undefined, meta: CaseMeta, now
   const rank = computeRank(input);
   const playDifficulty = p?.difficulty ?? 'normal';
   const points = runPoints(rank.score, playDifficulty, rank.rank);
+  // the clear time (investigation start → accepted verdict); a run solved before it was recorded falls back to its play time
+  const clearMs = typeof p?.clearMs === 'number' ? p.clearMs : p?.snapshot?.solved ? num(p.elapsedMs) : undefined;
   const result: CaseResult = {
     rank: rank.rank,
     title: rank.title,
     at: now,
     elapsedMs: input.elapsedMs,
     playDifficulty,
+    ...(clearMs !== undefined ? { clearMs } : {}),
     stats: {
       score: rank.score,
       points: points.total,
@@ -99,6 +102,8 @@ export function buildCaseResult(p: CaseProgress | undefined, meta: CaseMeta, now
       debateCleared: input.debateCleared ?? 0,
       difficulty: meta.difficulty,
       ...(meta.estimatedMinutes ? { estimatedMinutes: meta.estimatedMinutes } : {}),
+      // 質問の例 cards used (absent when the run had no cards to deal: an older run)
+      ...(p?.examples ? { examplesUsed: p.examples.used.length } : {}),
     },
   };
   return { result, rank, input, points };

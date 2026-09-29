@@ -9,11 +9,35 @@ import { HolmaFace } from './HolmaFace';
 
 export const MAX_QUESTION = 200;
 
+const CARDS_PREF = 'janedoe:examples-open';
+
+function readCardsPref(): boolean {
+  try {
+    return localStorage.getItem(CARDS_PREF) !== '0';
+  } catch {
+    return true;
+  }
+}
+function writeCardsPref(open: boolean) {
+  try {
+    localStorage.setItem(CARDS_PREF, open ? '1' : '0');
+  } catch {
+    /* per-viewer convenience only */
+  }
+}
+
+/** 1:05 */
+const mmss = (ms: number) => {
+  const s = Math.ceil(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
+
 export interface InputDockProps {
   ctl: Controller;
-  starters: string[];
-  /** Log has no question yet → chips open by default. */
-  empty: boolean;
+  /** 質問の例 cards on the table (src/features/examples, ≤ 3). */
+  cards: string[];
+  /** ms until the next card (a slot free and cards left), else null. */
+  nextInMs?: number | null;
   disabled?: boolean;
   inputId: string;
   /** 質問枠 of the run (null until the case data is known). 'closed' replaces the input. */
@@ -24,14 +48,18 @@ export interface InputDockProps {
 
 /**
  * Question input. Enter sends (never while an IME is composing), Shift+Enter is ignored
- * (questions are one line), 200-char limit with a live counter, starter chips that fill the
- * input without sending, read-only while Holma is examining (keeps the phone keyboard up).
+ * (questions are one line), 200-char limit with a live counter, read-only while Holma is
+ * examining (keeps the phone keyboard up). Above it the 質問の例 cards (dealt over time, at most 3):
+ * a card fills the input without sending; once sent it is an ordinary question and leaves the
+ * table. The row can be folded (remembered per viewer); a card dealt while it is folded lights a
+ * dot on the 「質問の例」 button.
  */
-export function InputDock({ ctl, starters, empty, disabled, inputId, budget, onOpenInquest }: InputDockProps) {
+export function InputDock({ ctl, cards, nextInMs = null, disabled, inputId, budget, onOpenInquest }: InputDockProps) {
   const ta = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
   const compEndAt = useRef(0);
-  const [chips, setChips] = useState(empty);
+  const [chips, setChips] = useState(readCardsPref);
+  const [dot, setDot] = useState(false);
   const [now, setNow] = useState(Date.now());
   const text = ctl.inputText.value;
   const asking = ctl.asking.value;
@@ -44,12 +72,14 @@ export function InputDock({ ctl, starters, empty, disabled, inputId, budget, onO
   const queued = ctl.queued.value && presenting;
   const canSend = !busy && !presenting && text.trim().length > 0 && waitLeft === 0;
   const netError = ctl.transient.value.find((t) => t.kind === 'network');
+  const picked = ctl.examplePick.value;
 
-  // chips follow the log state until the player toggles them
-  const toggled = useRef(false);
+  // a card dealt while the row is folded lights the button's dot
+  const seen = useRef(cards);
   useEffect(() => {
-    if (!toggled.current) setChips(empty);
-  }, [empty]);
+    if (!chips && cards.some((q) => !seen.current.includes(q))) setDot(true);
+    seen.current = cards;
+  }, [cards.join('|'), chips]);
 
   // rate-limit countdown
   useEffect(() => {
@@ -73,10 +103,7 @@ export function InputDock({ ctl, starters, empty, disabled, inputId, budget, onO
     if (presenting) {
       // fast-forward; a typed question goes out as soon as the presentation is over
       ctl.fastForward();
-      if (text.trim() && waitLeft === 0) {
-        ctl.queueSend();
-        if (!toggled.current) setChips(false);
-      }
+      if (text.trim() && waitLeft === 0) ctl.queueSend();
       return;
     }
     if (!canSend) {
@@ -85,11 +112,11 @@ export function InputDock({ ctl, starters, empty, disabled, inputId, budget, onO
     }
     const t = text;
     void ctl.ask(t);
-    if (!toggled.current) setChips(false);
   };
 
   const fill = (q: string) => {
     ctl.inputText.value = q.slice(0, MAX_QUESTION);
+    ctl.examplePick.value = q;
     audio.sfx('page');
     ctl.touch();
     requestAnimationFrame(() => {
@@ -147,31 +174,43 @@ export function InputDock({ ctl, starters, empty, disabled, inputId, budget, onO
           演出のあとに送信します
         </p>
       )}
-      {chips && starters.length > 0 && (
-        <div class="dock__chips" role="group" aria-label="質問の例（押すと入力欄に入ります）">
-          {starters.map((q) => (
-            <button type="button" key={q} class="dock__chip" onClick={() => fill(q)}>
+      {chips && (cards.length > 0 || nextInMs !== null) && (
+        <div class="dock__chips" role="group" aria-label="質問の例（押すと入力欄に入ります。送ると1問として数えます）" data-example-cards={cards.length}>
+          {cards.map((q) => (
+            <button type="button" key={q} class={`dock__chip ${picked === q ? 'is-picked' : ''}`} onClick={() => fill(q)} data-example-card>
               {q}
             </button>
           ))}
+          {nextInMs !== null && (
+            <span class="dock__chip-next t-mono" title="質問の例は、捜査の時間とともに届きます" data-example-next>
+              <Icon name="time" size={12} />
+              {cards.length === 0 ? '質問の例まで' : '次の例'} {mmss(nextInMs)}
+            </span>
+          )}
         </div>
       )}
       <div class="dock__row">
         <button
           type="button"
-          class={`dock__examples ${chips ? 'is-on' : ''}`}
+          class={`dock__examples ${chips ? 'is-on' : ''} ${dot && !chips ? 'has-new' : ''}`}
           aria-expanded={chips}
-          aria-label="質問の例"
+          aria-label={`質問の例（${cards.length}枚）`}
           data-tip="質問の例"
           data-tip-side="top"
           onClick={() => {
-            toggled.current = true;
             setChips(!chips);
+            writeCardsPref(!chips);
+            setDot(false);
             audio.sfx('toggle');
           }}
         >
           <Icon name="help" size={20} />
           <span class="dock__examples-label">質問の例</span>
+          {cards.length > 0 && (
+            <span class="dock__examples-count t-mono" aria-hidden="true">
+              {cards.length}
+            </span>
+          )}
         </button>
         <div class={`dock__field ${len >= MAX_QUESTION ? 'is-full' : len >= MAX_QUESTION - 20 ? 'is-near' : ''} ${len >= 120 ? 'is-counting' : ''}`}>
           {budget && <BudgetCounter view={budget} />}
@@ -195,6 +234,7 @@ export function InputDock({ ctl, starters, empty, disabled, inputId, budget, onO
             onInput={(e) => {
               const v = (e.target as HTMLTextAreaElement).value.replace(/\r?\n/g, ' ');
               ctl.inputText.value = [...v].slice(0, MAX_QUESTION).join('');
+              if (!v.trim()) ctl.examplePick.value = null;
               ctl.touch();
             }}
             onCompositionStart={() => {

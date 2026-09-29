@@ -79,6 +79,8 @@ const MODE = { easy: 'choice', normal: 'cloze', hard: 'free' };
 const LIVES = { easy: 10, normal: 3, hard: 3 };
 /** Smoke runs that skip the rest of the noise break after this many rounds. */
 const SKIP_AFTER = { c02: 1 };
+/** Smoke runs that never touch a 質問の例 card (the result then shows 「素手の審問官」). */
+const NO_CARD = ['c05'];
 const levelOf = (c) => LEVEL[c.id.slice(0, 3)] ?? 'normal';
 
 /** Verdicts that name part of the story but not all of it (never 'correct'). */
@@ -95,9 +97,10 @@ const INCOMPLETE = {
 
 /**
  * 質問枠 (shared/budget.ts, 2026-09-28): the expected budget of a case run and the counter text.
- * Kept in step with BUDGET_TUNING by hand (par 14 + 8 × case difficulty; ×1.6 / ×1.3 / ×1.1).
+ * Kept in step with BUDGET_TUNING by hand (par 14 + 8 × case difficulty; ×1.3 / ×1.0 / ×0.8 since
+ * 2026-09-29 — every published case sets its own questionBudget anyway).
  */
-const BUDGET_FACTOR = { easy: 1.6, normal: 1.3, hard: 1.1 };
+const BUDGET_FACTOR = { easy: 1.3, normal: 1.0, hard: 0.8 };
 const BUDGET_KIND = { easy: 'guide', normal: 'soft', hard: 'hard' };
 function expectedBudget(c, level) {
   const o = c.questionBudget?.[level];
@@ -205,6 +208,11 @@ const check = (cond, msg) => {
 async function tick(page, ms) {
   for (let t = 0; t < ms; t += 100) await page.clock.runFor(Math.min(100, ms - t));
 }
+/** Long stretches of investigation time (the 質問の例 clock) in 1 s steps. */
+async function advance(page, ms) {
+  for (let t = 0; t < ms; t += 1000) await page.clock.runFor(Math.min(1000, ms - t));
+}
+const cardTexts = (page) => page.evaluate(() => [...document.querySelectorAll('.dock__chip[data-example-card]')].map((e) => e.textContent));
 
 /** Poll fn(arg) in the page, advancing virtual time between polls. `each` runs between polls. */
 async function waitFor(page, fn, arg, { timeout = 90000, label = 'condition', step = 120, each } = {}) {
@@ -465,10 +473,34 @@ async function investigation(page, c, name, { questions, full }) {
     await tick(page, 600);
     await shot(page, name('tutorial-ask'));
   }
-  // 1) the first starter chip (fills, then sent with Enter)
-  const chipQ = await page.locator('.dock__chip').first().textContent();
-  const a0 = await ask(page, c, chipQ, { viaChip: true });
-  check(a0.length >= 1, `${c.id}: starter chip question answered (${a0.map((a) => a.answerClass).join(',')})`);
+  // 1) 質問の例 cards (src/features/examples): 見習い / 審問官 start with 2, 教授 with none (the first at 2:00)
+  const level = levelOf(c);
+  let cards = await cardTexts(page);
+  if (level === 'hard') {
+    const next = (await page.locator('[data-example-next]').textContent().catch(() => '')) ?? '';
+    check(cards.length === 0 && /(?:1:5\d|2:00)/.test(next), `${c.id}: 教授 starts without 質問の例 cards (${cards.length}; 「${next.trim()}」)`);
+    await shot(page, name('inv-cards-none'));
+    const ms0 = (await saveOf(page, c.id)).examples?.ms ?? 0;
+    await advance(page, Math.max(0, 118_000 - ms0));
+    check((await cardTexts(page)).length === 0, `${c.id}: 教授: still no card just before 2:00`);
+    await advance(page, 3_000);
+    await waitFor(page, () => document.querySelectorAll('.dock__chip[data-example-card]').length === 1, null, { label: '教授: the first card at 2:00' });
+    cards = await cardTexts(page);
+    check(cards.length === 1, `${c.id}: 教授: the first card arrives at 2:00`);
+  } else {
+    check(cards.length === 2, `${c.id}: ${level} starts with 2 質問の例 cards (${cards.length})`);
+  }
+  check(cards.length > 0 && cards.every((q) => c.intro.starterQuestions.includes(q)), `${c.id}: the first cards come from the starter questions (${cards.join(' / ')})`);
+  if (!full && NO_CARD.includes(c.id.slice(0, 3))) {
+    // this run solves the case without a card (素手の審問官 on the result)
+  } else {
+    const chipQ = cards[0];
+    const a0 = await ask(page, c, chipQ, { viaChip: true });
+    check(a0.length >= 1, `${c.id}: the 質問の例 card question was answered (${a0.map((a) => a.answerClass).join(',')})`);
+    const left = await cardTexts(page);
+    const ex = (await saveOf(page, c.id)).examples;
+    check(!left.includes(chipQ) && left.length === cards.length - 1 && ex?.used?.includes(chipQ), `${c.id}: the used card left the table (${left.length} left) and is saved as used`);
+  }
   if (tutorial) {
     await waitSel(page, '.coach[data-coach-step="stamp"]', { label: 'tutorial: stamp (after the first answer)' });
     await tick(page, 500);
@@ -481,6 +513,23 @@ async function investigation(page, c, name, { questions, full }) {
     check((await page.evaluate(() => window.__JD.getState().save.meta.tutorial?.state)) === 'done', `${c.id}: the tutorial can be skipped`);
   }
   await shot(page, name('inv-first-answer'));
+  if (full && level !== 'hard') {
+    // one card per minute of investigation time, at most 3 on the table; a used slot refills on the next deal
+    const ms0 = (await saveOf(page, c.id)).examples?.ms ?? 0;
+    const at = async (t) => {
+      await advance(page, Math.max(0, t - ms0));
+      await tick(page, 600);
+      return cardTexts(page);
+    };
+    const n60 = await at(61_000);
+    check(n60.length === 2, `${c.id}: a new card at 1:00 refills the used slot (${n60.length} on the table)`);
+    const n120 = await at(121_000);
+    check(n120.length === 3, `${c.id}: 3 cards at 2:00 (${n120.length})`);
+    await shot(page, name('inv-cards-3'));
+    const n180 = await at(181_000);
+    check(n180.length === 3 && (await page.locator('[data-example-next]').count()) === 0, `${c.id}: never more than 3 cards (${n180.length}), no countdown while the table is full`);
+    check(n120.every((q) => n180.includes(q)), `${c.id}: unused cards stay on the table`);
+  }
 
   // 2) probes — shots of the first finding cut-in / flight
   let shotFinding = false;
@@ -507,11 +556,19 @@ async function investigation(page, c, name, { questions, full }) {
     if (full && i === 3) {
       // resume check: reload mid-investigation keeps the log and the scene
       const n = await answerCount(page, c.id);
+      const exBefore = (await saveOf(page, c.id)).examples;
+      const cardsBefore = await cardTexts(page);
       await boot(page, { reload: true });
       await waitScene(page, 'investigation');
       await invReady(page);
       await tick(page, 600);
       check((await answerCount(page, c.id)) === n && (await page.locator('.arow[data-answer]').count()) >= n, `${c.id}: reload in the investigation keeps the scene and all ${n} answers`);
+      const exAfter = (await saveOf(page, c.id)).examples;
+      const cardsAfter = await cardTexts(page);
+      check(
+        exAfter?.seed === exBefore?.seed && (exAfter?.ms ?? 0) >= (exBefore?.ms ?? 0) && cardsBefore.every((q) => cardsAfter.includes(q)),
+        `${c.id}: reload keeps the 質問の例 table (same order seed, clock ${Math.round((exAfter?.ms ?? 0) / 1000)} s, cards ${cardsAfter.length})`,
+      );
       await shot(page, name('inv-resumed-reload'));
     }
     if (full && i === 5) {
@@ -1018,6 +1075,17 @@ async function result(page, c, name, { full }) {
   check(st.budget === budget && typeof st.spent === 'number' && st.spent <= st.asked, `${c.id}: the result stores the question budget ${st.budget} (expected ${budget}) and ${st.spent} counted of ${st.asked}`);
   const tile = await page.evaluate(() => [...document.querySelectorAll('.rs-stat')].find((e) => e.textContent.includes('質問数'))?.textContent.replace(/\s+/g, '') ?? '');
   check(tile.includes(`${st.spent}/${budget}問`), `${c.id}: the result tile shows the questions against the budget (${tile})`);
+  // the clear time and the first clear (docs/decisions.md 2026-09-29): a fresh profile, so this run is the first clear
+  const clearMs = s.lastResult?.clearMs;
+  const timeTile = await page.evaluate(() => [...document.querySelectorAll('.rs-stat')].find((e) => e.textContent.includes('解決タイム'))?.textContent.replace(/\s+/g, '') ?? '');
+  check(typeof clearMs === 'number' && clearMs > 0 && timeTile.length > 0, `${c.id}: the result shows the clear time (${timeTile}; ${Math.round((clearMs ?? 0) / 1000)} s)`);
+  const firstLine = ((await page.locator('[data-first-clear]').textContent().catch(() => '')) ?? '').replace(/\s+/g, '');
+  check(
+    s.firstClear?.clearMs === clearMs && s.lastResult?.firstClear === true && firstLine.includes('初回の解決') && firstLine.includes('初見'),
+    `${c.id}: the first clear is recorded and shown with 「初見」 (${firstLine})`,
+  );
+  const own = st.examplesUsed === 0;
+  check((await page.locator('[data-distinction="own-words"]').count()) === (own ? 1 : 0), `${c.id}: 「素手の審問官」 ${own ? 'shown (no card used)' : 'not shown'} (examplesUsed ${st.examplesUsed})`);
   if (full) {
     await boot(page, { reload: true });
     await waitScene(page, 'result');
@@ -1035,6 +1103,9 @@ async function result(page, c, name, { full }) {
   check(shown === s.bestRank, `${c.id}: files show best rank ${shown} (save ${s.bestRank}, run ${s.lastResult?.rank} ${s.lastResult?.title ?? ''})`);
   const meter = await page.locator('.dmeter__total').textContent();
   check(Number(meter) >= (s.bestPoints ?? 0), `${c.id}: the files header shows 名探偵度数 ${meter}`);
+  const firstTag = ((await page.locator(`article.tag:has(#case-${c.id}-title) .tag__first`).textContent().catch(() => '')) ?? '').replace(/\s+/g, '');
+  const total = ((await page.locator('[data-first-total]').textContent().catch(() => '')) ?? '').replace(/\s+/g, '');
+  check(firstTag.includes('初見') && total.includes('初見タイム合計'), `${c.id}: the case tag shows the first clear (${firstTag}) and the files header 初見タイム合計 (${total})`);
   const tag = page.locator(`article.tag:has(#case-${c.id}-title)`);
   await tag.scrollIntoViewIfNeeded();
   await tick(page, 1600);

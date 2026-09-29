@@ -149,6 +149,32 @@ export function keyRateTarget(difficulty: number): number {
   return 0.5 - 0.05 * (d - 1); // .50 / .45 / .40
 }
 
+/** 「寡黙な解剖医」: counted questions ≤ this share of min(par, the run's 質問枠). */
+export const SILENT_SHARE = 0.7;
+
+/**
+ * Distinctions a run earns beside its rank title (they never change the score). 2026-09-29:
+ * solved without using any 質問の例 card — waiting for cards is the only cost of using them, so
+ * not using them is honoured instead of using them being punished.
+ */
+export interface RunDistinction {
+  id: string;
+  title: string;
+  /** What it was earned for (shown under the name). */
+  note: string;
+  /** Holma's aside. */
+  comment: string;
+}
+
+export const RUN_DISTINCTIONS: RunDistinction[] = [
+  { id: 'own-words', title: '素手の審問官', note: '質問の例を一枚も使わずに解決', comment: '札には一度も手を伸ばさずに。問いまで自前とは、恐れ入りますねェ。' },
+];
+
+/** The distinctions of a stored run (`stats.examplesUsed` is absent in records from before the cards). */
+export function runDistinctions(stats: Record<string, number> | undefined): RunDistinction[] {
+  return stats?.examplesUsed === 0 ? RUN_DISTINCTIONS.filter((d) => d.id === 'own-words') : [];
+}
+
 /** Titles renamed on 2026-09-29 (the 反証 wording): saves keep the old text, the screen shows the new name. */
 const LEGACY_TITLE_IDS: Record<string, string> = { 一撃の審問官: 'one-shot', ためらわぬ弾丸: 'unwavering' };
 
@@ -252,7 +278,9 @@ export function computeRank(input: RankInput): RankResult {
         return 'flawless';
       case 'S':
         if (verdicts === 1 && misses === 0) return 'one-shot';
-        if (q.spent > 0 && q.spent <= par * 0.7) return 'silent';
+        // 寡黙: at most 70 % of the smaller of the case's par and the run's 質問枠 (2026-09-29: the
+        // budgets shrank, so a quiet run is measured against the tighter of the two)
+        if (q.spent > 0 && q.spent <= Math.min(par, q.budget) * SILENT_SHARE) return 'silent';
         return 'ace';
       case 'A':
         if (keyRate !== null && keyRate >= target + 0.1) return 'probe';

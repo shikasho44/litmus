@@ -6,6 +6,7 @@ import { caseList, caseListError, caseListState, loadCases } from '../../lib/cas
 import { DegreeMeter } from '../../features/rank/Badge';
 import { detectiveTotal } from '../../features/rank/points';
 import { caseStatus, saveData } from '../../state/save';
+import { formatElapsed } from '../../state/hooks';
 import { Button, IconButton } from '../../ui/Button';
 import { CaseTag } from '../../ui/CaseTag';
 import { Icon } from '../../ui/Icon';
@@ -72,6 +73,9 @@ export function FilesScene(_: SceneProps) {
   const anyStarted = Object.values(save.cases).some((c) => c.stage !== 'new');
   const focused = list?.find((c) => c.id === focus);
   const degree = detectiveTotal(save.cases);
+  // 初見タイム合計: the first-clear times of every case that has one (owner: how fast can you do them all on first sight)
+  const firsts = list ? list.map((c) => save.cases[c.id]?.firstClear).filter((f) => !!f) : [];
+  const firstTotal = firsts.reduce((sum, f) => sum + f.clearMs, 0);
 
   return (
     <section class="scene files" style={focused ? { '--files-accent': focused.accent } : undefined}>
@@ -120,6 +124,15 @@ export function FilesScene(_: SceneProps) {
                       <small>/{list.length}</small>
                     </dd>
                   </div>
+                  {firsts.length > 0 && (
+                    <div class="files__stats-first" data-first-total>
+                      <dt>初見タイム合計</dt>
+                      <dd aria-label={`初見タイム合計 ${formatElapsed(firstTotal)}（${firsts.length}件）`}>
+                        {formatElapsed(firstTotal)}
+                        <small>/{firsts.length}件</small>
+                      </dd>
+                    </div>
+                  )}
                 </dl>
               )}
             </div>
@@ -184,6 +197,7 @@ export function FilesScene(_: SceneProps) {
                   onSecondary={p?.lastResult ? () => goto('result', { caseId: c.id }) : undefined}
                   secondaryLabel="記録"
                   restored={p?.restored}
+                  firstClear={p?.firstClear}
                 />
               );
             })}

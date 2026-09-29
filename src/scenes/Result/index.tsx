@@ -18,14 +18,14 @@ import { openCase } from '../../app/flow';
 import { goto, type SceneProps } from '../../app/router';
 import { audio } from '../../audio';
 import { APP_CONFIG } from '../../config/app';
-import { buildCaseResult, computeRank, detectiveLevel, detectiveTotal, questionPar, questionTerms, rankAdvice, RANK_LABEL, RANK_TITLES, rankTitleOf, resultPoints, S_CONDITION, S_PLUS_CONDITION, type RankInput } from '../../features/rank';
+import { buildCaseResult, computeRank, detectiveLevel, detectiveTotal, questionPar, questionTerms, rankAdvice, RANK_LABEL, RANK_TITLES, rankTitleOf, resultPoints, runDistinctions, S_CONDITION, S_PLUS_CONDITION, type RankInput } from '../../features/rank';
 import { DifficultyBadge } from '../../features/difficulty/Badge';
 import { DIFFICULTY_META } from '../../features/difficulty/meta';
 import { fx } from '../../fx';
 import { motionReduced } from '../../fx/motion';
 import { useImage } from '../../lib/asset';
 import { caseList, loadCases } from '../../lib/cases';
-import { formatElapsed, useCaseProgress } from '../../state/hooks';
+import { formatClearTime, formatElapsed, useCaseProgress } from '../../state/hooks';
 import { completeCase, getCaseProgress, resetCase, saveData } from '../../state/save';
 import type { CaseResult, Rank } from '../../state/types';
 import { Button } from '../../ui/Button';
@@ -138,6 +138,9 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
   const q = questionTerms(input);
   const degree = detectiveTotal(saveData.value.cases);
   const bestPoints = saveData.value.cases[caseId]?.bestPoints;
+  /** The case's first clear (kept forever; absent for cases cleared before it was recorded). */
+  const firstClear = saveData.value.cases[caseId]?.firstClear;
+  const distinctions = runDistinctions(result.stats);
 
   // rank reveal
   useLayoutEffect(() => {
@@ -207,7 +210,9 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
       sub: `${verdicts <= 1 ? '一度で通った' : `${verdicts}度目で通った`}${gameOvers > 0 ? `・ゲームオーバー${gameOvers}回` : ''}`,
       tone: gameOvers > 0 ? 'warn' : verdicts <= 1 ? 'good' : undefined,
     },
-    { icon: 'time', label: '所要時間', num: formatElapsed(result.elapsedMs ?? 0) },
+    typeof result.clearMs === 'number'
+      ? { icon: 'time', label: '解決タイム', num: formatElapsed(result.clearMs), sub: '捜査の開始から死因宣告が通るまで' }
+      : { icon: 'time', label: '所要時間', num: formatElapsed(result.elapsedMs ?? 0) },
     { icon: 'check', label: '記憶の定着', num: `${quizMiss}`, sub: quizMiss === 0 ? '一度で全問正解' : 'やり直した回数', tone: quizMiss === 0 ? 'good' : undefined },
   ];
   const prev = result.prevBest;
@@ -248,6 +253,19 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
               <DifficultyBadge difficulty={level} />
               <span class="rs-level__mode">{DIFFICULTY_META[level].modeJp}の死因宣告</span>
             </p>
+            {firstClear && (
+              <p class={`rs-first ${result.firstClear ? 'is-now' : ''}`} data-first-clear>
+                <span class="rs-first__k">初回の解決</span>
+                <span class="rs-first__v">
+                  {DIFFICULTY_META[firstClear.difficulty].jp}・{formatClearTime(firstClear.clearMs)}・{firstClear.rank}
+                </span>
+                {result.firstClear && (
+                  <span class="rs-first__badge" title="この回が、この事件の初めての解決です">
+                    初見
+                  </span>
+                )}
+              </p>
+            )}
           </header>
 
           <div class="rs-main">
@@ -273,6 +291,13 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
                     審問官ランク <strong>{rank}</strong> ／ {RANK_LABEL[rank].jp}
                   </p>
                   <p class="rs-rank__title">「{rankTitleOf(result.title)?.title ?? result.title}」</p>
+                  {distinctions.map((d) => (
+                    <p key={d.id} class="rs-distinction" data-distinction={d.id} title={d.comment}>
+                      <Icon name="star" size={14} />
+                      <span class="rs-distinction__name">{d.title}</span>
+                      <span class="rs-distinction__note">{d.note}</span>
+                    </p>
+                  ))}
                   <div class="rs-rank__holma">
                     <div class="rs-rank__face" aria-hidden="true">
                       <HolmaSprite mood={isTop(rank) || rank === 'A' ? 'laugh' : 'normal'} framing="bust" />

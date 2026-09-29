@@ -16,6 +16,7 @@ import type {
   ScienceMemoView,
   VerdictResult,
 } from '../../shared/api';
+import type { ExampleState } from '../features/examples/examples';
 
 export const SAVE_VERSION = 1;
 
@@ -136,6 +137,26 @@ export interface CaseResult {
   prevBest?: Rank;
   /** The case's best 獲得度数 BEFORE this run (set by completeCase; 0 / undefined = first clear). */
   prevBestPoints?: number;
+  /** Clear time of this run: investigation start → verdict accepted (ms). Absent in older records. */
+  clearMs?: number;
+  /** This run is the case's first clear (set by completeCase; the result shows 「初見」). */
+  firstClear?: boolean;
+}
+
+/**
+ * The FIRST clear of a case, kept forever (2026-09-29): later clears never overwrite it. Absent for
+ * cases first cleared before it was recorded (nothing is invented for them) and never written by
+ * an online versus race.
+ */
+export interface FirstClear {
+  at: number;
+  difficulty: Difficulty;
+  /** Investigation start → verdict accepted (ms). */
+  clearMs: number;
+  /** Counted questions / the run's 質問枠. */
+  spent: number;
+  budget?: number;
+  rank: Rank;
 }
 
 /** The victim's restored identity, remembered once the identity ceremony has played (shown on the Files tag after completion). */
@@ -186,6 +207,14 @@ export interface CaseProgress {
   /** Best 獲得度数 of this case (名探偵度数 = the sum over all cases; src/features/rank/points.ts). */
   bestPoints?: number;
   lastResult?: CaseResult;
+  /** The 質問の例 cards of the run being played (src/features/examples). Reset with the run. */
+  examples?: ExampleState;
+  /** elapsedMs when this run's verdict was accepted (the clear time). Reset with the run. */
+  clearMs?: number;
+  /** The case's first clear, kept across replays (see FirstClear). */
+  firstClear?: FirstClear;
+  /** Solved at least once without using a 質問の例 card (kept across replays). */
+  ownWords?: boolean;
 }
 
 /* ------------------------------------------------------------------ */

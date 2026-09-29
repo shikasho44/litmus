@@ -32,8 +32,9 @@ const out = resolve(root, 'qa', 'ending');
 mkdirSync(out, { recursive: true });
 
 const CASES = [
-  'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-rose-that-bowed', // CASE 01–03 (intro, object souls)
-  'c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper', // CASE 04–07
+  'c08-half-folded-towel', // CASE 01 (the tutorial, 2026-09-29)
+  'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-rose-that-bowed', // CASE 02–04 (intro, object souls)
+  'c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper', // CASE 05–08
 ].filter((c) => !CASE || c.startsWith(CASE));
 const SIZES = [
   { tag: 'pc', viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },

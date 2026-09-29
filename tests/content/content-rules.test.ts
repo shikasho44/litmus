@@ -293,7 +293,7 @@ describe('c07 keeps what she is a secret until the player asks (2026-09-29)', ()
   // 言葉 / 屋根 are not leaves or roots
   const PLANT = /花|植物|茎|(?<!言)葉|(?<!屋)根|つぼみ|バラ|ばら|薔薇|かびん|rose|flower|vase|plant|petal|stem|bloom|bouquet/iu;
 
-  it('the case card, intro, starting findings, hint 1, idle lines, nudges and the debate name no flower, vase or plant', () => {
+  it('the case card, intro, starting findings, hints, idle lines, nudges, the debate and the verdict (replies, choices, cloze) name no flower, vase or plant', () => {
     const pre: [string, string][] = [
       ['title', c7.title],
       ['titleEn', c7.titleEn],
@@ -307,7 +307,8 @@ describe('c07 keeps what she is a secret until the player asks (2026-09-29)', ()
       ...c7.intro.holma.map((t, i): [string, string] => [`intro.holma[${i}]`, t]),
       ...c7.intro.starterQuestions.map((t, i): [string, string] => [`intro.starterQuestions[${i}]`, t]),
       ...(c7.intro.exampleQuestions ?? []).map((t, i): [string, string] => [`intro.exampleQuestions[${i}]`, t]),
-      ...c7.hints.filter((h) => h.level === 1).map((h): [string, string] => ['hint 1', h.text]),
+      // every hint (2026-09-30: hint 3 said 茎). Hint 2 may say she is not a person, never what she is.
+      ...c7.hints.map((h): [string, string] => [`hint ${h.level}`, h.text]),
       ...c7.holmaLines.idle.map((t, i): [string, string] => [`holmaLines.idle[${i}]`, t]),
       ...c7.holmaLines.nearCore.map((t, i): [string, string] => [`holmaLines.nearCore[${i}]`, t]),
       ...(c7.nudges ?? []).map((t, i): [string, string] => [`nudges[${i}]`, t]),
@@ -315,8 +316,17 @@ describe('c07 keeps what she is a secret until the player asks (2026-09-29)', ()
       ...c7.debate.flatMap((r): [string, string][] =>
         [r.title, ...r.intro, ...r.statements.map((s) => s.text), ...r.success, ...r.wrongShot, r.hint].map((t): [string, string] => [`debate ${r.id}`, t]),
       ),
+      // Holma's replies to a failed verdict and the verdict formats are read before the solve too
+      // (2026-09-30: the wrong-verdict replies said 花／花びん／茎／バラ, the choices said 茎).
+      ...c7.wrongClaims.map((w): [string, string] => [`wrongClaims.${w.id}`, w.feedback]),
+      ...c7.answerElements.map((e): [string, string] => [`missingFeedback ${e.id}`, e.missingFeedback]),
+      ['verdictModes.choice.prompt', c7.verdictModes!.choice.prompt],
+      ...c7.verdictModes!.choice.options.map((o): [string, string] => [`verdictModes.choice.${o.id}`, o.text]),
+      ['verdictModes.cloze.prompt', c7.verdictModes!.cloze.prompt],
+      ['verdictModes.cloze.template', c7.verdictModes!.cloze.template],
+      ...c7.verdictModes!.cloze.blanks.flatMap((b): [string, string][] => [[`verdictModes.cloze.${b.id}.label`, b.label], ...b.options.map((o, i): [string, string] => [`verdictModes.cloze.${b.id}[${i}]`, o])]),
     ];
-    const bad = pre.filter(([, t]) => PLANT.test(t)).map(([w, t]) => `${w}: ${t}`);
+    const bad = pre.filter(([, t]) => PLANT.test(t) || /しおれ/u.test(t)).map(([w, t]) => `${w}: ${t}`);
     expect(bad, bad.join('\n')).toEqual([]);
   });
 
@@ -334,6 +344,10 @@ describe('c07 keeps what she is a secret until the player asks (2026-09-29)', ()
 
   it('the rose and vase words are leak terms (never in public text, never in a model reply before the player holds them)', () => {
     for (const t of ['バラ', '薔薇', '花びん', '花瓶', '切り花']) expect(c7.leakTerms).toContain(t);
+  });
+
+  it('the flower, stem and vase words are secretTerms, so the validator also watches the verdict formats (2026-09-30)', () => {
+    for (const t of ['花', '植物', '茎', 'バラ', '花瓶']) expect(c7.secretTerms ?? []).toContain(t);
   });
 });
 

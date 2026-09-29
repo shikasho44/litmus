@@ -262,6 +262,78 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
     const n = normalize(text);
     for (const [t, nt] of leak) if (n.includes(nt)) errors.push(`leak term "${t}" appears in public field ${where}`);
   }
+  // Holma's replies to a failed verdict and the verdict prompts are read BEFORE the solve (by the
+  // players who have not found the answer yet), so they get the same scan (2026-09-30, the c07
+  // wrong-verdict replies said 花／花びん／茎／バラ). The choice options and the cloze sentence /
+  // options are not scanned here: they carry the answer by design (see secretTerms below).
+  const vmPre = c.verdictModes;
+  const replyFields: [string, string][] = [
+    ...c.wrongClaims.map((w) => [`wrongClaims.${w.id}.feedback`, w.feedback] as [string, string]),
+    ...c.answerElements.map((e) => [`answerElements.${e.id}.missingFeedback`, e.missingFeedback] as [string, string]),
+    ...(vmPre
+      ? ([
+          ['verdictModes.choice.prompt', vmPre.choice.prompt],
+          ['verdictModes.cloze.prompt', vmPre.cloze.prompt],
+          ...vmPre.cloze.blanks.map((b) => [`verdictModes.cloze.${b.id}.label`, b.label] as [string, string]),
+        ] as [string, string][])
+      : []),
+  ];
+  for (const [where, text] of replyFields) {
+    const n = normalize(text);
+    for (const [t, nt] of leak) if (n.includes(nt)) errors.push(`leak term "${t}" appears in pre-solve reply ${where}`);
+  }
+  // secretTerms: words that must stay hidden even in the verdict choices and the cloze (e.g. c07's
+  // identity — flower, stem, vase). Scanned over every text a player reads without having asked
+  // for it (findings and science memos that open on the player's own question are exempt).
+  const secret = (c.secretTerms ?? []).map((t) => [t, normalize(t)] as const).filter(([, n]) => n.length > 0);
+  if (secret.length > 0) {
+    const preSolve: [string, string][] = [
+      ['title', c.title],
+      ['titleEn', c.titleEn],
+      ...c.categories.map((t, i) => [`categories[${i}]`, t] as [string, string]),
+      ...publicFields.filter(([where]) => !/^(?:F\d+\.|scienceMemos\.)/.test(where)),
+      ...c.facts.filter((f) => f.visibleFromStart).flatMap((f) => [[`${f.id}.text`, f.text], [`${f.id}.cardTitle`, f.cardTitle ?? '']] as [string, string][]),
+      ...replyFields,
+      ...c.hints.map((h) => [`hint ${h.level}`, h.text] as [string, string]),
+      ...c.debate.flatMap((r) =>
+        [r.title, ...r.intro, ...r.statements.map((s) => s.text), ...r.success, ...r.wrongShot, r.hint].map((t) => [`debate ${r.id}`, t] as [string, string]),
+      ),
+      ...(vmPre
+        ? ([
+            ...vmPre.choice.options.map((o) => [`verdictModes.choice.${o.id}`, o.text] as [string, string]),
+            ['verdictModes.cloze.template', vmPre.cloze.template],
+            ...vmPre.cloze.blanks.flatMap((b) => b.options.map((o, i) => [`verdictModes.cloze.${b.id}[${i}]`, o] as [string, string])),
+          ] as [string, string][])
+        : []),
+    ];
+    for (const [where, text] of preSolve) {
+      const n = normalize(text);
+      for (const [t, nt] of secret) if (n.includes(nt)) errors.push(`secret term "${t}" appears before the solve in ${where}`);
+    }
+  }
+  // Debate lines must not bring in an object the player has never been shown (docs/decisions.md
+  // 2026-09-30, the "abrupt pieces" audit). Cheap check: katakana nouns (≥ 3 letters) in debate
+  // statements that appear nowhere in the pre-solve public text. Warning only.
+  const introPool = normalize(
+    [
+      c.intro.summary,
+      c.intro.location,
+      c.intro.time,
+      ...c.intro.narration,
+      ...c.intro.jane,
+      ...c.intro.holma,
+      ...c.intro.starterQuestions,
+      ...(c.intro.exampleQuestions ?? []),
+      ...c.facts.filter((f) => f.visibleFromStart).map((f) => f.text),
+    ].join('\n'),
+  );
+  for (const r of c.debate) {
+    for (const s of r.statements) {
+      const nouns = (s.text.replace(/\[\[|\]\]/g, '').match(/[ァ-ヴー]{3,}/gu) ?? []).filter((w) => !/^ク(?:ック)+$|^ククッ$/u.test(w));
+      const unseen = [...new Set(nouns)].filter((w) => !introPool.includes(normalize(w)));
+      if (unseen.length > 0) warnings.push(`debate ${r.id}/${s.id} names ${unseen.map((w) => `「${w}」`).join('')}, which the case file, intro and example questions never show (set it up before the inquest)`);
+    }
+  }
 
   // ── question budget override / nudges (shared/budget.ts) ──────
   const qb = c.questionBudget;

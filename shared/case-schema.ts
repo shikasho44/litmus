@@ -379,6 +379,14 @@ export const CaseSchema = z.object({
     .optional(),
   /** SECRET. Terms that must never appear in model-written replies before the solution. */
   leakTerms: z.array(z.string()).min(1),
+  /**
+   * SECRET, optional (2026-09-30). Words that must not appear anywhere a player can read before
+   * the solve — including the verdict choices, the cloze sentence and its options, every hint and
+   * the debate — because they would give away the case's hidden core (c07: that she is a flower).
+   * leakTerms cannot cover the verdict formats (they state the answer by design); these can.
+   * Checked by the validator only (the engine and the release guard do not use it).
+   */
+  secretTerms: z.array(z.string().min(1)).optional(),
   /** Verdict formats per difficulty (optional for older cases; validator warns when missing). */
   verdictModes: VerdictModesSchema.optional(),
 });

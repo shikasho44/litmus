@@ -113,7 +113,9 @@ describe('versus rooms', () => {
     const h = await t.host();
     const [code, pid, sig] = h.seat.split('.');
     expect(await err(t.vs.state(`${code}.${pid}.${'A'.repeat(22)}`))).toMatchObject({ status: 403, message: VERSUS_ERR.seat });
-    expect(await err(t.vs.state(`${code}.${pid.replace(/.$/, 'z')}.${sig}`))).toMatchObject({ status: 403 });
+    // flip the last character to a DIFFERENT one (a pid that already ends in z must still be forged)
+    const forged = pid.replace(/.$/, (c) => (c === 'z' ? 'y' : 'z'));
+    expect(await err(t.vs.state(`${code}.${forged}.${sig}`))).toMatchObject({ status: 403 });
     expect(await err(t.vs.state('garbage'))).toMatchObject({ status: 403 });
     // the same seat string against another server secret
     const other = new VersusService({ store: t.store, secret: 'another-secret-0123456789', content: () => t.registry, clock: t.clock });

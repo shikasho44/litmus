@@ -254,7 +254,11 @@ import { fx } from '../../fx';
 fx.shake(strength = 1, duration = .38)       // shakes the scene host
 fx.flash(color = '#fff', { opacity, duration }) // ≤ 3 flashes / second, min 340 ms apart
 fx.shatter(x?, y?, { color, count })         // glass burst (canvas) + sound; default = stage centre
-await fx.cutIn({ text, en, tone, character: 'holma' | 'jane', mood, hold }) // queued
+fx.bloom(x?, y?, { sound })                  // 反応あり: litmus bloom (red spot → spreading blue + ripples)
+                                             // + 'reaction' sound; skipped with reduced motion
+fx.noReaction(anchor, { sound })             // 反応なし tag above the tested word, ~1 s (+ 'noReaction')
+await fx.cutIn({ text, en, tone, character: 'holma' | 'jane', mood, hold }) // queued;
+                                             // tone 'litmus' = the band develops red → blue (反応あり！)
 await fx.stamp(answerClass, { x, y, hold = 1.1, size = 'xl', sound, shake })
 fx.speedLines(ms, { kind: 'radial' | 'horizontal', color })
 fx.glitch(element)                           // one-shot RGB-split glitch
@@ -265,7 +269,22 @@ fx.penalty(points, anchor, place = 'below')  // 「減点 −n」 tag beside an 
 fx.reset()                                   // SceneHost calls this on scene change
 ```
 
-Reduced motion (OS or setting): no shake / flash / glitch / shatter; stamps and cut-ins fade.
+Reduced motion (OS or setting): no shake / flash / glitch / shatter / bloom; stamps and cut-ins fade
+(the litmus cut-in shows its developed colours at once).
+
+### The 反証 (litmus test) staging — `src/features/inquest/litmus.ts`
+
+The inquest's first part is **反証** (EN LITMUS TEST; `debate` in code). Jane's statements carry
+glowing **誤差** (`[[…]]`, `noise` in code); the player sets a 所見 card (the findings case,
+`.iq-mag` / the phone drawer) and presses **当てる** (`[data-fire]`, EN TEST).
+`applyCard(from, to, label)` glides the card over like a strip of litmus paper and presses its
+acid-red pad on the word (`touch` resolves then; with reduced motion at once), and
+`finish(reacted)` either develops the pad blue and lifts it off, or leaves it red and lets it
+drop away. The scene then plays `fx.bloom()` + the `.noise.is-broken` colour change (red →
+violet → blue, struck through, `.noise__stain`) + `fx.cutIn({ text: '反応あり！', en: 'REACTION!',
+tone: 'litmus' })`, or `fx.noReaction(word)` (after the card has left) + composure −1.
+`flyCard()` is Holma's lent card (泣きつく) tossed into the findings case. Before 2026-09-29 this
+was a shot (`flyBullet`, speed lines, glass shatter, 「反証！」); `docs/decisions.md` has why.
 The backdrop (`BackdropCanvas`) is a WebGL shader (formalin haze, motes, vignette, scanlines,
 grain) at half resolution / 30 fps with a Canvas2D fallback; it pauses when the tab is hidden,
 renders one static frame with reduced motion, and drops to static on low FPS. `?nofx=1`
@@ -278,7 +297,9 @@ import { audio } from '../../audio';
 audio.bgm('title' | 'investigation' | 'inquest' | 'truth' | 'science' | 'none', fade = 1.4)
 audio.sfx('hover' | 'confirm' | 'cancel' | 'error' | 'stamp' | 'finding' | 'findingCore' | 'shatter'
         | 'whoosh' | 'cutin' | 'gavel' | 'heartbeat' | 'page' | 'open' | 'close' | 'toggle'
-        | 'refute' | 'reveal' | 'send', { answerClass })   // 'stamp' varies by answer class
+        | 'refute' | 'reveal' | 'send' | 'dip' | 'reaction' | 'noReaction', { answerClass })
+        // 'stamp' varies by answer class; 'dip' / 'reaction' / 'noReaction' are the 反証 cues
+        // (the card leaves the case / 反応あり / 反応なし)
 audio.blip('holma' | 'jane' | 'narration' | 'system')      // DialogueBox does this for you
 ```
 

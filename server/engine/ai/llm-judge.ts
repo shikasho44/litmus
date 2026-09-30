@@ -36,7 +36,8 @@ export const LLM_JUDGE_SYSTEM = [
 
 export function buildJudgePrompt(input: JudgeInput): string {
   const c = input.caseData;
-  const facts = c.facts.map((f) => `${f.id}: ${f.text}${f.judgeNote ? `【メモ】${f.judgeNote}` : ''}`).join('\n');
+  // the manner fact is sealed during the investigation (manner.ts)
+  const facts = c.facts.filter((f) => !f.manner).map((f) => `${f.id}: ${f.text}${f.judgeNote ? `【メモ】${f.judgeNote}` : ''}`).join('\n');
   return [
     `# 事件の真相（秘密）\n${c.truth.summary}\n死因: ${c.truth.causeOfDeath}`,
     `# 所見\n${facts}`,

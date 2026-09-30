@@ -994,10 +994,11 @@
     {
       "q": "お母さんは関係ありますか？",
       "expect": [
-        "yes"
+        "cannot"
       ],
-      "fact": "F10",
-      "group": "the key clues"
+      "manner": true,
+      "group": "the key clues",
+      "note": "死の種類の問いは捜査中は封印（2026-09-30、manner.ts）"
     },
     {
       "q": "水は腐ってた？",
@@ -1160,9 +1161,8 @@
     {
       "q": "殺されましたか？",
       "expect": [
-        "no"
+        "cannot"
       ],
-      "fact": "F24",
       "manner": true,
       "forbid": [
         "F19",
@@ -1172,14 +1172,13 @@
         "F34"
       ],
       "group": "people and manner",
-      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
+      "note": "死の種類の問いは捜査中は封印（2026-09-30、manner.ts）"
     },
     {
       "q": "だれかのしわざですか？",
       "expect": [
-        "no"
+        "cannot"
       ],
-      "fact": "F24",
       "manner": true,
       "forbid": [
         "F19",
@@ -1189,64 +1188,64 @@
         "F34"
       ],
       "group": "people and manner",
-      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
+      "note": "死の種類の問いは捜査中は封印（2026-09-30、manner.ts）"
     },
     {
       "q": "事故ですか？",
       "expect": [
-        "yes"
+        "cannot"
       ],
-      "fact": "F24",
       "manner": true,
       "group": "people and manner",
-      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
+      "note": "死の種類の問いは捜査中は封印（2026-09-30、manner.ts）"
     },
     {
       "q": "自殺ですか？",
       "expect": [
-        "no"
+        "cannot"
       ],
       "manner": true,
       "group": "people and manner",
-      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
+      "note": "死の種類の問いは捜査中は封印（2026-09-30、manner.ts）"
     },
     {
       "q": "猫がいたずら？",
       "expect": [
-        "no"
+        "no",
+        "vague",
+        "irrelevant"
       ],
-      "manner": true,
       "group": "people and manner",
-      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
+      "note": "動物の手出しは証拠の問い（封印の外、manner.ts）。猫は話に出てこない（『家に猫はいましたか？』は irrelevant）。"
     },
     {
       "q": "誰かが折った？",
       "expect": [
-        "no"
+        "cannot"
       ],
       "manner": true,
       "group": "people and manner",
-      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
+      "note": "死の種類の問いは捜査中は封印（2026-09-30、manner.ts）"
     },
     {
       "q": "お母さんのせい？",
       "expect": [
-        "no"
+        "cannot"
       ],
       "manner": true,
       "noNearCore": true,
       "group": "people and manner",
-      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
+      "note": "死の種類の問いは捜査中は封印（2026-09-30、manner.ts）"
     },
     {
       "q": "女の子のせい？",
       "expect": [
-        "no"
+        "cannot"
       ],
       "manner": true,
       "noNearCore": true,
       "group": "people and manner",
-      "note": "死の種類・誰かの手出しを問う質問。事実どおり答える（2026-09-28〜）。"
+      "note": "死の種類の問いは捜査中は封印（2026-09-30、manner.ts）"
     },
     {
       "q": "名前は？",

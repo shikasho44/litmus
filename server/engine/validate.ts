@@ -83,11 +83,22 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
   if (!c.facts.some((f) => f.importance >= 3)) errors.push('no core fact (importance ≥ 3)');
   if (!c.facts.some((f) => f.spoilerLevel >= 4)) info.push('no spoilerLevel-4 fact (nearCore relies on closeness/progress only)');
 
-  // ── manner of death / culprit seal (2026-09-28) ───────────────
+  // ── manner of death / culprit seal (sealed again 2026-09-30) ──
+  // The manner fact is sealed during the investigation (manner.ts): no question reaches it, only the
+  // planned スペシャルヒント (mannerReveal). It must not be a starting card, a probe's finding or
+  // inquest evidence.
   const mannerFacts = c.facts.filter((f) => f.manner);
   if (mannerFacts.length > 1) errors.push(`more than one manner fact (${mannerFacts.map((f) => f.id).join(', ')})`);
-  if (mannerFacts.length === 0 && c.publish) warnings.push('no manner fact (fact.manner): 「殺されたの？」「事故ですか？」 are routed by keywords only');
-  for (const f of mannerFacts) if (f.spoilerLevel >= 4) errors.push(`${f.id}: the manner fact must be reachable (spoilerLevel ≤ 3)`);
+  if (mannerFacts.length === 0 && c.publish) warnings.push('no manner fact (fact.manner): the planned special hint would have nothing to reveal');
+  for (const f of mannerFacts) {
+    if (f.spoilerLevel >= 4) errors.push(`${f.id}: the manner fact must be a card the special hint can show (spoilerLevel ≤ 3)`);
+    if (f.visibleFromStart) errors.push(`${f.id}: the manner fact is sealed and must not be visibleFromStart`);
+    c.probes.forEach((p, i) => {
+      if (p.facts.includes(f.id)) errors.push(`probe #${i + 1} "${p.q}" references the sealed manner fact ${f.id}`);
+    });
+    for (const r of c.debate) if (r.answer.fact === f.id || r.alsoAccept.includes(f.id)) errors.push(`debate ${r.id} uses the sealed manner fact ${f.id} as evidence`);
+    for (const g of c.facts) if (g.requires.includes(f.id)) errors.push(`${g.id} requires the sealed manner fact ${f.id}`);
+  }
   if (c.truth.culpritSeal && mannerFacts.length > 0 && mannerFacts[0].manner !== 'homicide') {
     warnings.push(`truth.culpritSeal is set but the manner fact ${mannerFacts[0].id} says ${mannerFacts[0].manner} (the seal is for cases whose verdict names a culprit)`);
   }
@@ -363,7 +374,7 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
 
   // ── probe coverage per fact ───────────────────────────────────
   const touched = new Set(c.probes.flatMap((p) => p.facts));
-  for (const f of c.facts) if (!touched.has(f.id) && !f.visibleFromStart) warnings.push(`no probe touches ${f.id} (${f.text.slice(0, 24)}…)`);
+  for (const f of c.facts) if (!touched.has(f.id) && !f.visibleFromStart && !f.manner) warnings.push(`no probe touches ${f.id} (${f.text.slice(0, 24)}…)`);
 
   // ── rules self-consistency ────────────────────────────────────
   const index = buildCaseIndex(c);

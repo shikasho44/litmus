@@ -41,6 +41,7 @@ export const HolmaLinesSchema = z.object({
     rude: bank(4),            // insults / abuse → stay in character, de-escalate
     empty: bank(3),           // empty / nonsense input
     tooLong: bank(2),
+    manner: bank(5),          // 「殺されたの？」「事故ですか？」 — sealed until the verdict (manner.ts)
     culprit: bank(5),         // 「犯人は誰？」「編集者が混ぜた？」 in a case that seals the culprit (culprit.ts)
   }),
   error: z.object({

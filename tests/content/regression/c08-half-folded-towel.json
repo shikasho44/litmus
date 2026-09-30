@@ -4,6 +4,24 @@
   "minRate": 0.95,
   "questions": [
     {
+      "q": "争った跡は？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F27",
+      "critical": true,
+      "group": "people and manner",
+      "note": "封印の一言が勧める証拠の問い（2026-09-30）。答えは F27。"
+    },
+    {
+      "q": "誰か家に入りましたか？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F27",
+      "group": "people and manner"
+    },
+    {
       "q": "ベランダは暑かったですか？",
       "expect": [
         "yes"
@@ -547,54 +565,59 @@
     {
       "q": "事故ですか？",
       "expect": [
-        "yes"
+        "cannot"
       ],
       "critical": true,
       "manner": true,
-      "note": "死の種類は事実どおり答える（2026-09-28〜）。",
+      "note": "死の種類の問いは捜査中は封印（2026-09-30、manner.ts）",
       "group": "people and manner"
     },
     {
       "q": "殺されたの？",
       "expect": [
-        "no"
+        "cannot"
       ],
       "critical": true,
       "manner": true,
-      "group": "people and manner"
+      "group": "people and manner",
+      "note": "死の種類の問いは捜査中は封印（2026-09-30、manner.ts）"
     },
     {
       "q": "犯人はいる？",
       "expect": [
-        "no"
+        "cannot"
       ],
       "manner": true,
-      "group": "people and manner"
+      "group": "people and manner",
+      "note": "死の種類の問いは捜査中は封印（2026-09-30、manner.ts）"
     },
     {
       "q": "夫のせい？",
       "expect": [
-        "no"
+        "cannot"
       ],
       "manner": true,
       "noNearCore": true,
-      "group": "people and manner"
+      "group": "people and manner",
+      "note": "死の種類の問いは捜査中は封印（2026-09-30、manner.ts）"
     },
     {
       "q": "自殺ですか？",
       "expect": [
-        "no"
+        "cannot"
       ],
       "manner": true,
-      "group": "people and manner"
+      "group": "people and manner",
+      "note": "死の種類の問いは捜査中は封印（2026-09-30、manner.ts）"
     },
     {
       "q": "誰かに毒を盛られた？",
       "expect": [
-        "no"
+        "cannot"
       ],
       "manner": true,
-      "group": "people and manner"
+      "group": "people and manner",
+      "note": "死の種類の問いは捜査中は封印（2026-09-30、manner.ts）"
     },
     {
       "q": "名前は？",

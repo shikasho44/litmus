@@ -60,7 +60,7 @@ export function toPublic(c: Case): CasePublic {
     holmaIntro: [...c.intro.holma],
     starterQuestions: [...c.intro.starterQuestions],
     startingFacts: c.facts.filter((f) => f.visibleFromStart && f.spoilerLevel < 4).map(publicFact),
-    totalFacts: c.facts.filter((f) => f.spoilerLevel < 4).length,
+    totalFacts: c.facts.filter((f) => f.spoilerLevel < 4 && !f.manner).length,
     shardWeights: shardWeights(c),
     hintCount: c.hints.length,
     holmaLines: { idle: [...c.holmaLines.idle], nearCore: [...c.holmaLines.nearCore] },
@@ -75,7 +75,7 @@ export function toPublic(c: Case): CasePublic {
  * the player already has without learning anything about them.
  */
 export function exampleView(c: Case): ExampleQuestion[] {
-  const reachable = new Set(c.facts.filter((f) => f.spoilerLevel < 4).map((f) => f.id));
+  const reachable = new Set(c.facts.filter((f) => f.spoilerLevel < 4 && !f.manner).map((f) => f.id));
   const probes = new Map(c.probes.map((p) => [normalize(p.q), p]));
   const seen = new Set<string>();
   const out: ExampleQuestion[] = [];

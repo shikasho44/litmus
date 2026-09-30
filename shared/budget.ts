@@ -17,7 +17,7 @@
  *
  * What counts ("charged"): a question part answered はい / いいえ / 一部そう / 関係ない that is
  * not small talk (the engine's meta kinds). 「具体的に」「答えられない」, hint / how-to / answer
- * requests, small talk, the culprit seal and the safety filter are free — none of them can ever
+ * requests, small talk, the manner and culprit seals and the safety filter are free — none of them can ever
  * unlock a finding. `asked` (ProgressSnapshot.asked) keeps counting every part as before.
  */
 import type { AnswerClass } from './constants';

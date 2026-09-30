@@ -316,12 +316,15 @@ export function isRelevanceQuestion(norm: string): boolean {
   return RELEVANCE_Q.test(norm);
 }
 
-/** 'culprit' is decided by the culprit seal (culprit.ts, opt-in cases only), not by detectMeta. */
-export type MetaKind = 'askAnswer' | 'askHint' | 'offtopic' | 'aboutHolma' | 'rude' | 'empty' | 'tooLong' | 'culprit';
+/**
+ * 'manner' is decided by the manner-of-death seal (manner.ts) and 'culprit' by the culprit seal
+ * (culprit.ts, opt-in cases only), not by detectMeta.
+ */
+export type MetaKind = 'askAnswer' | 'askHint' | 'offtopic' | 'aboutHolma' | 'rude' | 'empty' | 'tooLong' | 'manner' | 'culprit';
 
 const META_ASK_ANSWER: RegExp[] = [
-  // 犯人 is deliberately absent: 「犯人は誰？」 is an open question (→ vague), or the culprit seal
-  // (culprit.ts) in a case whose verdict names the culprit.
+  // 犯人 is deliberately absent: 「犯人は誰？」 must not imply that a culprit exists — the manner seal
+  // (manner.ts) takes it.
   /(?:死因|しいん|答え|こたえ|正解|せいかい|真相|しんそう|結論|けつろん|真実|しんじつ)(?:を|は|って|が|とか)?(?:教え|おしえ|言って|いって|知りたい|しりたい|なに|何|なん|だれ|誰|どれ|ちょうだい|頂戴|ください|下さい|くれ|ずばり|早く|はやく)/u,
   /(?:死因|答え|正解|真相|真実|結論|全部|ぜんぶ|すべて|全て|何が起き|なにがおき)(?:を|は|って|が)?.{0,4}(?:教えて|おしえて|話して|はなして|説明し|せつめいし|言って|いって)/u,
   /(?:なぜ|どうして|なんで|何が|なにが).{0,14}(?:説明し|せつめいし)(?:て|ろ)/u,

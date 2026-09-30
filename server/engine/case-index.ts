@@ -36,7 +36,12 @@ export interface IndexedProbe {
 }
 
 export interface CaseIndex {
+  /**
+   * The facts a question can reach (retrieval, keyword routing, model candidates) — every fact but
+   * the manner fact, which is sealed during the investigation (manner.ts).
+   */
   facts: IndexedFact[];
+  /** Every fact, the manner fact included. */
   factById: Map<string, IndexedFact>;
   probes: IndexedProbe[];
   memoById: Map<string, Case['scienceMemos'][number]>;
@@ -51,8 +56,9 @@ export interface CaseIndex {
    */
   secretNames: string[];
   /**
-   * The case's manner fact (fact.manner): murder / accident / suicide questions are answered from
-   * it (rules-judge.ts, manner.ts). Undefined when the case has none (old keyword routing only).
+   * The case's manner fact (fact.manner). Sealed during the investigation (manner.ts): not in
+   * `facts`, never unlocked by an answer (policy.ts). Kept for the planned スペシャルヒント
+   * (manner.ts mannerReveal). Undefined when the case has none.
    */
   mannerFact?: IndexedFact;
   /** Opt-in culprit seal (truth.culpritSeal, culprit.ts): questions naming the culprit → cannot. */
@@ -129,7 +135,7 @@ export function keywordVariants(keywords: readonly string[]): { form: string; ke
 }
 
 export function buildCaseIndex(c: Case): CaseIndex {
-  const facts: IndexedFact[] = c.facts.map((fact) => {
+  const all: IndexedFact[] = c.facts.map((fact) => {
     const norm = normalize(fact.text);
     const kws = [...new Set(fact.keywords.map(normalize).filter((k) => k.length > 0))];
     const clauses = fact.text
@@ -143,16 +149,18 @@ export function buildCaseIndex(c: Case): CaseIndex {
     const marks = polarityMarks(norm);
     return { fact, norm, grams: bigrams(norm), keywords: kws, polarity: marksPolarity(marks), clauses, marks, variants: keywordVariants(fact.keywords) };
   });
+  // the manner fact is sealed: out of reach of every question (manner.ts)
+  const facts = all.filter((f) => !f.fact.manner);
   const contentWords = [...new Set(facts.flatMap((f) => f.keywords).filter((k) => [...k].length >= 2))];
   return {
     facts,
-    factById: new Map(facts.map((f) => [f.fact.id, f])),
+    factById: new Map(all.map((f) => [f.fact.id, f])),
     contentWords,
     probes: c.probes.map((p, i) => indexProbe(p, i, contentWords)),
     memoById: new Map(c.scienceMemos.map((m) => [m.id, m])),
     leakTerms: [...new Set(c.leakTerms.map(normalize).filter((t) => t.length > 0))],
     secretNames: secretNamesOf(c),
-    mannerFact: facts.find((f) => f.fact.manner),
+    mannerFact: all.find((f) => f.fact.manner),
     culpritSeal: c.truth.culpritSeal ? compileCulpritSeal(c.truth.culpritSeal) : undefined,
   };
 }

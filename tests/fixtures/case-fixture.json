@@ -75,7 +75,7 @@
     { "q": "持病がありましたか", "answer": "no", "facts": ["F17"], "kind": "no" },
     { "q": "換気されていましたか", "answer": "no", "facts": ["F14"], "kind": "no" },
     { "q": "熊に襲われましたか", "answer": "no", "facts": ["F18"], "kind": "no" },
-    { "q": "殺されましたか", "answer": "no", "facts": ["F09", "F02"], "kind": "no" },
+    { "q": "殺されましたか", "answer": "cannot", "facts": [], "kind": "meta", "note": "MANNER: 殺人・事故・自殺・犯人・故意は捜査中は答えない（manner.ts kill）" },
     { "q": "二酸化炭素のせいですか", "answer": "no", "facts": ["F15"], "kind": "no" },
     { "q": "彼女の好きな食べ物は何ですか", "answer": "irrelevant", "facts": [], "kind": "irrelevant" },
     { "q": "お茶は関係ありますか", "answer": "irrelevant", "facts": ["F12"], "kind": "irrelevant" },

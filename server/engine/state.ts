@@ -45,7 +45,8 @@ export const SHARD_WEIGHT = [0, 1, 2, 3, 0] as const;
 export function shardWeights(c: Case): Record<string, number> {
   const out: Record<string, number> = {};
   for (const f of c.facts) {
-    const w = f.spoilerLevel >= 4 ? 0 : SHARD_WEIGHT[f.importance] ?? 0;
+    // the manner fact is sealed (manner.ts): it is not a shard of the investigation
+    const w = f.spoilerLevel >= 4 || f.manner ? 0 : SHARD_WEIGHT[f.importance] ?? 0;
     if (w > 0) out[f.id] = w;
   }
   return out;

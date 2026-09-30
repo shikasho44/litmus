@@ -1,12 +1,13 @@
 /**
- * Culprit seal — the one kind of question still not answered during the investigation (2026-09-28).
+ * Culprit seal — naming the culprit, in a case whose verdict names one (2026-09-28).
  *
- * Murder / accident / suicide questions are answered truthfully (manner.ts, docs/decisions.md).
- * But in a case whose verdict asks the player to NAME who did it (CASE 04: the culprit is one of
- * the three people at the table), yes/no questions would let the player eliminate the suspects
- * one by one. Such a case opts in with `truth.culpritSeal` (shared/case-schema.ts); then a question
- * that identifies the culprit gets 'cannot' (meta 'culprit', Holma's meta.culprit lines: naming
- * the culprit is for the verdict — ask about the evidence instead). No model is consulted.
+ * Murder / accident / suicide questions are sealed by the manner seal (manner.ts, which runs
+ * first). In a case whose verdict asks the player to NAME who did it (CASE 04: the culprit is one
+ * of the three people at the table), yes/no questions would still let the player eliminate the
+ * suspects one by one with words the manner seal does not treat as the manner (「老人は無実？」
+ * 「友人は潔白？」). Such a case opts in with `truth.culpritSeal` (shared/case-schema.ts); then a
+ * question that identifies the culprit gets 'cannot' (meta 'culprit', Holma's meta.culprit lines:
+ * naming the culprit is for the verdict — ask about the evidence instead). No model is consulted.
  *
  * Sealed (opted-in cases only):
  *   who        「犯人は誰？」「誰がやったの？」「誰のせい？」「毒を入れたのは誰？」「混ぜたのは編集者？」
@@ -15,8 +16,7 @@
  *              killed / did it / fault / suspicious or innocent / involved / motive —
  *              「編集者が小鉢に混ぜた？」「老人が毒を入れたの？」「編集者のせい？」「老人は怪しい？」
  *              「友人は関係ある？」「編集者は彼女を恨んでいた？」
- * Answered:  the manner with nobody named (「殺されたの？」「誰かが毒を混ぜたの？」「犯人はいますか？」
- *            「事故に見せかけた？」) and evidence about named people (「編集者が盛り付けをしましたか？」
+ * Answered:  evidence about named people (「編集者が盛り付けをしましたか？」
  *            「老人はおひたしを食べましたか？」「編集者ははさみを持っていた？」「編集者の証言は本当？」).
  *
  * People are the generic role words of manner.ts (編集者・老人・友人・男・女性 …) plus the case's own
@@ -41,7 +41,7 @@ const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 const P = (s: string) => new RegExp(s, 'u');
 
 const CULPRIT_WORD = '(?:真犯人|犯人|はんにん|加害者|かがいしゃ|容疑者|ようぎしゃ|下手人|げしゅにん|黒幕|くろまく)';
-/** 「犯人はいますか」「犯人がいるの？」 — whether a culprit exists is the manner, answered. */
+/** 「犯人はいますか」「犯人がいるの？」 — whether a culprit exists is the manner (manner.ts seals it first). */
 const EXISTENCE = P(`${CULPRIT_WORD}(?:は|が|って|も)?(?:いる|いま|いた|いな|居|存在|おる|おり)`);
 const VICTIM = '(?:彼女|かのじょ|本人|ほんにん|自分|じぶん|被害者|ひがいしゃ|じぇーん)';
 /**

@@ -1,20 +1,25 @@
 /**
- * Manner of death and the culprit seal (2026-09-28, docs/decisions.md).
+ * The manner-of-death seal (sealed again 2026-09-30, docs/decisions.md) and the culprit seal.
  *
- * Murder / accident / suicide questions — and the same thing in other words (a culprit exists,
- * intent, blame, tampering) — are ANSWERED TRUTHFULLY during the investigation: the rules judge
- * answers them from the case's manner fact (fact.manner, manner.ts). The one seal left is naming
- * the culprit, only in cases that opt in with truth.culpritSeal (culprit.ts, CASE 04): 「犯人は誰？」
- * 「編集者が混ぜた？」「老人は怪しい？」 get 'cannot' (meta 'culprit'); evidence about named people
- * and the manner with nobody named stay answered.
+ * Murder / accident / suicide questions — and the same thing in other words (a culprit, intent,
+ * blame, tampering, a named person's part) — are NOT answered during the investigation: the rules
+ * judge gives 'cannot' + meta 'manner' before any authored probe or model (manner.ts). Holma's
+ * sealed line is the same in accident and murder cases, the question is free (not charged to the
+ * 質問枠) and unlocks nothing. Evidence questions stay answered. The case's manner fact
+ * (fact.manner) is out of reach of every question; mannerReveal() is the hook for the planned
+ * スペシャルヒント. In CASE 04 the culprit seal (culprit.ts) also catches naming words the manner
+ * seal does not (「老人は無実？」).
  */
 import { describe, expect, it } from 'vitest';
-import { detectManner, mannerProposal, proposalHolds } from '../../server/engine/manner';
+import { detectManner, mannerReveal } from '../../server/engine/manner';
 import { compileCulpritSeal, detectCulprit } from '../../server/engine/culprit';
 import { detectSafety } from '../../server/engine/safety';
 import { detectMeta, normalize, analyze } from '../../server/engine/normalize';
 import { buildCaseIndex } from '../../server/engine/case-index';
 import { judgeText } from '../../server/engine/rules-judge';
+import { applyPolicy } from '../../server/engine/policy';
+import { initialState, shardWeights } from '../../server/engine/state';
+import { toPublic } from '../../server/engine/public-view';
 import { GameService } from '../../server/engine/game';
 import { TraceRing } from '../../server/engine/trace';
 import { loadRegistry, resolveContentRoot } from '../../server/node/content-fs';
@@ -24,7 +29,7 @@ import type { EngineTrace } from '../../server/engine/trace';
 import { FIXTURE_ID, SECRET, fixtureRaw, makeService } from './helpers';
 
 /* ------------------------------------------------------------------ */
-/* Analysis: what is a manner question, and what does it propose       */
+/* What is a manner question                                            */
 /* ------------------------------------------------------------------ */
 
 const MANNER = [
@@ -48,6 +53,8 @@ const MANNER = [
   // a poison mixed into food: a named person mixing, the mix-up as the accident, grudges
   '編集者が小鉢にトリカブトを混ぜましたか？', '隣の老人が毒を入れたのですか？', '編集者がやったの？', '小鉢に毒が混ぜられていましたか？', '毒を盛ったのですか？',
   '採り違えですか？', '彼女は間違えてトリカブトを摘みましたか？', '誤食ですか？', 'うっかり摘んだのですか？', '見間違えたのですか？', '編集者は彼女を恨んでいましたか？', '事故に見せかけたのですか？',
+  // the intro cases (objects as victims): a prank, someone breaking it on purpose
+  'だれかのいたずらですか？', '誰かのいたずら？', '誰かがわざとびんを割ったのですか？', '誰かがわざと折ったのですか？',
 ];
 
 const EVIDENCE = [
@@ -65,50 +72,15 @@ const EVIDENCE = [
   '彼女は鍋にニリンソウを入れましたか？', '編集者が盛り付けをしましたか？', 'ニリンソウとトリカブトは間違えやすいですか？', '小鉢に何か混ざっていましたか？',
   'おひたしにトリカブトが入っていましたか？', '編集者ははさみを持っていましたか？', '彼女はトリカブトを摘みましたか？', '部屋の空気は入れ替わっていましたか？',
   '心臓がけいれんしていましたか？', '隣人と口論していましたか？', '小鉢を運んだのは編集者ですか？',
+  '毒物は検出されましたか？', '猫がいたずらしましたか？', 'びんは割れていましたか？', '茎は折れていましたか？',
 ];
 
-describe('detectManner (analysis only — nothing is refused)', () => {
-  it.each(MANNER)('recognises the manner question 「%s」', (q) => {
+describe('detectManner', () => {
+  it.each(MANNER)('seals the manner question 「%s」', (q) => {
     expect(detectManner(q), q).toBeDefined();
   });
   it.each(EVIDENCE)('leaves the evidence question 「%s」 alone', (q) => {
     expect(detectManner(q), q).toBeUndefined();
-    expect(mannerProposal(q), q).toBeUndefined();
-  });
-});
-
-describe('mannerProposal', () => {
-  const P = (q: string) => mannerProposal(q);
-  it('reads the kind of death a question proposes', () => {
-    expect(P('殺されたの？')).toMatchObject({ proposes: 'homicide', agent: 'none', pure: true });
-    expect(P('誰かに殺されたの？')).toMatchObject({ proposes: 'homicide', agent: 'someone' });
-    expect(P('同僚が犯人ですか？')).toMatchObject({ proposes: 'homicide', agent: 'named' });
-    expect(P('熊に殺されたの？')).toMatchObject({ proposes: 'homicide', agent: 'other' });
-    expect(P('事故ですか？')).toMatchObject({ proposes: 'accident', pure: true });
-    expect(P('自殺ですか？')).toMatchObject({ proposes: 'suicide' });
-    expect(P('彼女はわざとこぼしたの？')).toMatchObject({ proposes: 'suicide', agent: 'victim' });
-    expect(P('彼女は毒を盛られた？')).toMatchObject({ proposes: 'homicide', agent: 'none' });
-    expect(P('採り違えですか？')).toMatchObject({ proposes: 'accident', weak: true });
-    expect(P('弟さんは悪くないですか？')).toMatchObject({ proposes: 'homicide', agent: 'named', denies: true });
-  });
-  it('takes the last proposal in the sentence (the predicate comes last)', () => {
-    expect(P('他殺ではなく事故ですか？')).toMatchObject({ proposes: 'accident' });
-    expect(P('事故に見せかけたのですか？')).toMatchObject({ proposes: 'homicide', rule: 'staged' });
-  });
-  it('proposes nothing where the manner alone cannot decide (a third party\'s neutral act, a specific type)', () => {
-    for (const q of ['誰かがストッパーを外したの？', '交通事故ですか？', '強盗に遭いましたか？', 'もう一人の人は関係ありますか？', '警察は事件として捜査しましたか？', '弟は胸を狙って投げたのですか？']) {
-      expect(P(q), q).toBeUndefined();
-    }
-  });
-  it('decides a proposal from the case\'s manner', () => {
-    const p = (q: string) => mannerProposal(q)!;
-    expect(proposalHolds(p('殺されたの？'), 'accident')).toBe(false);
-    expect(proposalHolds(p('殺されたの？'), 'homicide')).toBe(true);
-    expect(proposalHolds(p('同僚が犯人ですか？'), 'accident')).toBe(false);
-    expect(proposalHolds(p('同僚が犯人ですか？'), 'homicide')).toBeUndefined(); // which person: evidence or the seal
-    expect(proposalHolds(p('事故ですか？'), 'accident')).toBe(true);
-    expect(proposalHolds(p('採り違えですか？'), 'accident')).toBeUndefined(); // a mix-up in an accident case is evidence
-    expect(proposalHolds(p('採り違えですか？'), 'homicide')).toBe(false);
   });
 });
 
@@ -125,7 +97,8 @@ const SEALED = [
   '編集者がトリカブトを切ったのですか？', '幼なじみは関係ありますか？', 'お隣が混ぜたの？', '看護師のせいですか？', '彼女は編集者に毒を盛られた？',
   '老人は無実ですか？', '友人は潔白ですか？',
 ];
-const ANSWERED = [
+// not the culprit seal's (the manner seal takes the manner; evidence about people is answered)
+const NOT_CULPRIT = [
   '殺されたの？', '事故ですか？', '採り違えですか？', '誰かが毒を混ぜたの？', '事故に見せかけた？', '犯人はいますか？', '犯人がいるの？', '毒を盛られたのですか？',
   '編集者が盛り付けをしましたか？', 'おひたしを盛ったのは編集者ですか？', '老人はおひたしを食べましたか？', '編集者ははさみを持っていましたか？',
   '編集者の証言は本当ですか？', '友人は天ぷらを揚げましたか？', '老人の小鉢に毒はありましたか？', '彼女はトリカブトを摘みましたか？', '編集者と彼女は揉めていましたか？',
@@ -136,7 +109,7 @@ describe('detectCulprit', () => {
   it.each(SEALED)('seals the culprit-naming question 「%s」', (q) => {
     expect(detectCulprit(q, seal), q).toBeDefined();
   });
-  it.each(ANSWERED)('answers 「%s」 (the manner with nobody named, or evidence about people)', (q) => {
+  it.each(NOT_CULPRIT)('leaves 「%s」 to the manner seal or the evidence', (q) => {
     expect(detectCulprit(q, seal), q).toBeUndefined();
   });
 });
@@ -149,50 +122,63 @@ const registry = loadRegistry(resolveContentRoot({}));
 const cases = registry.list(true);
 
 describe.skipIf(cases.length === 0)('real cases', () => {
-  it('answers every authored manner probe; only culprit-naming probes of a sealed case are refused', () => {
+  it('labels every probe the seals catch MANNER / CULPRIT (cannot, no facts), and only those', () => {
     const wrong: string[] = [];
     let manner = 0;
-    let culprit = 0;
     for (const loaded of cases) {
       const c = loaded.data;
-      const s = loaded.index.culpritSeal;
       for (const p of c.probes) {
         const note = p.note ?? '';
         if (note.startsWith('SAFETY')) continue;
-        if (note.startsWith('MANNER')) wrong.push(`${c.id}: ${p.q} still carries the old MANNER seal`);
+        const d = judgeText(analyze(p.q), loaded.index);
+        const isManner = note.startsWith('MANNER');
         const isCulprit = note.startsWith('CULPRIT');
-        const sealed = !!s && !!detectCulprit(p.q, s);
-        if (isCulprit) {
-          culprit++;
-          if (!s) wrong.push(`${c.id}: ${p.q} is labelled CULPRIT but the case has no truth.culpritSeal`);
-          if (!sealed) wrong.push(`${c.id}: ${p.q} is labelled CULPRIT but the seal does not catch it`);
-          if (p.answer !== 'cannot' || p.facts.length > 0) wrong.push(`${c.id}: ${p.q} CULPRIT probe must be cannot with no facts`);
-        } else if (sealed) wrong.push(`${c.id}: ${p.q} (${p.answer}) is sealed by ${detectCulprit(p.q, s!)!.rule} but not labelled CULPRIT`);
-        if (!isCulprit && detectManner(p.q)) {
+        if (d.guard === 'manner') {
           manner++;
-          if (p.answer === 'cannot' && detectMeta(p.q, normalize(p.q), true) !== 'askAnswer') wrong.push(`${c.id}: ${p.q} is a manner question labelled cannot`);
-        }
+          if (!isManner) wrong.push(`${c.id}: ${p.q} (${p.answer}) is sealed by ${detectManner(p.q)?.rule} but not labelled MANNER`);
+        } else if (isManner) wrong.push(`${c.id}: ${p.q} is labelled MANNER but the seal does not catch it`);
+        if (d.guard === 'culprit' && !isCulprit) wrong.push(`${c.id}: ${p.q} is sealed by the culprit seal but not labelled CULPRIT`);
+        if (d.guard !== 'culprit' && isCulprit) wrong.push(`${c.id}: ${p.q} is labelled CULPRIT but the culprit seal does not catch it`);
+        if ((isManner || isCulprit) && (p.answer !== 'cannot' || p.facts.length > 0)) wrong.push(`${c.id}: ${p.q} sealed probe must be cannot with no facts`);
       }
-      for (const q of [...c.intro.starterQuestions, ...(c.intro.exampleQuestions ?? [])]) if (detectManner(q)) wrong.push(`${c.id} starter: ${q} (asking the manner is the player's own idea)`);
-      for (const q of c.intro.exampleQuestions ?? []) if (s && detectCulprit(q, s)) wrong.push(`${c.id} example: ${q} (an example card must not be a sealed culprit question)`);
+      for (const q of [...c.intro.starterQuestions, ...(c.intro.exampleQuestions ?? [])]) {
+        if (detectManner(q) && detectMeta(q, normalize(q), true) !== 'askAnswer') wrong.push(`${c.id} starter/example: ${q} (a sealed question must not be offered)`);
+        if (loaded.index.culpritSeal && detectCulprit(q, loaded.index.culpritSeal)) wrong.push(`${c.id} example: ${q} (a sealed culprit question)`);
+      }
     }
     expect(wrong, wrong.join('\n')).toEqual([]);
-    expect(manner).toBeGreaterThan(100);
-    expect(culprit).toBeGreaterThan(5);
+    expect(manner).toBeGreaterThan(150);
   });
 
-  it('has one manner fact per case that answers the manner without standing in for inquest evidence', () => {
+  it('keeps one manner fact per case, out of reach of every question, for the special hint', () => {
     for (const loaded of cases) {
       const c = loaded.data;
       const mf = c.facts.filter((f) => f.manner);
       expect(mf, c.id).toHaveLength(1);
       const f = mf[0];
-      expect(f.spoilerLevel, c.id).toBeLessThanOrEqual(2);
-      expect(f.importance, c.id).toBeLessThanOrEqual(2);
+      expect(f.spoilerLevel, c.id).toBeLessThanOrEqual(3);
       expect(f.cardTitle, c.id).toBeTruthy();
-      expect(f.judgeNote, c.id).toMatch(/ない/u); // states what is NOT true (Jev reads it)
+      expect(f.visibleFromStart ?? false, c.id).toBe(false);
+      for (const p of c.probes) expect(p.facts, `${c.id} ${p.q}`).not.toContain(f.id);
       for (const r of c.debate) expect([r.answer.fact, ...r.alsoAccept], `${c.id} ${r.id}`).not.toContain(f.id);
       expect(f.manner, c.id).toBe(c.truth.culpritSeal ? 'homicide' : 'accident');
+      // not retrievable, not a shard, not counted in the findings total
+      expect(loaded.index.facts.some((e) => e.fact.id === f.id), c.id).toBe(false);
+      expect(loaded.index.mannerFact?.fact.id, c.id).toBe(f.id);
+      expect(shardWeights(c)[f.id], c.id).toBeUndefined();
+      expect(toPublic(c).totalFacts, c.id).toBe(c.facts.filter((x) => x.spoilerLevel < 4 && !x.manner).length);
+      // the hook for the planned スペシャルヒント
+      expect(mannerReveal(c), c.id).toMatchObject({ factId: f.id, manner: f.manner });
+    }
+  });
+
+  it('never unlocks the manner fact from an answer, even when a model names it', () => {
+    for (const loaded of cases) {
+      const f = loaded.index.mannerFact!.fact;
+      const d: JudgeDecision = { answerClass: f.ifAsked === 'yes' ? 'yes' : 'no', factIds: [f.id], confidence: 1, closeness: 1, qtype: 'yesno', source: 'model', factStrength: { [f.id]: 1 } };
+      const r = applyPolicy(loaded.data, loaded.index, d, initialState(loaded.data, 0));
+      expect(r.unlock, loaded.data.id).toEqual([]);
+      expect(r.blocked, loaded.data.id).toContainEqual({ id: f.id, reason: 'manner' });
     }
   });
 
@@ -215,6 +201,7 @@ describe.skipIf(cases.length === 0)('real cases', () => {
 const C01 = 'c01-room-without-breath';
 const C04 = 'c04-white-flower-supper';
 const has = (id: string) => !!registry.get(id, true);
+const mannerPool = () => registry.lines.lines.meta.manner.map((l) => (typeof l === 'string' ? l : l.text));
 
 function realService(over: Partial<ConstructorParameters<typeof GameService>[0]> = {}) {
   return new GameService({ content: () => registry, secret: SECRET, components: { mode: 'rules', warnings: [] }, traces: new TraceRing(50), ...over });
@@ -238,67 +225,73 @@ function spyJudge(): Judge & { calls: number } {
   return j;
 }
 
-describe.skipIf(!has(C01))('an accident case answers the manner (c01)', () => {
-  it('「殺されたの？」 いいえ and 「事故ですか？」 はい, with the manner card', async () => {
-    const svc = realService();
-    const killed = await askOne(svc, C01, '殺されたのですか？');
-    expect(killed.a).toMatchObject({ answerClass: 'no' });
-    expect(killed.a.unlocked.map((f) => f.id)).toContain('F47');
-    expect(killed.a.notice).toBeUndefined();
-    expect((killed.r.trace as EngineTrace).parts?.[0].meta).toBeUndefined();
-    const accident = await askOne(svc, C01, '事故ですか？');
-    expect(accident.a.answerClass).toBe('yes');
-    // no seal in an accident case: a named person's part is simply answered
-    expect((await askOne(svc, C01, '同僚が犯人ですか？')).a.answerClass).toBe('no');
-  });
-});
-
-describe.skipIf(!has(C04))('a murder case answers the manner and seals only the culprit (c04)', () => {
+describe.each([C01, C04].filter(has))('the manner is sealed the same way in %s', (caseId) => {
   const svc = realService();
-  it.each([
-    ['殺されたの？', 'yes'],
-    ['事故ですか？', 'no'],
-    ['採り違えですか？', 'no'],
-    ['誰かが毒を混ぜたの？', 'yes'],
-    ['事故に見せかけた？', 'yes'],
-    ['犯人はいますか？', 'yes'],
-    ['自殺ですか？', 'no'],
-    ['編集者が盛り付けをしましたか？', 'yes'],
-    ['老人はおひたしを食べましたか？', 'no'],
-  ])('answers 「%s」 → %s', async (q, expected) => {
-    const { a } = await askOne(svc, C04, q);
-    expect(a.answerClass, q).toBe(expected);
-  });
-
-  it.each(['犯人は誰？', '誰がやったの？', '編集者が小鉢に混ぜた？', '老人が毒を入れたの？', '編集者のせい？', '老人は怪しい？', '友人は関係ある？', '犯人は編集者？'])(
-    'seals 「%s」 with a canned culprit line, no card, no support card',
+  it.each(['事故ですか？', '殺されたの？', '犯人はいる？', '自殺ですか？', '誰かが毒を混ぜたの？', '犯人は誰？', '採り違えですか？', 'わざとですか？'])(
+    'seals 「%s」: a canned sealed line, free, no card, no support card',
     async (q) => {
-      const { a, r, t } = await askOne(svc, C04, q);
+      const { a, r, t } = await askOne(svc, caseId, q);
       expect(a, q).toMatchObject({ answerClass: 'cannot', unlocked: [], memos: [] });
       expect(a.notice).toBeUndefined();
-      const pool = registry.lines.lines.meta.culprit.map((l) => (typeof l === 'string' ? l : l.text));
-      expect(pool.some((l) => a.line.includes(l)), a.line).toBe(true);
-      expect((r.trace as EngineTrace).parts?.[0].meta).toBe('culprit');
+      expect(mannerPool().some((l) => a.line.includes(l)), a.line).toBe(true);
+      expect((r.trace as EngineTrace).parts?.[0].meta).toBe('manner');
       expect(r.progress.unlocked).toEqual(t.progress.unlocked);
+      expect(r.progress.spent ?? 0).toBe(t.progress.spent ?? 0); // not charged to the 質問枠
       expect(r.progress.nearCore).toBe(false);
     },
   );
 
-  it('consults no model for a sealed question, but does for the manner', async () => {
+  it('answers the evidence question 「争った跡は？」 and charges it', async () => {
+    const { a, r, t } = await askOne(svc, caseId, '争った跡はありますか？');
+    expect(a.answerClass).toBe('no');
+    expect((r.trace as EngineTrace).parts?.[0].meta).toBeUndefined();
+    expect(r.progress.spent).toBe((t.progress.spent ?? 0) + 1);
+  });
+});
+
+describe.skipIf(!has(C01))('an accident case (c01)', () => {
+  it('answers evidence about people and poison', async () => {
+    const svc = realService();
+    expect((await askOne(svc, C01, '部屋に他の人はいましたか？')).a.answerClass).toBe('no');
+    expect((await askOne(svc, C01, '毒物は検出されましたか？')).a.answerClass).toBe('no');
+  });
+});
+
+describe.skipIf(!has(C04))('a murder case (c04)', () => {
+  const svc = realService();
+  it.each([
+    ['編集者が盛り付けをしましたか？', 'yes'],
+    ['老人はおひたしを食べましたか？', 'no'],
+    ['鍋に毒はありましたか？', 'no'],
+  ])('answers the evidence question 「%s」 → %s', async (q, expected) => {
+    const { a } = await askOne(svc, C04, q);
+    expect(a.answerClass, q).toBe(expected);
+  });
+
+  it.each(['老人は無実ですか？', '友人は潔白ですか？', '幼なじみは怪しい？'])('seals 「%s」 with the culprit seal', async (q) => {
+    const { a, r } = await askOne(svc, C04, q);
+    expect(a, q).toMatchObject({ answerClass: 'cannot', unlocked: [] });
+    const pool = registry.lines.lines.meta.culprit.map((l) => (typeof l === 'string' ? l : l.text));
+    expect(pool.some((l) => a.line.includes(l)), a.line).toBe(true);
+    expect((r.trace as EngineTrace).parts?.[0].meta).toBe('culprit');
+  });
+
+  it('consults no model and no renderer for a sealed question, but does for evidence', async () => {
     const judge = spyJudge();
     let renders = 0;
     const renderer = { name: 'spy-llm', canned: false, render: async () => ((renders++), { text: 'x', usage: { inputTokens: 0, outputTokens: 0, costUsd: 0 }, latencyMs: 1 }) };
     const ai = realService({ components: { mode: 'jev+llm', judge, renderer, warnings: [] } });
-    const sealed = await askOne(ai, C04, '編集者が毒を入れたのですか？');
-    expect(sealed.a.answerClass).toBe('cannot');
+    for (const q of ['殺されたのですか？', '事故ですか？', '編集者が毒を入れたのですか？', '老人は無実ですか？']) {
+      expect((await askOne(ai, C04, q)).a.answerClass, q).toBe('cannot');
+    }
     expect(judge.calls).toBe(0);
     expect(renders).toBe(0);
-    await askOne(ai, C04, '殺されたのですか？');
+    await askOne(ai, C04, '鍋に残った料理は調べられましたか？');
     expect(judge.calls).toBe(1);
   });
 
-  it('seals only the culprit part of a multi-question message', async () => {
-    const { r } = await askOne(svc, C04, '鍋に毒はありましたか？それと、犯人は編集者ですか？');
+  it('seals only the manner part of a multi-question message', async () => {
+    const { r } = await askOne(svc, C04, '鍋に毒はありましたか？それと、殺されたのですか？');
     expect(r.answers).toHaveLength(2);
     expect(r.answers[0].answerClass).toBe('no');
     expect(r.answers[1]).toMatchObject({ answerClass: 'cannot', unlocked: [] });
@@ -311,20 +304,21 @@ describe.skipIf(!has(C04))('a murder case answers the manner and seals only the 
   });
 });
 
-describe('the culprit seal is opt-in', () => {
-  it('answers a named person\'s part when the case does not seal the culprit', async () => {
+describe('the seals in the fixture', () => {
+  it('seals the manner in any case, with or without a culprit seal', async () => {
     const { svc } = makeService();
     const t = await svc.newToken(FIXTURE_ID);
-    const r = await svc.ask({ caseId: FIXTURE_ID, question: '同行者が犯人ですか？', token: t.token });
-    expect(r.answers[0].answerClass).toBe('no');
+    for (const q of ['同行者が犯人ですか？', '何者かに殺された？', '事故ですか？']) {
+      const r = await svc.ask({ caseId: FIXTURE_ID, question: q, token: t.token });
+      expect(r.answers[0].answerClass, q).toBe('cannot');
+    }
   });
 
-  it('seals it once truth.culpritSeal is set', () => {
+  it('adds the culprit seal once truth.culpritSeal is set', () => {
     const raw = fixtureRaw() as { truth: Record<string, unknown> };
     raw.truth.culpritSeal = { people: ['同行者'] };
     const index = buildCaseIndex(CaseSchema.parse(raw));
-    const d = judgeText(analyze('同行者が犯人ですか？'), index);
-    expect(d).toMatchObject({ answerClass: 'cannot', meta: 'culprit', guard: 'culprit', factIds: [] });
-    expect(judgeText(analyze('何者かに殺された？'), index).answerClass).toBe('no');
+    expect(judgeText(analyze('同行者は無実ですか？'), index)).toMatchObject({ answerClass: 'cannot', meta: 'culprit', guard: 'culprit', factIds: [] });
+    expect(judgeText(analyze('同行者が犯人ですか？'), index)).toMatchObject({ answerClass: 'cannot', meta: 'manner', guard: 'manner', factIds: [] });
   });
 });

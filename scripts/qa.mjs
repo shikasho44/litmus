@@ -595,6 +595,18 @@ async function investigation(page, c, name, { questions, full }) {
     check(free.length === 1 && free[0].free === true && free[0].answerClass === 'cannot', `${c.id}: a hint request typed in the chat is not counted (${free[0]?.answerClass}${free[0]?.free ? ', free' : ''})`);
     check((await budgetCheck(page, c, 'after a free question')) === spentNow, `${c.id}: the free question left the counter at ${spentNow}`);
     check((await page.locator('.arow__free').count()) >= 1, `${c.id}: the free answer carries 「ノーカウント」`);
+    // 2c) the manner seal (2026-09-30): murder / accident / culprit questions get the sealed line, free
+    for (const q of ['事故ですか？', '殺されたの？', '犯人はいる？']) {
+      const a = await ask(page, c, q);
+      check(
+        a.length === 1 && a[0].answerClass === 'cannot' && a[0].free === true && /宣告/u.test(a[0].line ?? '') && (a[0].unlocked ?? []).length === 0,
+        `${c.id}: 「${q}」 gets the sealed line, free, nothing unlocked (${a[0]?.answerClass}${a[0]?.free ? ', free' : ''}: ${(a[0]?.line ?? '').slice(0, 30)})`,
+      );
+    }
+    check((await budgetCheck(page, c, 'after the sealed questions')) === spentNow, `${c.id}: the sealed questions left the counter at ${spentNow}`);
+    const ev = await ask(page, c, '争った跡は？');
+    check(ev.length === 1 && ['yes', 'no', 'partial'].includes(ev[0].answerClass) && !ev[0].free, `${c.id}: 「争った跡は？」 is answered and counted (${ev[0]?.answerClass})`);
+    await shot(page, name('inv-manner-seal'));
   }
 
   // 3) make sure every debate round has its evidence (ask more probes if needed)

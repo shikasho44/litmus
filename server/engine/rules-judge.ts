@@ -5,15 +5,13 @@
  * Order of decisions:
  *   1. hard metas (empty / too long)
  *   1b. the victim's real name → 'cannot' (secret until solved)
- *   1c. culprit seal (culprit.ts; only cases with truth.culpritSeal): a question that identifies
- *      the culprit → 'cannot' (meta 'culprit'), no model consulted
+ *   1c. manner seal (manner.ts): murder / accident / suicide in any words — a culprit, intent,
+ *      blame, tampering — → 'cannot' (meta 'manner'), no model consulted, free, unlocks nothing.
+ *      Decided in the inquest (the supervisor's rule; sealed again 2026-09-30)
+ *   1d. culprit seal (culprit.ts; only cases with truth.culpritSeal): a question that identifies
+ *      the culprit and slipped past 1c (「老人は無実？」) → 'cannot' (meta 'culprit')
  *   2. a near-verbatim authored probe (≥ PROBE_OVERRIDE) — authored labels beat heuristics
  *   3. other metas (asks for the answer / a hint, small talk, about Holma, insults)
- *   3b. murder / accident / suicide in any words (manner.ts; not for open questions): answered from
- *      the case's manner fact (fact.manner) — 「殺されたの？」 いいえ in an accident case — unless a
- *      more specific piece of evidence gives the same answer (「毒を盛られた？」 → 毒物は出ない;
- *      「家族のせい？」 → 誰のせいでもない). Before step 4, so a merely similar probe
- *      (「犯人は誰ですか？」) never lends its label to 「犯人はいるの？」
  *   4. an authored probe above PROBE_THRESHOLD (label flipped when negation differs)
  *   5. open wh-questions → 'vague' (please ask yes/no)   [before keywords on purpose:
  *      "何時に死んだ？" must not become "はい" because 時間 is a keyword]. A question that
@@ -34,9 +32,8 @@ import { containsAffirmed, detectMeta, marksPolarity } from './normalize.js';
 import type { Candidates, ScoredFact, ScoredProbe } from './retrieve.js';
 import { retrieve } from './retrieve.js';
 import type { Judge, JudgeDecision, JudgeInput } from './judge-types.js';
-import { mannerProposal, proposalHolds, type MannerProposal } from './manner.js';
+import { detectManner } from './manner.js';
 import { detectCulprit } from './culprit.js';
-import { detectSafety } from './safety.js';
 
 export const PROBE_THRESHOLD = 0.6;
 export const PROBE_OVERRIDE = 0.9;
@@ -50,6 +47,7 @@ const META_CLASS: Record<MetaKind, AnswerClass> = {
   rude: 'cannot',
   empty: 'vague',
   tooLong: 'vague',
+  manner: 'cannot',
   culprit: 'cannot',
 };
 
@@ -120,19 +118,15 @@ export function judgeRules(q: AnalyzedQuestion, cand: Candidates, index: CaseInd
   if (meta === 'tooLong' || meta === 'empty') return metaDecision(meta, best);
   // The victim's real name is secret until solved: never confirm or deny it (no model either).
   if (secretNamesIn(q.norm, index.secretNames ?? []).length > 0) return { ...metaDecision('askAnswer', best), confidence: 1, guard: 'secretName' };
+  // Murder, accident or suicide is the inquest's question: never confirmed or denied here (manner.ts).
+  if (meta !== 'askAnswer' && meta !== 'rude' && detectManner(q.raw, q.norm)) return { ...metaDecision('manner', best), confidence: 1, guard: 'manner' };
   // Naming the culprit is the verdict's job in a case that seals it (culprit.ts): never confirmed or
-  // denied, whoever is named. Murder / accident / suicide themselves are answered (5b below).
+  // denied, whoever is named.
   if (index.culpritSeal && meta !== 'askAnswer' && meta !== 'rude' && detectCulprit(q.raw, index.culpritSeal, q.norm)) {
     return { ...metaDecision('culprit', best), confidence: 1, guard: 'culprit' };
   }
   if (best && best.score >= PROBE_OVERRIDE && meta !== 'rude') return openGuard(fromProbe(best, index), q);
   if (meta) return metaDecision(meta, best);
-  // Murder / accident / suicide, in any words (manner.ts): the case's manner fact decides — before a
-  // merely similar probe (「犯人はいるの？」 must not borrow the label of 「犯人は誰ですか？」).
-  if (!q.open) {
-    const manner = mannerDecision(q, keywordFacts, index, probeInfo);
-    if (manner) return manner;
-  }
   if (best && best.score >= PROBE_THRESHOLD) return openGuard(fromProbe(best, index), q);
 
   if (q.open) {
@@ -169,68 +163,6 @@ export function judgeRules(q: AnalyzedQuestion, cand: Candidates, index: CaseInd
 
   return { answerClass: 'vague', factIds: [], confidence: 0.2, closeness: 0, qtype: 'unknown', source: 'fallback', probe: probeInfo };
 }
-
-/* ------------------------------------------------------------------ */
-/* Manner of death (manner.ts)                                          */
-/* ------------------------------------------------------------------ */
-
-/**
- * 「殺されたの？」「事故ですか？」「自殺？」「毒を盛られた？」「弟のせい？」: a question that proposes a kind
- * of death is answered from the case's manner fact (fact.manner) — true or false, flipped for a
- * negated confirmation or a denied blame (「弟さんは悪くないですか」). Undefined when the case has no
- * manner fact, the question proposes none, or the manner alone does not decide it (WHICH named
- * person did it; a mix-up in an accident case): the keyword routing below answers those.
- *
- * A question that names the manner itself (殺された・事件・犯人・事故・自殺・故意) gets the manner fact.
- * Otherwise a more specific piece of evidence that gives the same answer is the better card: a
- * ruling-out fact whose keyword covers the deciding words (「毒を盛られた？」→ 毒物は出ない,
- * 「服は無理やり脱がされた？」→ 破れていない防寒具) or the case's "nobody is to blame" fact for a person
- * blamed (「家族のせい？」).
- */
-function mannerDecision(q: AnalyzedQuestion, keywordFacts: ScoredFact[], index: CaseIndex, probeInfo: JudgeDecision['probe']): JudgeDecision | undefined {
-  const mf = index.mannerFact;
-  const manner = mf?.fact.manner;
-  if (!mf || !manner) return undefined;
-  // 「人を殺せますか」「自殺できますか」 are the safety filter's (pipeline.ts runs it first); here they
-  // are not a proposal about her death
-  const p = mannerProposal(q.raw, q.norm);
-  if (!p || detectSafety(q.raw)) return undefined;
-  const holds = proposalHolds(p, manner);
-  if (holds === undefined) return undefined;
-  const negate = q.negated || !!p.denies;
-  const answerClass: AnswerClass = holds !== negate ? 'yes' : 'no';
-  if (!p.pure) {
-    const kw = keywordRoute(q, keywordFacts, index, probeInfo);
-    if (kw && kw.routed.fact.id !== mf.fact.id && kw.decision.answerClass === answerClass && specificEvidence(kw.routed, p, q.norm)) return kw.decision;
-  }
-  const id = mf.fact.id;
-  return {
-    answerClass,
-    factIds: [id],
-    confidence: 0.85,
-    closeness: closenessOf(answerClass, [id], index),
-    qtype: 'yesno',
-    source: 'keyword',
-    factStrength: { [id]: 0.85 },
-    probe: probeInfo,
-  };
-}
-
-/**
- * The routed fact speaks to the very words that decide the manner question (see mannerDecision):
- * a ruling-out fact whose keyword sits in them or in the object right before them (「毒を飲まされた？」).
- */
-function specificEvidence(r: Routed, p: MannerProposal, norm: string): boolean {
-  if (r.route === 'blame' || r.route === 'causal') return true;
-  if (r.fact.entry.fact.ifAsked !== 'no') return false;
-  const from = Math.max(0, p.at - OBJECT_WINDOW);
-  return r.fact.hits.some((h) => {
-    for (let at = norm.indexOf(h); at >= 0; at = norm.indexOf(h, at + 1)) if (at < p.end && at + h.length > from) return true;
-    return false;
-  });
-}
-/** Characters before a manner phrase that still belong to it (its object: 「毒を」「服を」). */
-const OBJECT_WINDOW = 3;
 
 /* ------------------------------------------------------------------ */
 /* Keyword decision                                                     */

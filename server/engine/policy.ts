@@ -15,6 +15,7 @@
  *     near the core, whatever closeness the judge reports. Repeats are not new moments: in the
  *     2026-09-25 AI playtest Jev rated closeness 3 on up to 25 of 40 on-topic questions, which
  *     would have made Holma say 「近い」 almost every turn.
+ *   - the manner fact (fact.manner) never becomes a card from an answer (sealed, manner.ts)
  *   - every id in `requires` must already be unlocked
  *   - at most 2 new cards per answer
  *   - science memos unlock with their fact
@@ -90,6 +91,12 @@ export function applyPolicy(c: Case, index: CaseIndex, decision: JudgeDecision, 
     const f = entry.fact;
     if (!answerable) {
       blocked.push({ id, reason: `answer-${decision.answerClass}` });
+      continue;
+    }
+    // The manner fact is sealed during the investigation (manner.ts): a model judge naming it
+    // unlocks nothing. Only the planned スペシャルヒント reveals it (mannerReveal).
+    if (f.manner) {
+      blocked.push({ id, reason: 'manner' });
       continue;
     }
     if (f.spoilerLevel >= 4) {

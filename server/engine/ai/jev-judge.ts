@@ -162,7 +162,7 @@ export function buildAskRequest(input: JudgeInput, strategy: CandidateStrategy =
       ? input.candidates.facts.map((s) => s.entry.fact)
       : base === 'wide'
         ? wideCandidates(input)
-        : c.facts;
+        : c.facts.filter((f) => !f.manner); // the manner fact is sealed (manner.ts)
   const candidateIds = [...new Set(facts.map((f) => f.id))];
   const byId = new Map(c.facts.map((f) => [f.id, f]));
 

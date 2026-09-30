@@ -53,11 +53,10 @@ export const FactSchema = z.object({
   judgeNote: z.string().optional(),
   /**
    * Marks THE manner fact of the case (at most one; added 2026-09-28): the kind of death it
-   * records. Murder / accident / suicide questions are answered truthfully during the
-   * investigation, and the offline rules judge answers a question that proposes a kind of death
-   * (「殺されたの？」「事故ですか？」「自殺？」「誰かが毒を混ぜた？」, server/engine/manner.ts) from
-   * this value and routes it to this fact. Its keywords should hold only the words whose answer
-   * is its ifAsked (the crime words: 殺され・犯人・事件…); accident words are decided by manner.ts.
+   * records (事故だった／殺されたのだった). SEALED during the investigation (2026-09-30, the
+   * supervisor's rule, server/engine/manner.ts): murder / accident / suicide questions get Holma's
+   * sealed line, no question reaches this fact and no answer unlocks it. It is kept for the planned
+   * スペシャルヒント (a long ad) that reveals only the manner (manner.ts mannerReveal).
    */
   manner: z.enum(['accident', 'homicide', 'suicide']).optional(),
 });

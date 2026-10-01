@@ -5,6 +5,7 @@ import { goto, openOverlay, type SceneProps } from '../../app/router';
 import { openCase } from '../../app/flow';
 import { audio } from '../../audio';
 import { APP_CONFIG } from '../../config/app';
+import { TITLE_VARIANT } from '../../config/titleVariant';
 import { fx } from '../../fx';
 import { motionReduced } from '../../fx/motion';
 import { ART, fetchJson, useImage, useImageMissing } from '../../lib/asset';
@@ -19,6 +20,7 @@ import { HolmaSprite } from '../../ui/HolmaSprite';
 import { Icon } from '../../ui/Icon';
 import type { IconName } from '../../ui/icons';
 import './title.css';
+import './title-variants.css';
 
 /** The press-to-enter gate is shown once per page load (it also unlocks audio). */
 let entered = false;
@@ -78,21 +80,17 @@ function splitTitle(t: string): { a: string; particle?: string; b?: string } {
 }
 
 function Logo() {
+  if (TITLE_VARIANT.logo === 'forensic' || TITLE_VARIANT.logo === 'forensic-vert') return <ForensicLogo kind={TITLE_VARIANT.logo} />;
   const parts = splitTitle(APP_CONFIG.GAME_TITLE);
   // Without a 「の」 tag between the rows the logo loses its beat, so the head word is printed on a
   // litmus strip instead (red | blue, develops on entry) and the big word overlaps it.
   const strip = !!parts.b && !parts.particle;
   const head = <GlitchText text={parts.a} period={7} />;
+  const sub = TITLE_VARIANT.subtitle;
   return (
-    <div class={`logo ${strip ? 'logo--strip' : ''}`}>
-      <p class="logo__kicker" aria-hidden="true">
-        <span>CASE No.000</span>
-        <span class="logo__kicker-sep" />
-        <span>UNIDENTIFIED</span>
-        <span class="logo__kicker-sep" />
-        <span>零番安置室</span>
-      </p>
-      <h1 class="logo__title" aria-label={APP_CONFIG.GAME_TITLE}>
+    <div class={`logo ${strip ? 'logo--strip' : ''} ${sub ? 'logo--subtitled' : ''}`}>
+      <LogoKicker />
+      <h1 class="logo__title" aria-label={TITLE_VARIANT.logoTitle}>
         <span class="logo__row logo__row--a" aria-hidden="true">
           {strip ? <span class="logo__strip">{head}</span> : head}
         </span>
@@ -102,9 +100,74 @@ function Logo() {
             <span class="logo__big">{parts.b}</span>
           </span>
         )}
+        {sub && (
+          <span class="logo__subtitle" aria-hidden="true">
+            <span class="logo__subtitle-rule" />
+            <span class="logo__subtitle-jp">{sub.jp}</span>
+            <span class="logo__subtitle-rule" />
+          </span>
+        )}
       </h1>
       <p class="logo__sub">
-        <span>{APP_CONFIG.SUBTITLE}</span>
+        <span>{sub ? sub.en : TITLE_VARIANT.strapline}</span>
+      </p>
+    </div>
+  );
+}
+
+function LogoKicker({ unit }: { unit?: string }) {
+  return (
+    <p class="logo__kicker" aria-hidden="true">
+      <span>{unit ?? 'CASE No.000'}</span>
+      <span class="logo__kicker-sep" />
+      <span>UNIDENTIFIED</span>
+      <span class="logo__kicker-sep" />
+      <span>零番安置室</span>
+    </p>
+  );
+}
+
+/**
+ * Prototype A 「科学捜査官リトマス」: リトマス is the hero now, so it gets the litmus strip at full
+ * size (the brand carries over), and 科学捜査官 is the small beat before it.
+ */
+function ForensicLogo({ kind }: { kind: 'forensic' | 'forensic-vert' }) {
+  const name = (
+    <span class="logo__row logo__row--name" aria-hidden="true">
+      <span class="logo__strip">
+        <GlitchText text="リトマス" period={7} />
+      </span>
+    </span>
+  );
+  let rank;
+  if (kind === 'forensic') {
+    rank = (
+      <span class="logo__row logo__row--rank" aria-hidden="true">
+        <span class="logo__plate">
+          <span class="logo__plate-id">
+            <span>ID</span>
+            <span>No.000</span>
+          </span>
+          <span class="logo__plate-jp">科学捜査官</span>
+        </span>
+      </span>
+    );
+  } else {
+    rank = (
+      <span class="logo__vert" aria-hidden="true">
+        科学捜査官
+      </span>
+    );
+  }
+  return (
+    <div class={`logo logo--strip logo--forensic logo--${kind}`}>
+      <LogoKicker unit="FORENSIC UNIT" />
+      <h1 class="logo__title" aria-label={TITLE_VARIANT.logoTitle}>
+        {rank}
+        {name}
+      </h1>
+      <p class="logo__sub">
+        <span>{TITLE_VARIANT.strapline}</span>
       </p>
     </div>
   );

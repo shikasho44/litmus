@@ -1,0 +1,169 @@
+/* ==========================================================================
+   TITLE PROTOTYPES (src/config/titleVariant.ts) — only applied with ?title=a / a2 / b.
+   The default logo never carries these classes.
+   ========================================================================== */
+
+/* ---------- A 「科学捜査官リトマス」: リトマス is the hero on the litmus strip ---------- */
+.logo--forensic .logo__title {
+  justify-items: start;
+}
+.logo--forensic .logo__row--name {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(60px, min(8.6vw, 12.4vh), 168px);
+  margin-left: 0.3em;
+}
+.logo--forensic .logo__strip {
+  padding: 0.07em 0.3em 0.13em 0.22em;
+}
+.logo--forensic .logo__row--rank {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  font-size: clamp(24px, min(3.7vw, 5.3vh), 68px);
+}
+
+/* A: 科学捜査官 on an ID plate (formalin ID tab + ink plate), stuck on the strip's top edge */
+.logo--forensic .logo__plate {
+  display: inline-flex;
+  align-items: stretch;
+  margin-bottom: -0.34em;
+  background: var(--ink);
+  box-shadow: inset 0 0 0 0.05em var(--bone), 0.1em 0.1em 0 var(--alarm);
+  transform: rotate(3deg) skewX(-10deg);
+  transform-origin: 0 100%;
+  animation: stamp-in 0.32s cubic-bezier(0.2, 1.5, 0.4, 1) 0.95s both;
+}
+.logo__plate-id {
+  display: grid;
+  align-content: center;
+  gap: 0.12em;
+  padding: 0 0.5em;
+  background: var(--formalin);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.26em;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+.logo__plate-id span:first-child {
+  font-family: var(--font-en);
+  font-weight: 400;
+  font-size: 2em;
+  letter-spacing: 0.04em;
+}
+.logo__plate-jp {
+  padding: 0.12em 0.34em 0.18em 0.4em;
+  color: var(--bone);
+  letter-spacing: 0.1em;
+}
+/* the small beat lands last, like 審問 does on the default logo (scale: leaves transform alone) */
+@keyframes stamp-in {
+  from { opacity: 0; scale: 1.6; }
+}
+
+/* A2 (runner-up): 科学捜査官 set vertically next to the strip, like a name tag hanging from it */
+.logo--forensic-vert .logo__title {
+  grid-template-columns: auto auto;
+  align-items: end;
+}
+.logo__vert {
+  position: relative;
+  z-index: 2;
+  writing-mode: vertical-rl;
+  font-size: clamp(22px, min(2.9vw, 4.1vh), 56px);
+  line-height: 1;
+  padding: 0.3em 0.18em;
+  margin-right: -0.4em;
+  margin-bottom: -0.3em;
+  color: var(--ink);
+  background: var(--formalin);
+  letter-spacing: 0.06em;
+  box-shadow: 0.1em 0.1em 0 var(--alarm);
+  transform: rotate(-3deg);
+  animation: stamp-in 0.32s cubic-bezier(0.2, 1.5, 0.4, 1) 0.95s both;
+}
+.logo--forensic-vert .logo__row--name {
+  margin-left: 0;
+}
+
+/* the strap reads after the strip, clear of its tilted lower edge */
+.logo--forensic .logo__sub {
+  margin-top: clamp(16px, 3.2vh, 30px);
+  margin-left: 0.8em;
+}
+
+/* ---------- B 「リトマス審問 ―アナムネの告解―」: the current logo + a subtitle line ---------- */
+.logo__subtitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  width: max-content;
+  margin: 0.4em 0 0 1.6em;
+  font-family: var(--font-jane);
+  font-weight: 500;
+  font-size: clamp(20px, min(2.3vw, 3.6vh), 40px);
+  line-height: 1.2;
+  padding: 0.16em 0.9em 0.2em;
+  color: var(--bone);
+  letter-spacing: 0.22em;
+  /* a slim smoked band: mincho strokes stay legible over the key art (Holma's face on phones) */
+  background: linear-gradient(90deg, transparent, rgba(11, 13, 18, 0.86) 14%, rgba(11, 13, 18, 0.86) 86%, transparent);
+  text-shadow: 0.06em 0.06em 0 var(--ink);
+  animation: subtitle-in 0.7s var(--ease-out) 1.25s both;
+}
+.logo__subtitle-rule {
+  width: 1.8em;
+  height: 0.07em;
+  background: var(--bone);
+  box-shadow: 0.05em 0.05em 0 var(--ink);
+}
+.logo__subtitle-jp {
+  margin-right: -0.22em; /* letter-spacing trails the last glyph */
+}
+@keyframes subtitle-in {
+  from { opacity: 0; letter-spacing: 0.6em; }
+}
+
+/* ---------- short wide windows ---------- */
+@media (max-height: 800px) {
+  [data-layout='wide'] .logo--subtitled .logo__sub {
+    margin-top: 8px;
+  }
+}
+
+/* ---------- narrow (phones) ---------- */
+[data-layout='narrow'] .logo--forensic .logo__row--name {
+  font-size: clamp(50px, 17.4vw, 96px);
+  margin-left: 0.18em;
+}
+[data-layout='narrow'] .logo--forensic .logo__row--rank {
+  font-size: clamp(22px, 7.4vw, 40px);
+}
+[data-layout='narrow'] .logo__vert {
+  font-size: clamp(18px, 6vw, 32px);
+}
+/* B and A2 are taller, and the logo turns about its lower-left corner: keep the kicker off the left edge */
+[data-layout='narrow'] .logo--subtitled,
+[data-layout='narrow'] .logo--forensic-vert {
+  margin-left: 16px;
+}
+/* the longer EN strap must not push a 320px phone sideways */
+[data-layout='narrow'] .logo--forensic .logo__sub span {
+  letter-spacing: 0.2em;
+  padding-inline: 14px 12px;
+}
+[data-layout='narrow'] .logo__subtitle {
+  font-size: clamp(17px, 5.4vw, 26px);
+  margin-left: 0.4em;
+  letter-spacing: 0.16em;
+}
+
+[data-reduce-motion='true'] .logo__plate,
+[data-reduce-motion='true'] .logo__vert,
+[data-reduce-motion='true'] .logo__subtitle {
+  animation: none;
+}

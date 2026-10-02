@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>先生と一緒にできる取り組み｜リトマス審問 企画ノート</title>
+<style>
+  :root {
+    --ink: #0B0D12; --ink-2: #141821; --ink-3: #1E2430;
+    --bone: #F2EFE6; --bone-2: #D8D3C4; --bone-3: #A7A08F;
+    --line: rgba(242, 239, 230, 0.14); --line-2: rgba(242, 239, 230, 0.26);
+    --formalin: #C6FF3D; --formalin-deep: #6E9A0C;
+    --alarm: #FF2E63; --cyan: #3DE0FF; --amber: #FFB020; --violet: #9B6BFF; --mute: #8A93A6;
+    --sans: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body { margin: 0; background: var(--ink); color: var(--bone-2); font-family: var(--sans); font-size: 16px; line-height: 1.85; letter-spacing: .02em; }
+  a { color: var(--cyan); text-underline-offset: 3px; }
+  strong { color: var(--bone); }
+  code { font-family: var(--mono); font-size: .86em; background: var(--ink-3); border: 1px solid var(--line); padding: .05em .4em; border-radius: 3px; color: var(--bone); word-break: break-word; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header.hero { border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(198,255,61,.06), transparent 70%); }
+  header.hero .wrap { padding-top: 36px; padding-bottom: 28px; }
+  .back { font-size: 13px; }
+  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: .24em; color: var(--formalin); text-transform: uppercase; margin-top: 12px; }
+  h1 { color: var(--bone); font-size: clamp(26px, 5vw, 40px); line-height: 1.3; margin: 8px 0 10px; }
+  .lead { max-width: 780px; font-size: 17px; margin: 0; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .badge { font-family: var(--mono); font-size: 12px; padding: 3px 10px; border: 1px solid var(--line-2); background: var(--ink-2); color: var(--bone-2); }
+  .badge.ok { border-color: var(--formalin-deep); color: var(--formalin); }
+  .badge.warn { border-color: rgba(255,176,32,.5); color: var(--amber); }
+  .badge.no { border-color: rgba(255,46,99,.5); color: var(--alarm); }
+  section { padding: 36px 0 4px; }
+  h2 { color: var(--bone); font-size: clamp(21px, 3.4vw, 26px); line-height: 1.4; margin: 0 0 8px; }
+  h2 .en { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .28em; color: var(--formalin); font-weight: 400; margin-bottom: 4px; }
+  h3 { color: var(--bone); font-size: 17px; margin: 24px 0 8px; padding-left: 10px; border-left: 4px solid var(--formalin); line-height: 1.5; }
+  p { margin: 8px 0; }
+  ul, ol { padding-left: 1.3em; margin: 8px 0; }
+  li + li { margin-top: 4px; }
+  .note { font-size: 14px; color: var(--bone-3); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
+  .card { background: var(--ink-2); border: 1px solid var(--line); padding: 16px 18px; }
+  .card h4 { margin: 0 0 6px; color: var(--bone); font-size: 16px; }
+  .card .tag { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; color: var(--formalin); }
+  .callout { border: 1px solid var(--line-2); border-left: 4px solid var(--cyan); background: var(--ink-2); padding: 12px 16px; margin: 14px 0; }
+  .callout.kurare { border-left-color: var(--violet); }
+  .callout.kurare::before { content: 'くられ先生のツボ'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--violet); margin-bottom: 4px; }
+  .callout.warn { border-left-color: var(--amber); }
+  .callout.warn::before { content: '気をつけること'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--amber); margin-bottom: 4px; }
+  .callout.next { border-left-color: var(--formalin); }
+  .callout.next::before { content: '次の一歩'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--formalin); margin-bottom: 4px; }
+  .table-wrap { overflow-x: auto; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 560px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--bone); background: var(--ink-3); font-weight: 700; white-space: nowrap; }
+  details { background: var(--ink-2); border: 1px solid var(--line); padding: 10px 14px; margin: 10px 0; }
+  details summary { cursor: pointer; color: var(--bone); }
+  footer { border-top: 1px solid var(--line); margin-top: 48px; padding: 18px 0 40px; font-size: 13px; color: var(--mute); }
+  @media (max-width: 520px) { body { font-size: 15px; } .lead { font-size: 16px; } }
+
+  .steps { counter-reset: st; list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 10px; }
+  .steps li { counter-increment: st; background: var(--ink-2); border: 1px solid var(--line); padding: 12px 14px 12px 56px; position: relative; margin: 0; }
+  .steps li::before { content: counter(st); position: absolute; left: 14px; top: 12px; width: 28px; height: 28px; border-radius: 50%; background: var(--formalin); color: var(--ink); font-weight: 700; display: grid; place-items: center; font-family: var(--mono); }
+  .steps li strong { display: block; }
+  .squares { font-family: var(--mono); letter-spacing: 2px; line-height: 1.4; }
+  .sq { display: inline-block; width: 18px; height: 18px; margin: 0 2px 2px 0; vertical-align: middle; border-radius: 3px; }
+  .sq.b { background: #3D7BFF; } .sq.r { background: #FF3B5C; } .sq.g { background: #59606E; } .sq.p { background: #9B6BFF; }
+  .share { background: var(--ink-3); border: 1px dashed var(--line-2); padding: 12px 14px; display: inline-block; margin: 10px 0; }
+  .meter { display: flex; height: 22px; border-radius: 4px; overflow: hidden; margin: 10px 0 4px; max-width: 560px; }
+  .meter span { flex: 1; }
+  .meter-labels { display: flex; justify-content: space-between; max-width: 560px; font-size: 12px; color: var(--bone-3); }
+  .pri { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 3px; background: var(--formalin); color: var(--ink); font-weight: 700; margin-right: 6px; }
+  .pri.two { background: var(--cyan); } .pri.three { background: var(--bone-3); }
+  .size { font-family: var(--mono); font-size: 12px; color: var(--amber); }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <a class="back" href="index.html">← 企画ノートの台帳へ</a>
+    <div class="kicker">IDEA · I-004</div>
+    <h1>先生と一緒にできる取り組み</h1>
+    <p class="lead">ゲームの外にも広がる取り組みを5つ考えました。どれも「先生にとっても嬉しいこと」があるものを選んでいます。</p>
+    <div class="badges"><span class="badge">種類：取り組み</span><span class="badge ok">状態：企画書</span><span class="badge">作る大きさ：S〜M</span></div>
+  </div>
+</header>
+<main class="wrap">
+
+<section>
+  <h2><span class="en">LIST</span>5つの取り組み</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>取り組み</th><th>一言</th><th>先生にとって</th><th>大きさ</th></tr></thead>
+    <tbody>
+      <tr><td><a href="#check">① 答え合わせ実験</a></td><td>解いたあとに、事件の科学を安全な実験で確かめる</td><td>チャンネルのネタになる。ゲームから先生の動画へ人が流れる</td><td>S（ゲーム側）</td></tr>
+      <tr><td><a href="#cabbage">② 科学捜査官の試験紙</a></td><td>赤キャベツで、家でリトマス試験紙を作る</td><td>先生が子ども向けに紹介している実験そのもの</td><td>S</td></tr>
+      <tr><td><a href="#class">③ 教室パック</a></td><td>理科の授業の導入で、登録なしで使える</td><td>「勉強は楽しく作られていないから工夫が要る」という先生の考えに沿う</td><td>M</td></tr>
+      <tr><td><a href="#series">④ 型を借りた事件シリーズ</a></td><td>怪談や昔話の形で始まり、科学でひっくり返す事件</td><td>新シリーズ「心霊解明」「まんが薬理昔ばなし」と同じ発想</td><td>事件ごと</td></tr>
+      <tr><td><a href="#shelf">⑤ 先生の事件ファイル</a></td><td>先生の10問を、特別な棚として見せる</td><td>お名前と仕事がきちんと前に出る</td><td>S</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout warn">先生への提案は短く、遊べる形で。ここに並べたものは、こちらで形にしてから「こんなのも作ってみました」と見せるための候補です。先生にお願いごとを増やすためのものではありません（2026-09-30 の持ち主の指摘）。</div>
+</section>
+
+<section id="check">
+  <h2><span class="en">01 · CHECK BY EXPERIMENT</span>答え合わせ実験</h2>
+  <p>事件を解いたあと、その科学を<strong>安全な実験で確かめる短い動画</strong>が見られる、という取り組みです。たとえば入門の事件なら、家でできます。</p>
+  <ul>
+    <li>背のびした牛乳びん → 水を凍らせると体積がふえる</li>
+    <li>氷点下の雪だるま → 黒い布と白い布で、雪のとけ方を比べる</li>
+    <li>水のそばの渇き → 切った茎に空気が入ると、水を吸えなくなる</li>
+  </ul>
+  <div class="callout kurare">先生のツボのうち「クイズにして、答え合わせを体験にする」「安くて誰でも試せるのに、結果は本物」に当たります。ドズル社とのコラボでは、マイクラの中の実験で正解を確かめていました。新シリーズ「心霊解明」でも、再現実験で確かめています。<br>動画を先生のチャンネルで出していただければ、ゲームから先生の動画へ、先生の動画からゲームへ、人が行き来します。</div>
+  <ul>
+    <li><span class="size">作る大きさ：S</span>（ゲーム側は、科学の解説の最後に「答え合わせ」の欄とリンクを置くだけ）</li>
+    <li><strong>気をつけること：</strong>危ない事件（液体窒素・トリカブト・ハチなど）は、実験せず説明だけ。動画を作るかどうかは先生側のご判断なので、まずこちらで入門の事件1本分を自分たちで撮って、見本として見せる形がよい。</li>
+  </ul>
+</section>
+
+<section id="cabbage">
+  <h2><span class="en">02 · RED CABBAGE</span>科学捜査官の試験紙</h2>
+  <p>赤キャベツの汁で、家や教室で<strong>リトマス試験紙のようなもの</strong>を作ります。酢をつけると赤く、重曹水をつけると青や緑に変わります。題名の「リトマス」が、手の中の本物になります。</p>
+  <ul>
+    <li>ゲームの中の「近い・遠い」の色（<a href="I-005-original-design.html">I-005</a>）を、同じ赤キャベツの色にそろえる。</li>
+    <li>題名が「科学捜査官リトマス」になった場合、「捜査官の道具を自分で作る」という入口になる。</li>
+    <li>夏休みの自由研究、教室パック（③）の最初の10分にも使える。</li>
+  </ul>
+  <div class="callout kurare">先生は子ども向けに「体験が大事」と書き、赤キャベツで色が変わる実験を紹介しています。先生ご自身の紹介と、このゲームの題名が自然につながります。</div>
+  <ul>
+    <li><span class="size">作る大きさ：S</span>（手順のページと印刷用の1枚）</li>
+    <li><strong>気をつけること：</strong>使うのは台所にあるもの（酢・重曹・石けん水など）だけ。強い薬品は使わない。</li>
+  </ul>
+</section>
+
+<section id="class">
+  <h2><span class="en">03 · CLASSROOM</span>教室パック</h2>
+  <p>理科の授業の<strong>導入の10〜15分</strong>で使える形です。先生がコードを出すと、生徒は登録なしで参加できます。</p>
+  <ul>
+    <li><strong>中身：</strong>死を扱わない「やさしい謎」と、入門の「もの」の事件。班ごとに同じ謎を解く。</li>
+    <li><strong>先生の画面：</strong>班ごとの進み具合と、名前を出さずに「よい質問」を表示。最後に科学の解説と、印刷用のワークシート。</li>
+    <li><strong>単元に合わせて：</strong>先生がツクール（<a href="I-001-tsukuru.html">I-001</a>）で、授業の単元に合う謎を作れる（生徒は遊ぶだけ）。</li>
+  </ul>
+  <p class="note">根拠：科学推理カードを中1の理科で使った先生は「意欲は上がるが、準備も授業時数も足りないので、導入で短く使うのが現実的」と報告しています。小学校の先生の時間外の在校時間は月約41時間。準備がいらないこと、1コマに収まること、番号で参加できることが条件です（<a href="research/mechanics.html">調べもの</a>）。</p>
+  <div class="callout kurare">先生は「勉強は楽しく作られていないから工夫が要る」という立場です。先生ご自身の動画も、授業での利用を歓迎しています（薬理凶室さんの教育目的利用ガイドライン）。</div>
+  <ul>
+    <li><span class="size">作る大きさ：M</span>（対戦の部屋の変種、先生用の画面、広告なし）</li>
+    <li><strong>持ち主の強み：</strong>生成AIの講師として、学校・自治体・保護者とのつながりがある。題名の候補「科学捜査官リトマス」も、学校に説明しやすい。</li>
+    <li><strong>気をつけること：</strong>学校のフィルターで開けない場合がある（許可を申請するための資料を用意する）。生徒の名前を記録に残さない。お金の取り方は<a href="../strategy/monetization.html">収益化の提案</a>で。</li>
+  </ul>
+</section>
+
+<section id="series">
+  <h2><span class="en">04 · BORROWED FORMS</span>型を借りた事件シリーズ</h2>
+  <p>怪談・昔話・空想の物語の<strong>形で始まり、科学でひっくり返す</strong>事件のシリーズです。たとえば「呪われた部屋で、泊まった人が次々に倒れる」という怪談の形で始まり、捜査を進めると、本当の理由は科学で説明できる、という流れです。</p>
+  <div class="callout kurare">先生のツボの「昔話・怪談・空想の型を借りる」「再現性のある『よくある話』を検証する」に当たります。先生の新シリーズ「心霊解明」（怪談を科学と再現実験で解き明かす）、「まんが薬理昔ばなし」（昔話を現代の犯罪の話にする）と同じ発想です。</div>
+  <ul>
+    <li><strong>気をつけること：</strong>先生の新シリーズの題材と重ねない。オカルトを本当らしく見せない（害のない怪談として扱い、最後は必ず科学で説明する）。具体的な事件の種は<a href="I-003-cases-batch1.html">I-003</a>に入れていきます。</li>
+  </ul>
+</section>
+
+<section id="shelf">
+  <h2><span class="en">05 · KURARE FILES</span>先生の事件ファイル</h2>
+  <p>先生が作ってくださる10問を、事件ファイルの中で<strong>特別な棚</strong>として見せます。</p>
+  <ul>
+    <li>棚の名前と、先生のお名前（「作：くられ」など、クレジットの形は先生と相談）。</li>
+    <li>解いたあとに、先生の「余話」（<a href="I-005-original-design.html">I-005</a>）。</li>
+    <li>名探偵度数に、先生の棚を全部解いた人だけの称号。</li>
+  </ul>
+  <ul>
+    <li><span class="size">作る大きさ：S</span></li>
+    <li><strong>気をつけること：</strong>薬理凶室さんのお名前やロゴを使う形は、必ず先生に確認してから。過去回をもとにした事件の権利（コラボ先・声・絵）が関わるかも、公開前に一度確かめる。</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="en">NEXT</span>次の一歩</h2>
+  <div class="callout next">すぐ形にできるのは ②（赤キャベツの手順の1枚）と ⑤（棚の見た目）です。①は、入門の事件1本分の答え合わせ実験を、こちらで撮ってみるところから始められます。どれから進めるか選んでください。</div>
+</section>
+
+</main>
+<footer><div class="wrap">更新：2026-10-02 ／ リトマス審問 企画ノート（内部資料・公開しない）</div></footer>
+</body>
+</html>

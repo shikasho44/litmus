@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>みんなで遊ぶ形を増やす｜リトマス審問 企画ノート</title>
+<style>
+  :root {
+    --ink: #0B0D12; --ink-2: #141821; --ink-3: #1E2430;
+    --bone: #F2EFE6; --bone-2: #D8D3C4; --bone-3: #A7A08F;
+    --line: rgba(242, 239, 230, 0.14); --line-2: rgba(242, 239, 230, 0.26);
+    --formalin: #C6FF3D; --formalin-deep: #6E9A0C;
+    --alarm: #FF2E63; --cyan: #3DE0FF; --amber: #FFB020; --violet: #9B6BFF; --mute: #8A93A6;
+    --sans: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body { margin: 0; background: var(--ink); color: var(--bone-2); font-family: var(--sans); font-size: 16px; line-height: 1.85; letter-spacing: .02em; }
+  a { color: var(--cyan); text-underline-offset: 3px; }
+  strong { color: var(--bone); }
+  code { font-family: var(--mono); font-size: .86em; background: var(--ink-3); border: 1px solid var(--line); padding: .05em .4em; border-radius: 3px; color: var(--bone); word-break: break-word; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header.hero { border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(198,255,61,.06), transparent 70%); }
+  header.hero .wrap { padding-top: 36px; padding-bottom: 28px; }
+  .back { font-size: 13px; }
+  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: .24em; color: var(--formalin); text-transform: uppercase; margin-top: 12px; }
+  h1 { color: var(--bone); font-size: clamp(26px, 5vw, 40px); line-height: 1.3; margin: 8px 0 10px; }
+  .lead { max-width: 780px; font-size: 17px; margin: 0; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .badge { font-family: var(--mono); font-size: 12px; padding: 3px 10px; border: 1px solid var(--line-2); background: var(--ink-2); color: var(--bone-2); }
+  .badge.ok { border-color: var(--formalin-deep); color: var(--formalin); }
+  .badge.warn { border-color: rgba(255,176,32,.5); color: var(--amber); }
+  .badge.no { border-color: rgba(255,46,99,.5); color: var(--alarm); }
+  section { padding: 36px 0 4px; }
+  h2 { color: var(--bone); font-size: clamp(21px, 3.4vw, 26px); line-height: 1.4; margin: 0 0 8px; }
+  h2 .en { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .28em; color: var(--formalin); font-weight: 400; margin-bottom: 4px; }
+  h3 { color: var(--bone); font-size: 17px; margin: 24px 0 8px; padding-left: 10px; border-left: 4px solid var(--formalin); line-height: 1.5; }
+  p { margin: 8px 0; }
+  ul, ol { padding-left: 1.3em; margin: 8px 0; }
+  li + li { margin-top: 4px; }
+  .note { font-size: 14px; color: var(--bone-3); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
+  .card { background: var(--ink-2); border: 1px solid var(--line); padding: 16px 18px; }
+  .card h4 { margin: 0 0 6px; color: var(--bone); font-size: 16px; }
+  .card .tag { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; color: var(--formalin); }
+  .callout { border: 1px solid var(--line-2); border-left: 4px solid var(--cyan); background: var(--ink-2); padding: 12px 16px; margin: 14px 0; }
+  .callout.kurare { border-left-color: var(--violet); }
+  .callout.kurare::before { content: 'くられ先生のツボ'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--violet); margin-bottom: 4px; }
+  .callout.warn { border-left-color: var(--amber); }
+  .callout.warn::before { content: '気をつけること'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--amber); margin-bottom: 4px; }
+  .callout.next { border-left-color: var(--formalin); }
+  .callout.next::before { content: '次の一歩'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--formalin); margin-bottom: 4px; }
+  .table-wrap { overflow-x: auto; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 560px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--bone); background: var(--ink-3); font-weight: 700; white-space: nowrap; }
+  details { background: var(--ink-2); border: 1px solid var(--line); padding: 10px 14px; margin: 10px 0; }
+  details summary { cursor: pointer; color: var(--bone); }
+  footer { border-top: 1px solid var(--line); margin-top: 48px; padding: 18px 0 40px; font-size: 13px; color: var(--mute); }
+  @media (max-width: 520px) { body { font-size: 15px; } .lead { font-size: 16px; } }
+
+  .steps { counter-reset: st; list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 10px; }
+  .steps li { counter-increment: st; background: var(--ink-2); border: 1px solid var(--line); padding: 12px 14px 12px 56px; position: relative; margin: 0; }
+  .steps li::before { content: counter(st); position: absolute; left: 14px; top: 12px; width: 28px; height: 28px; border-radius: 50%; background: var(--formalin); color: var(--ink); font-weight: 700; display: grid; place-items: center; font-family: var(--mono); }
+  .steps li strong { display: block; }
+  .squares { font-family: var(--mono); letter-spacing: 2px; line-height: 1.4; }
+  .sq { display: inline-block; width: 18px; height: 18px; margin: 0 2px 2px 0; vertical-align: middle; border-radius: 3px; }
+  .sq.b { background: #3D7BFF; } .sq.r { background: #FF3B5C; } .sq.g { background: #59606E; } .sq.p { background: #9B6BFF; }
+  .share { background: var(--ink-3); border: 1px dashed var(--line-2); padding: 12px 14px; display: inline-block; margin: 10px 0; }
+  .meter { display: flex; height: 22px; border-radius: 4px; overflow: hidden; margin: 10px 0 4px; max-width: 560px; }
+  .meter span { flex: 1; }
+  .meter-labels { display: flex; justify-content: space-between; max-width: 560px; font-size: 12px; color: var(--bone-3); }
+  .pri { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 3px; background: var(--formalin); color: var(--ink); font-weight: 700; margin-right: 6px; }
+  .pri.two { background: var(--cyan); } .pri.three { background: var(--bone-3); }
+  .size { font-family: var(--mono); font-size: 12px; color: var(--amber); }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <a class="back" href="index.html">← 企画ノートの台帳へ</a>
+    <div class="kicker">IDEA · I-002</div>
+    <h1>みんなで遊ぶ形を増やす</h1>
+    <p class="lead">いまの対戦は「同じ事件を同時に解いて、先に宣告を通した人が勝ち」の1種類です。友だち・配信・毎日・大会で遊べる形を7つ考えました。</p>
+    <div class="badges"><span class="badge">種類：遊び方（対戦・配信）</span><span class="badge ok">状態：企画書</span><span class="badge">作る大きさ：S〜L</span></div>
+  </div>
+</header>
+<main class="wrap">
+
+<section>
+  <h2><span class="en">RECOMMEND</span>おすすめの順番</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>順</th><th>企画</th><th>理由</th><th>大きさ</th></tr></thead>
+    <tbody>
+      <tr><td><span class="pri">1</span></td><td><a href="#panel">パネル選び対戦</a></td><td>くられ先生が作ったジェーンドゥの遊び方そのもの。先生に一番伝わる。</td><td>M</td></tr>
+      <tr><td><span class="pri two">2</span></td><td><a href="#daily">今日の小審問</a></td><td>毎日1問・答えを見せない共有で、遊ぶ人が勝手に広めてくれる形。</td><td>M</td></tr>
+      <tr><td><span class="pri three">3</span></td><td><a href="#holma">ホルマ役モード</a></td><td>配信者が出題者になれる。配信の見どころは配信者の反応。</td><td>M</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">裏付けは<a href="research/mechanics.html">遊び方の調べもの</a>と<a href="research/kurare.html">くられ先生の調べもの</a>にあります。</p>
+</section>
+
+<section id="panel">
+  <h2><span class="en">01 · PANEL DRAFT</span>パネル選び対戦</h2>
+  <p><strong>遊び方：</strong>対戦の途中で、6枚の「現場パネル」が裏向きで並びます。順番に1枚ずつ選び、中身は自分だけが見られます。見たパネルを<strong>公開</strong>すると全員に見える代わりにボーナス、<strong>隠す</strong>と自分だけの手がかりになります。全部のパネルが開いたら、早い者勝ちで宣告。パネルの1枚は、理系の人には決め手になる「サイエンスヒント」です。</p>
+  <div class="callout kurare">先生のジェーンドゥの元の遊び方（パネル選び、隠すか公開するか、早い者勝ち）を、オンライン対戦で再現する形です。「情報の駆け引き」は先生のツボの1つ。いまの対戦には、相手と駆け引きする場面がありません。</div>
+  <ul>
+    <li><span class="size">作る大きさ：M</span>　部屋の仕組みは今の対戦を使う。事件ごとに6枚のパネル（絵と短い文）が要る。絵は再構成の漫画コマを流用できる事件もある。</li>
+    <li><strong>気をつけること：</strong>パネルの中身で答えが一気に分からないよう、段階をつけて書く。1事件6枚の絵の量。</li>
+  </ul>
+</section>
+
+<section id="daily">
+  <h2><span class="en">02 · DAILY</span>今日の小審問</h2>
+  <p><strong>遊び方：</strong>5〜10分で解ける「やさしい謎」が毎日1問。全員が同じ謎を解きます。結果は、<strong>はい＝青、いいえ＝赤</strong>のマスで、答えを見せずに共有できます。リトマス試験紙の色と、はい／いいえが重なります。</p>
+  <div class="share">
+    <div>リトマス審問 今日の小審問 #012</div>
+    <div class="squares"><span class="sq b"></span><span class="sq r"></span><span class="sq r"></span><span class="sq b"></span><span class="sq g"></span><span class="sq b"></span><span class="sq r"></span><span class="sq b"></span><span class="sq b"></span><span class="sq p"></span></div>
+    <div>質問10・所見7/8・囁き0 ／ 6分12秒</div>
+  </div>
+  <p class="note">青＝はい、赤＝いいえ、灰＝関係ない、紫＝宣告。共有の見た目は案です。</p>
+  <ul>
+    <li><strong>なぜ効くか：</strong>ワードルは2024年に53億回遊ばれ、答えを見せずに結果を共有できたことが広がった鍵でした。友だちランキングと、週替わりのタイムアタックも置けます（初回の解決タイムの仕組みを使う）。</li>
+    <li><span class="size">作る大きさ：M</span>　毎日の謎は、ツクールの良い作品と公式の事件で埋める。</li>
+    <li><strong>気をつけること：</strong>毎日作り続ける量（ツクールの広場ができてからが現実的）。費用は1回約0.7円（15問）なので、人が増えたら想定質問を厚くして、AIを使わない判定で答える。</li>
+  </ul>
+</section>
+
+<section id="holma">
+  <h2><span class="en">03 · HUMAN GAME MASTER</span>ホルマ役モード</h2>
+  <p><strong>遊び方：</strong>人が出題者になります。出題者の画面には、真相と所見が並びます。質問が届くと、横に<strong>AIの判定の案</strong>と「この質問で開く所見」が出ます。出題者は「はい／いいえ／関係ない」のボタンで答え、AIの案と違うときだけ確認が出ます。配信者が出題者になり、視聴者がスマホで質問する使い方もできます。</p>
+  <ul>
+    <li><strong>なぜ効くか：</strong>ウミガメのスープは本来、人が出題者の遊びです。配信を見る理由の55%は配信者の反応、という調査もあります。AIの案があるので、人の答えのぶれも減ります。最初の構想（2026-09-25、J-31）にもあった遊び方です。</li>
+    <li><span class="size">作る大きさ：M</span>　対戦の部屋と判定を使う。</li>
+    <li><strong>気をつけること：</strong>出題者がうっかり答えを言ってしまう（決まった答えのボタンを中心にする）。質問の渋滞（似た質問をまとめる）。</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="en">04–07 · MORE</span>ほかの4つ</h2>
+  <div class="grid">
+    <div class="card">
+      <div class="tag">04 · INSIDER</div><h4>インサイダー審問</h4>
+      <p>4〜8人で短い事件を解く。1人だけが要の所見をこっそり知っている。質問の回数はみんなで共有。宣告が通ったら投票し、内通者は正体がばれずにみんなを導ければ勝ち。</p>
+      <p class="note">根拠：同じ仕組みのボードゲームが30万部。前半は協力、後半は疑い合いで会話が生まれる。<br>注意：声で話せる場が前提。短い事件がたくさん要る。</p>
+      <p><span class="size">M</span></p>
+    </div>
+    <div class="card">
+      <div class="tag">05 · AUDIENCE</div><h4>観客陪審</h4>
+      <p>配信の視聴者が、画面のコードを入れて参加（登録なし）。質問の候補を出し合い、票の多い順に並ぶ。配信者がそこから選んで聞く。宣告の前に、視聴者が死因を予想する。</p>
+      <p class="note">根拠：コードだけで1万人が参加できた例。視聴者の投票で総視聴時間が1か月で倍になった例。AIに送るのは選ばれた質問だけなので、費用は増えない。<br>注意：荒らし（言葉のフィルター・配信者の承認）、コメント欄のネタばれ。</p>
+      <p><span class="size">M→L</span></p>
+    </div>
+    <div class="card">
+      <div class="tag">06 · TEAM</div><h4>チーム戦・協力戦・AIライバル</h4>
+      <p>チームで質問の回数を共有して競う。協力戦では、最初に配る所見が人ごとに違い、話し合わないと真相がつながらない。ひとりのときは、AIの探偵が「ライバル」として同時に進み、進み具合だけが見える。</p>
+      <p class="note">根拠：協力型の「ito」が100万部。AIライバルは今のAIの試し遊びの仕組みを使える。<br>注意：チームの強さの釣り合い、AIライバルの費用（1日の回数に上限）。</p>
+      <p><span class="size">S〜M</span></p>
+    </div>
+    <div class="card">
+      <div class="tag">07 · CUP</div><h4>審問杯と配信者キット</h4>
+      <p>配信のガイドライン（収益化してよい、など）を明記。配信モード（文字を大きく、真相の前に注意の札、結果の共有を遅らせる）、観戦画面、季節ごとの配信者の大会。</p>
+      <p class="note">根拠：配信者と世界大会で伸びたジオゲッサーの例。<br>注意：一度きりの事件が配信でネタばれする。配信は対戦・ツクール・毎日の謎を中心にして、公式の新作は時期をずらす。</p>
+      <p><span class="size">S〜M</span></p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="en">NEXT</span>次の一歩</h2>
+  <div class="callout next">持ち主が気になるものを1〜2個選んでいただければ、その企画の試作の形を詰めます。おすすめは「パネル選び対戦」です。<a href="I-005-original-design.html">I-005（ジェーンドゥの仕組みを取り入れる）</a>のサイエンスヒントと組み合わせると、先生に「元の遊び方を、オンライン対戦でこう生かした」と見せられます。</div>
+</section>
+
+</main>
+<footer><div class="wrap">更新：2026-10-02 ／ リトマス審問 企画ノート（内部資料・公開しない）</div></footer>
+</body>
+</html>

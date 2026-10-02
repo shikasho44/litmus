@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>リトマス審問ツクール｜リトマス審問 企画ノート</title>
+<style>
+  :root {
+    --ink: #0B0D12; --ink-2: #141821; --ink-3: #1E2430;
+    --bone: #F2EFE6; --bone-2: #D8D3C4; --bone-3: #A7A08F;
+    --line: rgba(242, 239, 230, 0.14); --line-2: rgba(242, 239, 230, 0.26);
+    --formalin: #C6FF3D; --formalin-deep: #6E9A0C;
+    --alarm: #FF2E63; --cyan: #3DE0FF; --amber: #FFB020; --violet: #9B6BFF; --mute: #8A93A6;
+    --sans: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body { margin: 0; background: var(--ink); color: var(--bone-2); font-family: var(--sans); font-size: 16px; line-height: 1.85; letter-spacing: .02em; }
+  a { color: var(--cyan); text-underline-offset: 3px; }
+  strong { color: var(--bone); }
+  code { font-family: var(--mono); font-size: .86em; background: var(--ink-3); border: 1px solid var(--line); padding: .05em .4em; border-radius: 3px; color: var(--bone); word-break: break-word; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header.hero { border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(198,255,61,.06), transparent 70%); }
+  header.hero .wrap { padding-top: 36px; padding-bottom: 28px; }
+  .back { font-size: 13px; }
+  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: .24em; color: var(--formalin); text-transform: uppercase; margin-top: 12px; }
+  h1 { color: var(--bone); font-size: clamp(26px, 5vw, 40px); line-height: 1.3; margin: 8px 0 10px; }
+  .lead { max-width: 780px; font-size: 17px; margin: 0; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .badge { font-family: var(--mono); font-size: 12px; padding: 3px 10px; border: 1px solid var(--line-2); background: var(--ink-2); color: var(--bone-2); }
+  .badge.ok { border-color: var(--formalin-deep); color: var(--formalin); }
+  .badge.warn { border-color: rgba(255,176,32,.5); color: var(--amber); }
+  .badge.no { border-color: rgba(255,46,99,.5); color: var(--alarm); }
+  section { padding: 36px 0 4px; }
+  h2 { color: var(--bone); font-size: clamp(21px, 3.4vw, 26px); line-height: 1.4; margin: 0 0 8px; }
+  h2 .en { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .28em; color: var(--formalin); font-weight: 400; margin-bottom: 4px; }
+  h3 { color: var(--bone); font-size: 17px; margin: 24px 0 8px; padding-left: 10px; border-left: 4px solid var(--formalin); line-height: 1.5; }
+  p { margin: 8px 0; }
+  ul, ol { padding-left: 1.3em; margin: 8px 0; }
+  li + li { margin-top: 4px; }
+  .note { font-size: 14px; color: var(--bone-3); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
+  .card { background: var(--ink-2); border: 1px solid var(--line); padding: 16px 18px; }
+  .card h4 { margin: 0 0 6px; color: var(--bone); font-size: 16px; }
+  .card .tag { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; color: var(--formalin); }
+  .callout { border: 1px solid var(--line-2); border-left: 4px solid var(--cyan); background: var(--ink-2); padding: 12px 16px; margin: 14px 0; }
+  .callout.kurare { border-left-color: var(--violet); }
+  .callout.kurare::before { content: 'くられ先生のツボ'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--violet); margin-bottom: 4px; }
+  .callout.warn { border-left-color: var(--amber); }
+  .callout.warn::before { content: '気をつけること'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--amber); margin-bottom: 4px; }
+  .callout.next { border-left-color: var(--formalin); }
+  .callout.next::before { content: '次の一歩'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--formalin); margin-bottom: 4px; }
+  .table-wrap { overflow-x: auto; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 560px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--bone); background: var(--ink-3); font-weight: 700; white-space: nowrap; }
+  details { background: var(--ink-2); border: 1px solid var(--line); padding: 10px 14px; margin: 10px 0; }
+  details summary { cursor: pointer; color: var(--bone); }
+  footer { border-top: 1px solid var(--line); margin-top: 48px; padding: 18px 0 40px; font-size: 13px; color: var(--mute); }
+  @media (max-width: 520px) { body { font-size: 15px; } .lead { font-size: 16px; } }
+
+  .steps { counter-reset: st; list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 10px; }
+  .steps li { counter-increment: st; background: var(--ink-2); border: 1px solid var(--line); padding: 12px 14px 12px 56px; position: relative; margin: 0; }
+  .steps li::before { content: counter(st); position: absolute; left: 14px; top: 12px; width: 28px; height: 28px; border-radius: 50%; background: var(--formalin); color: var(--ink); font-weight: 700; display: grid; place-items: center; font-family: var(--mono); }
+  .steps li strong { display: block; }
+  .squares { font-family: var(--mono); letter-spacing: 2px; line-height: 1.4; }
+  .sq { display: inline-block; width: 18px; height: 18px; margin: 0 2px 2px 0; vertical-align: middle; border-radius: 3px; }
+  .sq.b { background: #3D7BFF; } .sq.r { background: #FF3B5C; } .sq.g { background: #59606E; } .sq.p { background: #9B6BFF; }
+  .share { background: var(--ink-3); border: 1px dashed var(--line-2); padding: 12px 14px; display: inline-block; margin: 10px 0; }
+  .meter { display: flex; height: 22px; border-radius: 4px; overflow: hidden; margin: 10px 0 4px; max-width: 560px; }
+  .meter span { flex: 1; }
+  .meter-labels { display: flex; justify-content: space-between; max-width: 560px; font-size: 12px; color: var(--bone-3); }
+  .pri { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 3px; background: var(--formalin); color: var(--ink); font-weight: 700; margin-right: 6px; }
+  .pri.two { background: var(--cyan); } .pri.three { background: var(--bone-3); }
+  .size { font-family: var(--mono); font-size: 12px; color: var(--amber); }
+</style>
+<style>
+  .chat { display: grid; gap: 10px; margin: 14px 0; max-width: 820px; }
+  .msg { padding: 10px 14px; border: 1px solid var(--line); background: var(--ink-2); }
+  .msg .who { display: block; font-size: 12px; letter-spacing: .1em; margin-bottom: 2px; }
+  .msg.user { border-left: 4px solid var(--cyan); }
+  .msg.user .who { color: var(--cyan); }
+  .msg.holma { border-left: 4px solid var(--formalin); }
+  .msg.holma .who { color: var(--formalin); }
+  .stage { border-top: 3px solid var(--formalin); }
+  .stage.s2 { border-top-color: var(--cyan); }
+  .stage.s3 { border-top-color: var(--violet); }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <a class="back" href="index.html">← 企画ノートの台帳へ</a>
+    <div class="kicker">IDEA · I-001</div>
+    <h1>リトマス審問ツクール</h1>
+    <p class="lead">「こんな結末の謎にしたい」と話すだけで、ホルマ（AI）が解ける謎に組み立て、試しに解いて確かめてくれる。できた謎は、友だちにコードで送って一緒に遊べる。</p>
+    <div class="badges"><span class="badge">種類：遊び方（みんなで作る）</span><span class="badge ok">状態：企画書</span><span class="badge">作る大きさ：第1段階 M ／ 全部 L</span><span class="badge">名前は仮</span></div>
+  </div>
+</header>
+<main class="wrap">
+
+<section>
+  <h2><span class="en">PLAY</span>どんな遊びか</h2>
+  <ol>
+    <li><strong>結末を話す。</strong>「冷凍庫から出した水のペットボトルを振ったら、一瞬で凍った。答えは過冷却」のように、思いついた謎の答えを話すだけ。</li>
+    <li><strong>ホルマが組み立てる。</strong>3つだけ聞き返したあと、表の問題文・所見カード・想定される質問と答え・ヒントまで作ってくれる。直したいところも、話して直せる。</li>
+    <li><strong>試しに解いてから、送る。</strong>AIの探偵たちが試しに解いて「5人中4人が解けた」「ここで詰まった」と教えてくれる。自分でも1回解いてから、コードで友だちに送る。</li>
+  </ol>
+
+  <h3>作るときの会話（イメージ）</h3>
+  <div class="chat">
+    <div class="msg user"><span class="who">作る人</span>冷凍庫から出した水のペットボトルを振ったら、中身が一瞬でシャーベットになった、っていう謎を作りたい。答えは過冷却。</div>
+    <div class="msg holma"><span class="who">ホルマ</span>よい謎ですねェ。3つだけ伺います。① だれと遊びますか（家族・友だち・クラス）。② むずかしさは。③ 最初に見せる場面は、どこにしましょう。</div>
+    <div class="msg user"><span class="who">作る人</span>クラスで。ふつう。最初は「振ったら凍った」の場面で。</div>
+    <div class="msg holma"><span class="who">ホルマ</span>組み立てました。所見カード9枚、想定される質問140、ヒント3段です。探偵たちに試しに解かせたところ、5人中4人が解けました（平均14問）。中学生役は「冷凍庫が壊れていた？」で止まりました。所見「冷凍庫はふつうに動いていた」を足しますか。</div>
+  </div>
+  <p class="note">会話と数字はイメージです。</p>
+</section>
+
+<section>
+  <h2><span class="en">FLOW</span>作る流れ</h2>
+  <ol class="steps">
+    <li><strong>注文</strong>結末を話す。ホルマが3つだけ聞き返す（だれと遊ぶ／むずかしさ／最初に見せる場面）。</li>
+    <li><strong>下書き</strong>AIが、表の問題文と裏の真相、所見カード8〜12枚、想定される質問と答え（言い換え・打ち間違い・否定形・答えを聞き出そうとする質問まで）、ヒント3段、正解の要素、ひとことの科学解説を作る。</li>
+    <li><strong>自動の検査</strong>① 安全（死・けが・犯罪・実在の人物・個人情報を止める）② 形と答えの漏れ（今の「事件の検査器」）③ 想定質問の自己採点（今の規則判定で95%以上）④ AIの試し遊び（子ども・大人・ひねくれ者・答えを聞き出そうとする人の役で、解けた率と質問数を測る）⑤ 別のAIに「同じ所見で成り立つ、別の答え」を探させる。</li>
+    <li><strong>作者のクリアチェック</strong>作った人が、表側から自分で1回解く。解けないと公開できない（マリオメーカーが質を支えたやり方）。</li>
+    <li><strong>公開</strong>はじめは「コードを知っている人だけ」。ラベルは「やさしい謎（だれも傷つかない）」「AIと作った」、むずかしさと時間（試し遊びから自動）。</li>
+    <li><strong>遊ぶ・送る・評価</strong>6文字のコードで送る（今の対戦の部屋コードを使う）。そのまま友だちと対戦も。解いたあとに「なるほど／それはない」の2択と、通報ボタン。</li>
+  </ol>
+</section>
+
+<section>
+  <h2><span class="en">WHY US</span>このゲームだからできること</h2>
+  <div class="grid">
+    <div class="card"><h4>答えがぶれない</h4><p>AIが出題者のウミガメのスープは、国内外で「同じ質問なのに答えがぶれる」「投稿問題の出来がばらばら」で評価が割れています（<a href="research/mechanics.html">調べもの</a>）。このゲームは真相を固定して判定するので、作る段階の検査を厚くすれば、2つとも消せます。</p></div>
+    <div class="card"><h4>部品がほぼそろっている</h4><p>事件の検査器、規則判定、AIの試し遊び（1本約2円）、安全フィルター、部屋コード、判定AI。新しく作るのは「会話で下書きを作るところ」と「作る画面・共有ページ」です。</p></div>
+    <div class="card"><h4>手本がもうある</h4><p>入門の「もの」の事件（牛乳びん・雪だるま）が、そのまま「やさしい謎」の手本になります。</p></div>
+  </div>
+  <div class="callout kurare">先生はジェーンドゥについて「パネルヒントを作るのがマジ大変」と書いています。作る大変さをAIが引き受ける仕組みは、作り手の先生にこそ伝わる面白さです。また、ジェーンドゥ風の自作問題を投稿サイトに出しているファンもいます。先生が開いた自由研究コンテストのように、<strong>「先生が選ぶ謎のコンテスト」</strong>で優秀作を公式に格上げする形にもつなげられます。</div>
+</section>
+
+<section>
+  <h2><span class="en">RULES</span>決まりと、段階的な開き方</h2>
+  <div class="grid">
+    <div class="card stage"><div class="tag">第1段階</div><h4>自分と友だちだけ</h4><p>作る・試す・コードで送るまで。みんなの一覧は無し。死を扱わない「やさしい謎」だけ。</p><p><span class="size">作る大きさ：M</span></p></div>
+    <div class="card stage s2"><div class="tag">第2段階</div><h4>みんなの広場</h4><p>人の確認と評価を通った謎だけを一覧に載せる。週替わりのお題、ホルマの推薦、作者の成績、通報と削除。</p><p><span class="size">作る大きさ：M〜L</span></p></div>
+    <div class="card stage s3"><div class="tag">第3段階（あとで判断）</div><h4>特別な作り手と、コンテスト</h4><p>アンバサダーなど条件を満たした人や、キャンペーンの応募でこちらが採用を決めた謎だけ、監修を経て、死を扱う公式の事件へ。</p></div>
+  </div>
+  <ul>
+    <li><strong>一般の人の謎は、死・けが・犯罪・実在の人物を扱わない</strong>（持ち主の判断 J-32・J-73）。</li>
+    <li>子どもが使う前提で、<strong>名前はニックネームだけ</strong>。個人情報は入れさせない。16歳未満は保護者の同意が必要になる流れ（改正個人情報保護法、2026-07成立）に合わせる。</li>
+    <li>「ジェーンドゥ」の名前や、番組の素材は使わない（薬理凶室さんのファン活動ガイドライン）。有名な問題の丸写しは、似た謎の照合と通報で防ぐ。</li>
+  </ul>
+  <div class="callout warn">
+    <ul>
+      <li><strong>AIの費用：</strong>1作あたり数十円の見込み（下書き＋試し遊び数本）。作れる回数に上限を設ける。回数を増やすのは応援パスなどにする（<a href="../strategy/monetization.html">収益化の提案</a>）。</li>
+      <li><strong>質の低い謎であふれる：</strong>はじめはコード限定。一覧は人の確認を通ったものだけ。</li>
+      <li><strong>AIは質問が下手：</strong>研究でも、AIが質問する側に回ると人よりかなり弱い。「解けない」の判定は、人の評価で補う。</li>
+      <li><strong>名前：</strong>一般の人の謎は死を扱わないので、「審問」の重い響きと合わない可能性がある。看板を「リトマス」にして、「リトマス・ラボ」のようにモード名で分ける案も残しておく（2026-09-26 の検討）。</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2><span class="en">PROTOTYPE</span>試作のいちばん小さい形</h2>
+  <p><strong>画面を作る前に、体験だけを見せます。</strong>結末の一行から、AIが謎を組み立て、今の検査器とAIの試し遊びに通すところまでを、手元で3回やってみます。できた3問は、静的版（AIなし）でもそのまま遊べる形にします。</p>
+  <ul>
+    <li>例の結末：「振ったら凍ったペットボトル」（過冷却）／「内側だけ濡れた窓」（結露）／「影がふたつある日」（光源）など、死を扱わないもの</li>
+    <li>見せるもの：組み立てにかかった時間、検査の結果、試し遊びの結果（解けた率・質問数・詰まった所）、実際に遊べる URL</li>
+  </ul>
+  <div class="callout next">持ち主のOKが出たら、見本の3問を作ります（画面なし、今ある部品だけで。AIの費用は数十円）。遊んでいただいて手応えがあれば、第1段階の画面づくりに進みます。先生に見せるかどうかは、そのあとで決めます。</div>
+</section>
+
+</main>
+<footer><div class="wrap">更新：2026-10-02 ／ リトマス審問 企画ノート（内部資料・公開しない）</div></footer>
+</body>
+</html>

@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>くられ先生の人物とツボ｜リトマス審問 企画ノート</title>
+<style>
+  :root {
+    --ink: #0B0D12; --ink-2: #141821; --ink-3: #1E2430;
+    --bone: #F2EFE6; --bone-2: #D8D3C4; --bone-3: #A7A08F;
+    --line: rgba(242, 239, 230, 0.14); --line-2: rgba(242, 239, 230, 0.26);
+    --formalin: #C6FF3D; --formalin-deep: #6E9A0C;
+    --alarm: #FF2E63; --cyan: #3DE0FF; --amber: #FFB020; --violet: #9B6BFF; --mute: #8A93A6;
+    --sans: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body { margin: 0; background: var(--ink); color: var(--bone-2); font-family: var(--sans); font-size: 16px; line-height: 1.85; letter-spacing: .02em; }
+  a { color: var(--cyan); text-underline-offset: 3px; }
+  strong { color: var(--bone); }
+  code { font-family: var(--mono); font-size: .86em; background: var(--ink-3); border: 1px solid var(--line); padding: .05em .4em; border-radius: 3px; color: var(--bone); word-break: break-word; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header.hero { border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(198,255,61,.06), transparent 70%); }
+  header.hero .wrap { padding-top: 36px; padding-bottom: 28px; }
+  .back { font-size: 13px; }
+  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: .24em; color: var(--formalin); text-transform: uppercase; margin-top: 12px; }
+  h1 { color: var(--bone); font-size: clamp(26px, 5vw, 40px); line-height: 1.3; margin: 8px 0 10px; }
+  .lead { max-width: 780px; font-size: 17px; margin: 0; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .badge { font-family: var(--mono); font-size: 12px; padding: 3px 10px; border: 1px solid var(--line-2); background: var(--ink-2); color: var(--bone-2); }
+  .badge.ok { border-color: var(--formalin-deep); color: var(--formalin); }
+  .badge.warn { border-color: rgba(255,176,32,.5); color: var(--amber); }
+  .badge.no { border-color: rgba(255,46,99,.5); color: var(--alarm); }
+  section { padding: 36px 0 4px; }
+  h2 { color: var(--bone); font-size: clamp(21px, 3.4vw, 26px); line-height: 1.4; margin: 0 0 8px; }
+  h2 .en { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .28em; color: var(--formalin); font-weight: 400; margin-bottom: 4px; }
+  h3 { color: var(--bone); font-size: 17px; margin: 24px 0 8px; padding-left: 10px; border-left: 4px solid var(--formalin); line-height: 1.5; }
+  p { margin: 8px 0; }
+  ul, ol { padding-left: 1.3em; margin: 8px 0; }
+  li + li { margin-top: 4px; }
+  .note { font-size: 14px; color: var(--bone-3); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
+  .card { background: var(--ink-2); border: 1px solid var(--line); padding: 16px 18px; }
+  .card h4 { margin: 0 0 6px; color: var(--bone); font-size: 16px; }
+  .card .tag { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; color: var(--formalin); }
+  .callout { border: 1px solid var(--line-2); border-left: 4px solid var(--cyan); background: var(--ink-2); padding: 12px 16px; margin: 14px 0; }
+  .callout.kurare { border-left-color: var(--violet); }
+  .callout.kurare::before { content: 'くられ先生のツボ'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--violet); margin-bottom: 4px; }
+  .callout.warn { border-left-color: var(--amber); }
+  .callout.warn::before { content: '気をつけること'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--amber); margin-bottom: 4px; }
+  .callout.next { border-left-color: var(--formalin); }
+  .callout.next::before { content: '次の一歩'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--formalin); margin-bottom: 4px; }
+  .table-wrap { overflow-x: auto; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 560px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--bone); background: var(--ink-3); font-weight: 700; white-space: nowrap; }
+  details { background: var(--ink-2); border: 1px solid var(--line); padding: 10px 14px; margin: 10px 0; }
+  details summary { cursor: pointer; color: var(--bone); }
+  footer { border-top: 1px solid var(--line); margin-top: 48px; padding: 18px 0 40px; font-size: 13px; color: var(--mute); }
+  @media (max-width: 520px) { body { font-size: 15px; } .lead { font-size: 16px; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <a class="back" href="../index.html">← 企画ノートの台帳へ</a>
+    <div class="kicker">RESEARCH · くられ先生</div>
+    <h1>くられ先生の人物とツボ</h1>
+    <p class="lead">先生に「面白い」と思ってもらう企画を考えるための調べものです。公開されている情報（コラム・動画・業務案内など）だけをもとにしています。私生活には触れていません。</p>
+    <div class="badges"><span class="badge no">内部資料・公開しない</span><span class="badge">調査日：2026-10-01〜02</span><span class="badge">出典：約50件</span></div>
+  </div>
+</header>
+<main class="wrap">
+
+<section>
+  <h2><span class="en">KEY POINTS</span>まず押さえること（5つ）</h2>
+  <div class="grid">
+    <div class="card"><div class="tag">01</div><h4>ジェーンドゥは先生の看板</h4><p>チャンネルの人気上位3本はすべてジェーンドゥ、上位15本中10本を占めます。ボードゲーム「ブラックストーリーズ」を、科学向けに作り替えた先生ご本人の企画です。</p></div>
+    <div class="card"><div class="tag">02</div><h4>「型を借りて、科学でひっくり返す」人</h4><p>昔話・怪談・空想・クイズの型を借りて、科学で見方をひっくり返すのが芯です。正しさは面白さを支える役で、説明しすぎを嫌います。</p></div>
+    <div class="card"><div class="tag">03</div><h4>行動の基準は「おもしろいか」</h4><p>しっかり準備してくる相手には本気で応じ、ネタだけ持っていく相手には雑に応じる、とご本人が書いています。中身の決まっていない頼み方は避けます。</p></div>
+    <div class="card"><div class="tag">04</div><h4>ゲームと教育に前向き</h4><p>ゲーム有害論に反論する動画があり、「勉強は楽しく作られていないから工夫が要る」という立場です。授業での利用は歓迎（一般公開や有料講習は不可）。</p></div>
+    <div class="card"><div class="tag">05</div><h4>やりとりは短く、文章で</h4><p>会議は原則なし。用件を短く、遊べる形で見せるのが合います。お金とクレジットは先にはっきり（「科学者が安く使われることはあってはならない」という考え）。</p></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="en">ORIGINAL DESIGN</span>ジェーンドゥの元の遊び方（企画のヒントの宝庫）</h2>
+  <p>先生が動画で説明している進め方です。私たちのゲームにまだ無い仕組みがいくつもあります。</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>段階</th><th>中身</th><th>このゲームでの使い道（案）</th></tr></thead>
+    <tbody>
+      <tr><td>① 質問</td><td>はい／いいえで質問したあと、全員が1回ずつ答える。ここで当たることはほぼ無く、得た情報が後で効く。</td><td>今の捜査パートに近い。</td></tr>
+      <tr><td>② パネル選び</td><td>6枚に分けた絵から、各自がパネルを選んで見る。中身を隠すか公開するかを選べる回もあった。</td><td><strong>対戦の駆け引き</strong>に使える（自分だけが見た手がかりを、隠すか公開するか）。</td></tr>
+      <tr><td>③ 早い者勝ち</td><td>全パネルを公開して、早い者勝ちで答える。</td><td>今のオンライン対戦の「先に宣告を通した人が勝ち」と同じ。</td></tr>
+      <tr><td>④ 最終ヒント</td><td>最後のヒント。</td><td>今のヒント（囁き）に近い。</td></tr>
+      <tr><td>サイエンスヒント</td><td>パネルの1枚は、理系の人には決め手、そうでない人にはハズレに見える。パネルに嘘は書かない。</td><td><strong>知識が近道になる手がかり</strong>を、事件ごとに1つ必ず入れる決まりにできる。</td></tr>
+      <tr><td>近い・遠い</td><td>外れた答えにも「近い・遠い」を返す。「正解でよい」と「完璧な正解」を分ける。</td><td>宣告の外れに<strong>リトマスの色（赤〜青）で近さを見せる</strong>。完璧な正解は今の S+ に近い。</td></tr>
+      <tr><td>語りと小話</td><td>始まりと終わりは被害者の一人称の語り。正解のあとに後日談、続いて先生の歴史や進化の小話。</td><td>語りは今もある。<strong>解いたあとの「小話」の欄</strong>を足せば、先生の事件で先生のひとことを載せられる。</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="en">WHAT DELIGHTS</span>面白がるツボ（12）</h2>
+  <ol>
+    <li>矛盾から入り、見方がひっくり返る（「〜なのに死んだ」。被害者が人間とは限らない）</li>
+    <li>知識があれば近道、なくても積み重ねで届く</li>
+    <li>情報の駆け引き（パネル選び、隠すか公開するか、早い者勝ち）</li>
+    <li>ボケを科学で受けて返す</li>
+    <li>答えの先の「へえ」（後日談と、歴史の小話）</li>
+    <li>科学を器に入れる（一人称の被害者、キャラクター化、悪役）</li>
+    <li>昔話・怪談・空想の型を借りる</li>
+    <li>再現性のある「よくある話」を検証する（新シリーズ「心霊解明」）</li>
+    <li>クイズにして、答え合わせを体験にする（ドズル社の回では、マイクラの中の実験で正解を確かめた）</li>
+    <li>相手の土俵に合わせて作る（子ども向け科学教室との回では、専用の問題を作った）</li>
+    <li>安くて誰でも試せるのに、結果は本物（赤キャベツで色が変わる実験の紹介など）</li>
+    <li>調べた細部を、説明しすぎない</li>
+  </ol>
+  <div class="callout kurare">題名の「リトマス」は、先生が子ども向けに紹介している<strong>赤キャベツの色変わり実験</strong>（家でできるリトマス試験紙）と結びつけられます。「科学捜査官の道具をつくろう」のような取り組みの入口になります。</div>
+</section>
+
+<section>
+  <h2><span class="en">AVOID</span>避けた方がいいこと</h2>
+  <ul>
+    <li>ニセ科学や健康デマを、本当らしく見せる</li>
+    <li>危ない手順を、再現できるほど書く（「なぜ死んだか」までにとどめる）</li>
+    <li>知識でも積み重ねでも届かない、理不尽な当てもの</li>
+    <li>長い説明、ルールの後出しや破り</li>
+    <li>押すだけの作業になる遊び</li>
+    <li>過去の回の書き起こしや音声の流用、公式と誤解される見せ方</li>
+    <li>中身の決まっていない頼み方、ネタだけもらう相談</li>
+    <li>政治・宗教、メンバーの素性に触れること</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="en">HOW TO SHOW</span>提案の見せ方（調査者の推測）</h2>
+  <ul>
+    <li><strong>1件1枚で、遊べる状態にして出す。</strong>矛盾の一文、パネル6枚の案（うち1枚はサイエンスヒント）、答え、答えの先の小話。解ける URL を添え、文章は短く。</li>
+    <li><strong>ひねる余地を1か所だけ残す。</strong>科学は固め、切り口か被害者の台詞のどちらかを先生に委ねる余白にする。</li>
+    <li><strong>ゲームでしかできないことを見せる。</strong>AI の進行役がボケに科学で返す、隠す・公開するの駆け引き、答え合わせの体験。</li>
+    <li><strong>1行目に「どこが面白いか」を書く。</strong>謝礼やクレジットは先に示す。</li>
+  </ul>
+  <div class="callout warn">X の投稿は調べられていません（X の検索が使えなかったため）。会員限定の記事・動画（ジェーンドゥ誕生秘話の後半など）も読めていません。</div>
+</section>
+
+<section>
+  <h2><span class="en">DETAILS</span>詳しい調査</h2>
+  <details><summary>人物・仕事の進め方（経歴、協業のしかた、価値観、話し方、お金の作り方）</summary>
+<p>凡例：【事実】＝出典あり　【推測】＝調査者の推測</p>
+<h3>1. 経歴と役割</h3>
+<ul><li>【事実】1979年京都府生まれ。1998年ごろから文筆活動。『危ない28号』初代編集長。2004年に『図解アリエナイ理科ノ教科書』を出し、「薬理凶室」のリーダーとしてシリーズを執筆。2018年に星雲賞ノンフィクション部門を受賞 [1]。
+</li><li>【事実】「アリエナイ理科」シリーズは累計50万部。原作を担当したコミックス『科学はすべてを解決する!!』も50万部超 [2][9]。
+</li><li>【事実】科学監修した作品：『Dr.STONE』（漫画2017–2022、アニメも）、『ウィッチウォッチ』、『トリリオンゲーム』、『腹腹先生』、『インフェクション』、『LAND LOCK』、『灰原哀の科学事件ファイル』など [3]。日本科学未来館の企画、講演、TV出演（『世界一受けたい授業』など）も多い [1]。
+</li><li>【事実】YouTube「科学はすべてを解決する! [くられ with 薬理凶室]」はチャンネル開設が2017年4月、登録者は約38.9万人 [4]。
+</li><li>【事実】2004年の本に書いた「青酸カリは毒殺に向かない」という記事がきっかけで、作家や漫画家から相談が来るようになり、監修の仕事が始まった [5]。
+</li></ul>
+<h3>2. 協業スタイル</h3>
+<ul><li>【事実】『Dr.STONE』では、原作の稲垣氏から「こういうものは作れる？」と聞かれたことを、自分の知識と周囲の専門家の意見で確かめる役だった [6]。稲垣氏は、毎週渡される資料を読み込んでいたと話している [7]。
+</li><li>【事実】監修では「物語の設定を理解し、作り手の狙いに合わせて提案する」ことを大事にしている [5]。
+</li><li>【事実】『ウィッチウォッチ』の作者・篠原氏は「怒涛の科学監修」「漫画として使いやすい親切な回答」と礼を述べ、ページが足りずアイデアを使い切れなかったとも書いている（2022-08-29）[8]。
+</li><li>【事実】「ジェーンドゥの死因」は本人の発案。市販の死因当てゲーム「ブラックストーリー」を実際に遊んで物足りなさを感じ、どこが物足りないのかを自分で分析して作った。GMもクイズ作りも本人で、「パネルヒントを作るのがマジ大変」と書いている（2021-11-25）[10]。
+</li><li>【事実】業務案内には次の条件がある [9]（最終更新2026-02-10）。
+<ul><li>具体案・日時・費用が決まっていない依頼は受けない。
+</li><li>事前のオンライン会議は原則断る。手が空いた時間にメールやSNSでやりとりする。
+</li><li>事務手続きが何度も続く案件は受けにくい。書類は依頼側が代わりに作る。特にくられ本人が書類に記入するのは「まず対応不可能」。
+</li><li>Gmailは届かないことが多い。
+</li></ul>
+</li><li>【推測】やりとりは文章で短く進めたい人。自分で作った仕組みを改良していくのが好きな「作り手」型で、受け身の監修者ではない。依頼者の仮説（アイデアが採用されると乗ってくる、型にはめると邪魔になる）は、[8][10]から見て当たっている可能性が高い。
+</li></ul>
+<h3>3. 価値観と関心</h3>
+<ul><li>【事実】活動の軸は「科学は楽しい！」を広めること [2]。
+</li><li>【事実】コラム「科学者はワガママであって良い」（2013年初出、2025-07-07改稿）で「科学者が安く使われることはあってはならない」と主張し、成果に見合った対価が必要だと書いている [11]。
+</li><li>【事実】AIについて：ChatGPTに遊びで文章を作らせて投稿している（2025-04-20）[12]。2026年1月には、フィクションのための調べ物でChatGPTのアカウントが停止された。OpenAIから自分のアカウントだけ復旧する話が来たが「フェアではない」として断り、代わりに異議申し立ての仕組みの改善を求め、日本のクリエイターの意見集めには協力すると伝えた。Geminiも「優秀」と書いている（2026-01-27）[13]。
+</li><li>【事実】2025-10-20には、作家なら作品を作る大変さを知っているはずなのに、それを軽んじる人はプロとしてどうなのか、という趣旨の投稿をしている。何に向けた発言かは確認できていない [14]。
+</li><li>【未確認】AI画像やAIイラストについての本人発言は、公開情報からは見つけられなかった（X APIが使えず検索も限られたため）。言葉のAIを日常的に使っていることは事実だが、AI画像をどう見ているかは不明。
+</li></ul>
+<h3>4. 話し方</h3>
+<ul><li>【事実】文体はくだけている。「ぶっちゃけ」「マジ大変」「（笑）」「しまする」「ｸﾞﾋｮﾋｮﾋｮﾋｮ」など、キャラを交えた冗談が多い [10][15]。白衣に狐面のマッドサイエンティストという設定で出演する [1]。
+</li><li>【推測】仕事の連絡も、形式ばった長文より、要点を絞ったくだけた文章の方が合いそう。ただし条件の線引き（業務案内）ははっきりしている。
+</li></ul>
+<h3>5. お金の作り方</h3>
+<ul><li>【事実】収入源は、書籍（三才ブックスほか）、漫画原作、科学監修、講演（学校向けは1日2万円＋交通費。企業向けは相談）、トリック考案（1件5万円〜）、報道向け監修（10万円〜。名前が出ない監修は受けていない）[9]。
+</li><li>【事実】ほかに、ニコニコの有料チャンネル「ニコニコ秘密基地」（2023年3月開設）、YouTubeメンバーシップ、上野屋とのコラボ白衣・ネクタイ、ドワンゴジェイピーストアでのグッズ、阿佐ヶ谷などでのイベント、無料メルマガ（2020年9月に終了）[4][16][17]。
+</li><li>【事実】「ジェーンドゥの死因」は「○○の主役は我々だ！」とのコラボで始まった。声はうるちまい子さん。ドズル社、QuizKnock、ブラックチャンネルともコラボしている [10][18]。
+</li><li>【未確認】ジェーンドゥの書籍化・ゲーム化・アプリ化の公式発表は見つからなかった。
+</li><li>【推測】過去回をもとにした事件をゲームに入れる場合、その回の権利がくられ本人だけのものか、コラボ先・声優・絵の担当者が関わるのかを、最初に一度確認しておくと安全。
+</li></ul>
+<h3>6. 依頼者への実務アドバイス（すべて【推測】、根拠は上記の事実）</h3>
+<ol><li><strong>連絡はメールかDMで短く</strong>。用件・決めてほしいこと・期限を3行程度にまとめる。会議の設定はしない（[9]）。
+</li><li><strong>書類の手間はこちらで全部持つ</strong>。契約書などは依頼側が下書きし、確認か署名だけで済む形にする（[9]）。
+</li><li><strong>アイデアの扱い方</strong>。テンプレートを埋めてもらうより、「ゲームの決まりごと（入力の形式、答えの判定、1件の分量）」だけを渡して、中身は自由に書いてもらう方がよさそう。採用した案は「この案で実装した」とすぐに見せて返すと乗ってきやすい（[8][10]）。タイトル案も、採否と理由を返すと次のアイデアにつながる。
+</li><li><strong>お金は先に、はっきり</strong>。「安く使われるべきでない」という考え方なので（[11]）、監修料・執筆料・クレジット表記・収益分配を、こちらから先に金額つきで出すのが礼儀にかなう。「無償で」「後で考える」は避ける。名前が出ない仕事は受けていないので（[9]）、クレジット表記の形も提案する。
+</li><li><strong>AI画像は最初に正直に伝える</strong>。どのモデル・どの工程で使っているかを先に説明し、本人と、本人が紹介してくれたイラストレーターの考えを聞く。紹介されたイラストレーターに依頼する道も残しておく。直近の「作品を作る大変さを軽んじる人」への怒りの投稿（[14]）が何に向けたものかは分からないため、反AI的な発言かどうかを決めつけない。
+</li><li><strong>ジェーンドゥ由来の事件の権利を確認する</strong>。コラボ先や声・絵の担当者が関わるかどうかを、一度だけ確認しておく。
+</li><li>危ない科学の話題は本人の持ち味なので、手順の具体化（再現できるレベル）はゲーム側で控えるルールを共有しておくと安心。
+</li></ol>
+<h3>出典</h3>
+<ol><li>Wikipedia「くられ」 <a href="https://ja.wikipedia.org/wiki/くられ" target="_blank" rel="noopener">https://ja.wikipedia.org/wiki/くられ</a> （2026-10-01 閲覧）
+</li><li>フェリシモ神戸学校 くられ講演案内（開催 2025-12-13） <a href="https://www.felissimo.co.jp/kobeschool/kurare/" target="_blank" rel="noopener">https://www.felissimo.co.jp/kobeschool/kurare/</a>
+</li><li>アリエナイ理科ポータル「連載・科学監修一覧」（2018-05-02 作成、2024-04-26 更新） <a href="https://www.cl20.jp/portal/works/" target="_blank" rel="noopener">https://www.cl20.jp/portal/works/</a>
+</li><li>YouTube @krr チャンネル概要（2026-10-01 閲覧） <a href="https://www.youtube.com/@krr/about" target="_blank" rel="noopener">https://www.youtube.com/@krr/about</a>
+</li><li>三井化学 MOLp インタビュー（2022-09-13） <a href="https://jp.mitsuichemicals.com/jp/molp/article/detail_20220913_1/index.htm" target="_blank" rel="noopener">https://jp.mitsuichemicals.com/jp/molp/article/detail_20220913_1/index.htm</a>
+</li><li>日経クロストレンド「Dr. STONE」記事（2020-12-03） <a href="https://xtrend.nikkei.com/atcl/contents/18/00316/00035/" target="_blank" rel="noopener">https://xtrend.nikkei.com/atcl/contents/18/00316/00035/</a>
+</li><li>週プレNEWS 稲垣理一郎インタビュー（2022-06-13） <a href="https://wpb.shueisha.co.jp/news/entertainment/20220613-116535/" target="_blank" rel="noopener">https://wpb.shueisha.co.jp/news/entertainment/20220613-116535/</a>
+</li><li>ウィッチウォッチ公式X（2022-08-29） <a href="https://x.com/WITCHWATCH_off/status/1564067132647780354" target="_blank" rel="noopener">https://x.com/WITCHWATCH_off/status/1564067132647780354</a>
+</li><li>料金・業務ご案内ページ（2018-04-06 作成、2026-02-10 更新） <a href="https://www.cl20.jp/portal/business/" target="_blank" rel="noopener">https://www.cl20.jp/portal/business/</a>
+</li><li>ブロマガの主役は我々だ！「水平思考科学クイズ ジェーンドゥの死因」（2021-11-25、くられ寄稿） <a href="https://ch.nicovideo.jp/warewareda/blomaga/ar2064550" target="_blank" rel="noopener">https://ch.nicovideo.jp/warewareda/blomaga/ar2064550</a>
+</li><li>俺コラム「科学者はワガママであって良い」（2013-11-12 初出、2025-07-07 改稿） <a href="https://www.cl20.jp/portal/helldoctor-column-16/" target="_blank" rel="noopener">https://www.cl20.jp/portal/helldoctor-column-16/</a>
+</li><li>くられ X（2025-04-20） <a href="https://x.com/reraku/status/1913855931143827563" target="_blank" rel="noopener">https://x.com/reraku/status/1913855931143827563</a>
+</li><li>くられ X（2026-01-27） <a href="https://x.com/reraku/status/2015933579675808182" target="_blank" rel="noopener">https://x.com/reraku/status/2015933579675808182</a>
+</li><li>くられ X（2025-10-20） <a href="https://x.com/reraku/status/1980048068788760677" target="_blank" rel="noopener">https://x.com/reraku/status/1980048068788760677</a>
+</li><li>くられ X（2020-03） <a href="https://x.com/reraku/status/1241310576661262336" target="_blank" rel="noopener">https://x.com/reraku/status/1241310576661262336</a>
+</li><li>薬理凶室グッズ情報（2026-05-29 更新） <a href="https://www.cl20.jp/portal/unit_yakuri_goods/" target="_blank" rel="noopener">https://www.cl20.jp/portal/unit_yakuri_goods/</a>
+</li><li>アリエナイ理科ポータル トップ（メルマガ終了告知） <a href="https://www.cl20.jp/portal/" target="_blank" rel="noopener">https://www.cl20.jp/portal/</a>
+</li><li>ジェーンドゥの死因 一覧（2022-01-27 作成、2026-09-21 更新） <a href="https://www.cl20.jp/portal/jane-doe/" target="_blank" rel="noopener">https://www.cl20.jp/portal/jane-doe/</a>
+</li><li>合法昔ばなし一覧 <a href="https://www.cl20.jp/portal/legal-old-tales/" target="_blank" rel="noopener">https://www.cl20.jp/portal/legal-old-tales/</a>
+</li><li>KAI-YOU（2023-11-16） <a href="https://kai-you.net/article/88211" target="_blank" rel="noopener">https://kai-you.net/article/88211</a>
+</li></ol>
+  </details>
+  <details><summary>面白がるツボの調査（ジェーンドゥの設計、回の傾向と人気、繰り返す題材、褒めるもの・嫌うもの、ゲーム・教育・ファン）</summary>
+<p>凡例：【事実】出典あり／【推測】調査者の推測。kurare-profile.md に書いた内容は繰り返さない。各回の答えは書かない。原文の引用は1か所だけで、ほかは要約。</p>
+<h3>0. 要点</h3>
+<ul><li>ジェーンドゥは、ウミガメのスープに段階的なヒントと駆け引きを足した「ゲーム」で、本人のチャンネルでいちばん見られているシリーズ。
+</li><li>本人の芯は、昔話・怪談・空想・クイズの型を借りて、科学で見方をひっくり返すこと（調査者のまとめ）。正しさは面白さを支える役で、説明しすぎを嫌う。
+</li></ul>
+<h3>1. ジェーンドゥの設計</h3>
+<ul><li>【事実】元はボードゲーム「ブラックストーリーズ」で、それを科学向けに作り替えた、と本人が説明している [3]。ブロマガでは、何が物足りなかったかの中身は会員限定部分にあり、読めない [1]。
+</li><li>【事実】進行は4段階 [2][3][4]。①はい/いいえの質問のあと、全員が1回ずつ答える。ここで当たることはほぼなく、得た情報が後で効く、と本人は言う [3]。②6枚に分けた絵から各自がパネルを選んで見る。2021年版では、中身を隠すか公開するかを選べた [2]。③全パネルを公開し、早い者勝ちで答える。④最終ヒント。
+</li><li>【事実】パネルに嘘は書かない。1枚は「サイエンスヒント」で、理系の人には決め手、そうでない人にはハズレに見える [4]。外れた答えにも近い・遠いを返し、「正解でよい」と「完璧な正解」を分ける [4][5][8]。
+</li><li>【事実】始まりと終わりは被害者の一人称ナレーション。正解のあとに後日談、続いて本人が歴史や進化の小話を足す [5]。
+</li><li>【推測】ブラックストーリーへの不満は、当て推量で終わる・知識が報われない・行き詰まる、の3点だったと思われる。足した仕組みがちょうどその裏返しになっている。冒頭のナレーションは、うるちまい子さんの提案が採用されたものかもしれない（会員限定記事への読者コメントから）[11]。
+</li></ul>
+<h3>2. 回の傾向と人気</h3>
+<ul><li>【事実】29本（約28問、2021-11〜2026-09）。うち22本が我々だとのコラボで、2024-01まで続いた。1年半の空白のあと、QuizKnock、GENKI LABO（子ども向け科学教室）、ドズル社とのコラボの看板企画として復活した [6]。
+</li><li>【事実】チャンネルの人気順で上位3本はすべてジェーンドゥ、上位15本中10本を占める [7]。最多は宝石の回の150万回（我々だ側）、本人チャンネルでは舞踏会の回の122万回。ドズル社回は公開12日で約39万回 [6]。
+</li><li>【事実】タイトルは「〜なのに死んだ」という矛盾の形（水のない場所での溺死、爆弾のない爆死、など）。舞台は仕事や医療の現場、史実もの、女騎士やアイドルといった架空の設定まで。被害者が人間でない回もある [4][6]。
+</li><li>【事実】視聴者がよく褒めるのは、科学ヒントから答えにたどり着けた気持ちよさ、声の演技、掛け合い。自分たちで遊びたい、商品化してほしい、という声もある [8]。ドズル社回には、初めてでも解きやすかった、子どもと楽しめた、という投稿があった [27]。この形式をまねた自作問題をファンが投稿サイトに出している [10]。
+</li></ul>
+<h3>3. 繰り返す題材と「型」</h3>
+<ul><li>【事実】人気動画に多いのは、毒、ニセ科学の検証、食べ物の魔改造（罰ゲーム研究所）、法律や犯罪の対談、クイズ（薬品当て、外国で死刑になる罪の4択、判例）[7]。
+</li><li>【事実】「合法昔ばなし」（2018-11〜、我々だのチャンネル、約35本）は、昔話を科学で語り直す企画ではない。今なら捕まりそうな実話（電話のただ掛け、偽札、脱税など）を昔話の口調で読み聞かせる企画で、最多は脱税の回の266万回 [12]。昔話そのものを語り直すのは、新シリーズ「まんが薬理昔ばなし」（2026-07〜。三匹の子豚をネット犯罪の話にした）の方 [13]。
+</li><li>【事実】もう一つの新シリーズ「心霊解明」（2025-11〜）。お菊人形の回では、視聴者の相談から始め、民俗学の論文、1か月の再現実験、人形師への取材を重ねた。最後は、同じ型の話が多いのは再現性があるからだ、という趣旨で締めている [14]。
+</li><li>【事実】本でも型を借りる。空想の設定を科学で読み解く本（星雲賞）、毒のキャラクター図鑑、悪魔が教える薬の本などがある [15]。科学そのものに善悪はない、と伝えるために、わざと悪ぶった入口を選んだ、と本人が書いている [18]。
+</li></ul>
+<h3>4. 褒めるもの・嫌うもの</h3>
+<ul><li>【事実】面白い物語とは、状況がすぐ分かり、気持ちを乗せられ、意外な展開とオチを経て余韻が残るもの。説明だらけやキャラクターのぶれは面白さを損なう。科学の正しさは面白さを支えるのが役目だが、作品が自分で決めたルールを破るのはだめ [16]。
+</li><li>【事実】褒める漫画は、作者が深く調べた細部を、いちいち説明しない作品 [20]。自由研究コンテストの講評では、50円玉とたこ糸で重力加速度を正確に出した研究を、安くて誰でもできるのに結果が確かだと評価している（話者は推定）[25]。
+</li><li>【事実】本人のコラムの見出しは「行動原理は『おもしろい』かどうか」[17]。しっかり準備してくる相手には本気で応じ、ネタだけただで持っていく相手には雑に応じる [17]。
+</li><li>【事実】嫌うのは、ニセ科学で稼ぐ商売、陰謀論、オカルトを上塗りする解説。一方で、娯楽としての怪談は好きで、害のない怪談と人に害を与えるオカルトをはっきり分ける [14][21]。受験向けの詰め込み教育と教科書も、長年批判している [19]。
+</li></ul>
+<h3>5. ゲーム・教育・子ども・ファン</h3>
+<ul><li>【事実】ゲーム好きで、ゲーム有害論やゲーム条例に反論する動画がある。科学を覚えるのはゲームのルールを覚えるのと同じ、勉強は楽しく作られていないから工夫が要る、押すだけの放置ゲームはパチンコに近い、という趣旨の発言をしている（自動字幕で確認、話者は推定）[22]。別の座談会では、漫画・アニメ・ゲームは人の想像力の最先端だから参考になる、という発言もある（話者は推定）[23]。
+</li><li>【事実】子どもには体験が大事だと書き、赤キャベツで色が変わる実験を紹介している [28]。授業での利用や編集は歓迎、一般公開や有料講習での利用は不可 [24]。
+</li><li>【事実】ファン活動ガイドライン [24] の要点。
+<ul><li>歓迎：感想、自作漫画、独自のイラスト、安全な実験の再現、非公式と明記した同人誌、コスプレ。
+</li><li>禁止：転載、書き起こし、公式画像や音声の流用、営利利用や公式と誤解させること、政治や宗教との結びつけ、メンバーの素性を探ること。
+</li><li>その他：動画で紹介したアイデアは出典を示せば使える。外部の切り抜き動画は、現在断っている [6]。
+</li></ul>
+</li><li>【事実】視聴者参加の企画：2022年の自由研究動画コンテスト（応募100件超）[25]、超会議のポスターイラスト募集（2025）[26]、お悩み相談の動画化 [14]。ファンアートの「#薬理怪画」は直近だけで約290件ある [27]。
+</li></ul>
+<h3>6. まとめ</h3>
+<h4>面白がるツボ</h4>
+<ol><li>矛盾から入り、見方がひっくり返る（被害者が人間とは限らない）[4][6]
+</li><li>知識があれば近道、なくても積み重ねで届く [4][9]
+</li><li>情報の駆け引き（パネル選び、隠すか公開するか、早い者勝ち）[2]
+</li><li>ボケを科学で受けて返す [3][29]
+</li><li>答えの先の「へえ」（後日談と歴史の小話）[5]
+</li><li>科学を器に入れる（一人称の被害者、キャラクター化、悪役）[15][18]
+</li><li>昔話・怪談・空想の型を借りる [12][13][14]
+</li><li>再現性のある「よくある話」を検証する [14]
+</li><li>クイズ化し、答え合わせを体験にする（ドズル社側はマイクラ内の実験で正解を確かめた）[4][7]
+</li><li>相手の土俵に合わせて作る（GENKI LABO専用の問題など）[3][4]
+</li><li>安くて誰でも試せるのに、結果は本物 [25][28]
+</li><li>調べた細部を説明しすぎない [16][20]
+</li></ol>
+<h4>避けた方がいいこと</h4>
+<ol><li>ニセ科学や健康デマを本当らしく見せる [21]
+</li><li>危険な手順を再現できるほど書く（「なぜ死んだか」までにとどめる）【推測】
+</li><li>知識でも積み重ねでも届かない、理不尽な当てもの [9]
+</li><li>長い説明、ルールの後出しや破り [16]
+</li><li>押すだけの作業になるゲーム性 [22]
+</li><li>過去回の書き起こしや音声の流用、公式と誤解される見せ方 [24]
+</li><li>中身の決まっていない頼み方や、ネタだけもらう相談 [17]
+</li><li>政治・宗教・メンバーの素性に触れること [24]
+</li></ol>
+<h4>提案の見せ方（【推測】）</h4>
+<ul><li>1件1枚で、遊べる状態にして出す。矛盾の一文、パネル6枚の案（うち1枚はサイエンスヒント）、答え、答えの先の小話を載せ、静的版の解けるURLを添える。文章は短く。
+</li><li>ひねる余地を1か所だけ残す。答えの科学は固め、切り口か被害者の台詞のどちらかを「先生ならどうしますか」と空けておく [3][4]。
+</li><li>ゲームでしかできないことを見せる。AIの進行役がボケに科学で返す、隠す・公開するの駆け引き、答え合わせの体験など [4]。
+</li><li>本人の仕事に触れる。たとえば、題名の「リトマス」と赤キャベツの色変わり実験を結びつける [28]。
+</li><li>1行目に「どこが面白いか」を書く [17]。謝礼やクレジットは、profile のとおり先に示す。
+</li></ul>
+<p>未確認：本人がXで何を拡散しているか（X APIが使えなかった）。メンバー限定動画「科学監修の舞台裏」（2026-09-01）、ブロマガの後半、誕生秘話（会員限定）。コンテスト第2回が開かれたか。</p>
+<h3>出典（閲覧・取得はいずれも2026-10-02）</h3>
+<ol><li>ブロマガ「水平思考科学クイズ ジェーンドゥの死因」2021-11-25（公開部分とコメント） <a href="https://ch.nicovideo.jp/warewareda/blomaga/ar2064550" target="_blank" rel="noopener">https://ch.nicovideo.jp/warewareda/blomaga/ar2064550</a>
+</li><li>第1回 我々コラボ 2021-11-23（冒頭のルール説明、自動字幕） <a href="https://www.youtube.com/watch?v=vPmYqIKtfw4" target="_blank" rel="noopener">https://www.youtube.com/watch?v=vPmYqIKtfw4</a>
+</li><li>GENKI LABO理科準備室 コラボ前編 2025-12-19（本人の説明、自動字幕） <a href="https://www.youtube.com/watch?v=6UL1tOnJbP4" target="_blank" rel="noopener">https://www.youtube.com/watch?v=6UL1tOnJbP4</a>
+</li><li>ドズル社コラボ（本人ch）2026-09-20 <a href="https://www.youtube.com/watch?v=QJbe0zfFsrg" target="_blank" rel="noopener">https://www.youtube.com/watch?v=QJbe0zfFsrg</a> ／ドズル社側マイクラ毒クイズ 2026-09-20 <a href="https://www.youtube.com/watch?v=Q55aB238Qbo" target="_blank" rel="noopener">https://www.youtube.com/watch?v=Q55aB238Qbo</a>
+</li><li>QuizKnockコラボ 2025-08-29（自動字幕） <a href="https://www.youtube.com/watch?v=5XrleiRau-Y" target="_blank" rel="noopener">https://www.youtube.com/watch?v=5XrleiRau-Y</a>
+</li><li>ジェーンドゥ一覧（2022-01-27作成・2026-09-21更新） <a href="https://www.cl20.jp/portal/jane-doe/" target="_blank" rel="noopener">https://www.cl20.jp/portal/jane-doe/</a> ＋各動画の公開日・再生数・概要欄
+</li><li>本人チャンネル 人気順・新しい順一覧 <a href="https://www.youtube.com/@krr/videos" target="_blank" rel="noopener">https://www.youtube.com/@krr/videos</a>
+</li><li>コメント欄：舞踏会回 2022-01-27 <a href="https://www.youtube.com/watch?v=Rkgvggt2lN4" target="_blank" rel="noopener">https://www.youtube.com/watch?v=Rkgvggt2lN4</a> ／宝石回 2022-02-26 <a href="https://www.youtube.com/watch?v=dj_v-HvrOtM" target="_blank" rel="noopener">https://www.youtube.com/watch?v=dj_v-HvrOtM</a> ／アイドル回 2023-10-27 <a href="https://www.youtube.com/watch?v=eGbUru4LNS0" target="_blank" rel="noopener">https://www.youtube.com/watch?v=eGbUru4LNS0</a>
+</li><li>ファンのnote 2025-07-07 <a href="https://note.com/hikataka_rin401/n/nc880738ba5f4" target="_blank" rel="noopener">https://note.com/hikataka_rin401/n/nc880738ba5f4</a>
+</li><li>DEBONO「ジェーン・ドゥーの死因２」2024-10-10 <a href="https://de-bono.net/mondai/show/4001" target="_blank" rel="noopener">https://de-bono.net/mondai/show/4001</a>
+</li><li>うるちまい子「ジェーン・ドゥの死因」誕生秘話 2023-03-10（公開部分とコメント） <a href="https://ch.nicovideo.jp/kagaku-kaiketu/blomaga/ar2142252" target="_blank" rel="noopener">https://ch.nicovideo.jp/kagaku-kaiketu/blomaga/ar2142252</a>
+</li><li>合法昔ばなし一覧（2023-04-14作成・2025-10-18更新） <a href="https://www.cl20.jp/portal/legal-old-tales/" target="_blank" rel="noopener">https://www.cl20.jp/portal/legal-old-tales/</a> ／第1話 2018-11-22 <a href="https://www.youtube.com/watch?v=nIuBAoNvl5g" target="_blank" rel="noopener">https://www.youtube.com/watch?v=nIuBAoNvl5g</a>
+</li><li>まんが薬理昔ばなし「三匹の子豚とネット犯罪」2026-07-30 <a href="https://www.youtube.com/watch?v=0rwlbLtSgyA" target="_blank" rel="noopener">https://www.youtube.com/watch?v=0rwlbLtSgyA</a>
+</li><li>心霊解明まとめ 2026-08-15 <a href="https://www.cl20.jp/portal/haunting/" target="_blank" rel="noopener">https://www.cl20.jp/portal/haunting/</a> ／お菊人形の記事（2016-08-30初出・2026-08-16改稿） <a href="https://www.cl20.jp/portal/japanese_doll/" target="_blank" rel="noopener">https://www.cl20.jp/portal/japanese_doll/</a> ／動画 2026-08-15 <a href="https://www.youtube.com/watch?v=Br9Bb_3Uw5A" target="_blank" rel="noopener">https://www.youtube.com/watch?v=Br9Bb_3Uw5A</a>
+</li><li>書籍：アリエナクナイ科学ノ教科書 <a href="https://www.cl20.jp/portal/arienakunai_science/" target="_blank" rel="noopener">https://www.cl20.jp/portal/arienakunai_science/</a> ／毒物ずかん <a href="https://www.cl20.jp/portal/cute_poison_guide/" target="_blank" rel="noopener">https://www.cl20.jp/portal/cute_poison_guide/</a> ／悪魔が教える 願いが叶う毒と薬 <a href="https://www.cl20.jp/portal/poison_and_drag/" target="_blank" rel="noopener">https://www.cl20.jp/portal/poison_and_drag/</a>
+</li><li>俺コラム「物語の『おもしろさ』とは何か」（2016-03初出・2025-08-31改稿、本人のX投稿2022-01-26を含む） <a href="https://www.cl20.jp/portal/helldoctor-column-23/" target="_blank" rel="noopener">https://www.cl20.jp/portal/helldoctor-column-23/</a>
+</li><li>俺コラム「座右の銘と仕事の話」（2013-12-03初出・2026-07-14改稿） <a href="https://www.cl20.jp/portal/helldoctor-column-18/" target="_blank" rel="noopener">https://www.cl20.jp/portal/helldoctor-column-18/</a>
+</li><li>俺コラム「アリエナイ理科振り返り」（2018-10-30初出） <a href="https://www.cl20.jp/portal/helldoctor-column-29/" target="_blank" rel="noopener">https://www.cl20.jp/portal/helldoctor-column-29/</a>
+</li><li>俺コラム「教育現場のゲンバ」（2019-10-29初出・2026-09-27改稿） <a href="https://www.cl20.jp/portal/helldoctor-column-24/" target="_blank" rel="noopener">https://www.cl20.jp/portal/helldoctor-column-24/</a>
+</li><li>イチオシ漫画紹介 第1回 2019-01-18 <a href="https://www.cl20.jp/portal/kurare_selection_comics_01/" target="_blank" rel="noopener">https://www.cl20.jp/portal/kurare_selection_comics_01/</a>
+</li><li>ニセ科学の三叉路（2019-10-22初出・2026-01-27改稿） <a href="https://www.cl20.jp/portal/crossroad-of-fake-science/" target="_blank" rel="noopener">https://www.cl20.jp/portal/crossroad-of-fake-science/</a> ／陰謀論の罠（2021-04-15初出・2026-01-26改稿） <a href="https://www.cl20.jp/portal/fake-sc-trap/" target="_blank" rel="noopener">https://www.cl20.jp/portal/fake-sc-trap/</a>
+</li><li>動画「ゲーム脳問題って存在するの？」2022-11-26 <a href="https://www.youtube.com/watch?v=DWEUmpFt2cs" target="_blank" rel="noopener">https://www.youtube.com/watch?v=DWEUmpFt2cs</a> ／「アニメゲーム有害論は疫学で論破できる」2022-06-29 <a href="https://www.youtube.com/watch?v=lHnblpw4YFU" target="_blank" rel="noopener">https://www.youtube.com/watch?v=lHnblpw4YFU</a> ／「ゲーム条例」2025-06-14 <a href="https://www.youtube.com/watch?v=y88fFsuIQEM" target="_blank" rel="noopener">https://www.youtube.com/watch?v=y88fFsuIQEM</a>
+</li><li>動画「薬理凶室のアイディアはどこから?」2026-07-01 <a href="https://www.youtube.com/watch?v=fQwTqtXcvBM" target="_blank" rel="noopener">https://www.youtube.com/watch?v=fQwTqtXcvBM</a>
+</li><li>ファン活動ガイドライン 2025-05-23 <a href="https://www.cl20.jp/portal/guideline/" target="_blank" rel="noopener">https://www.cl20.jp/portal/guideline/</a> ／教育目的利用ガイドライン 2024-12-12 <a href="https://www.cl20.jp/portal/educational-purpose-guideline/" target="_blank" rel="noopener">https://www.cl20.jp/portal/educational-purpose-guideline/</a>
+</li><li>自由研究動画コンテスト 特別の部 2022-11-23 <a href="https://www.cl20.jp/portal/macsc-sp2/" target="_blank" rel="noopener">https://www.cl20.jp/portal/macsc-sp2/</a> ／授賞式 高校生以下の部 2022-10-09 <a href="https://www.youtube.com/watch?v=dwkq4vCdzLs" target="_blank" rel="noopener">https://www.youtube.com/watch?v=dwkq4vCdzLs</a>
+</li><li>超会議2025 ポスターイラスト募集 2025-02-07 <a href="https://www.cl20.jp/portal/nico2025/" target="_blank" rel="noopener">https://www.cl20.jp/portal/nico2025/</a>
+</li><li>Yahoo!リアルタイム検索（2026-09-20〜10-02の投稿：ドズル社回への反応、#薬理怪画） <a href="https://search.yahoo.co.jp/realtime" target="_blank" rel="noopener">https://search.yahoo.co.jp/realtime</a>
+</li><li>キッチンサイエンス（2014-11初出・2026-09-22改稿） <a href="https://www.cl20.jp/portal/kitchen-science-re/" target="_blank" rel="noopener">https://www.cl20.jp/portal/kitchen-science-re/</a>
+</li><li>薬理大喜利まとめ 2025-09-22 <a href="https://www.cl20.jp/portal/oogiri/" target="_blank" rel="noopener">https://www.cl20.jp/portal/oogiri/</a>
+</li></ol>
+  </details>
+</section>
+
+</main>
+<footer><div class="wrap">更新：2026-10-02 ／ リトマス審問 企画ノート（内部資料・公開しない）</div></footer>
+</body>
+</html>

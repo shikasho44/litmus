@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>収益化の提案｜リトマス審問 企画ノート</title>
+<!--
+  収益化の提案（S-001）。企画ノートのひな形（docs/ideas/_template.html）と同じ見た目。
+  - 1ファイルで開ける。外部の読み込みはしない（下の計算機の script もこのファイルの中だけ）。
+  - 数字の【試算】は「4. 試算」の前提から計算した（作業用の計算は担当の作業メモにある）。
+  - 内部資料。お金の交渉に関わる中身を含むので公開しない。
+-->
+<style>
+  :root {
+    --ink: #0B0D12; --ink-2: #141821; --ink-3: #1E2430;
+    --bone: #F2EFE6; --bone-2: #D8D3C4; --bone-3: #A7A08F;
+    --line: rgba(242, 239, 230, 0.14); --line-2: rgba(242, 239, 230, 0.26);
+    --formalin: #C6FF3D; --formalin-deep: #6E9A0C;
+    --alarm: #FF2E63; --cyan: #3DE0FF; --amber: #FFB020; --violet: #9B6BFF; --mute: #8A93A6;
+    --sans: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body { margin: 0; background: var(--ink); color: var(--bone-2); font-family: var(--sans); font-size: 16px; line-height: 1.85; letter-spacing: .02em; }
+  a { color: var(--cyan); text-underline-offset: 3px; }
+  strong { color: var(--bone); }
+  code { font-family: var(--mono); font-size: .86em; background: var(--ink-3); border: 1px solid var(--line); padding: .05em .4em; border-radius: 3px; color: var(--bone); word-break: break-word; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header.hero { border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(198,255,61,.06), transparent 70%); }
+  header.hero .wrap { padding-top: 36px; padding-bottom: 28px; }
+  .back { font-size: 13px; }
+  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: .24em; color: var(--formalin); text-transform: uppercase; margin-top: 12px; }
+  h1 { color: var(--bone); font-size: clamp(26px, 5vw, 40px); line-height: 1.3; margin: 8px 0 10px; }
+  .lead { max-width: 780px; font-size: 17px; margin: 0; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .badge { font-family: var(--mono); font-size: 12px; padding: 3px 10px; border: 1px solid var(--line-2); background: var(--ink-2); color: var(--bone-2); }
+  .badge.ok { border-color: var(--formalin-deep); color: var(--formalin); }
+  .badge.warn { border-color: rgba(255,176,32,.5); color: var(--amber); }
+  .badge.no { border-color: rgba(255,46,99,.5); color: var(--alarm); }
+  section { padding: 36px 0 4px; }
+  h2 { color: var(--bone); font-size: clamp(21px, 3.4vw, 26px); line-height: 1.4; margin: 0 0 8px; }
+  h2 .en { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .28em; color: var(--formalin); font-weight: 400; margin-bottom: 4px; }
+  h3 { color: var(--bone); font-size: 17px; margin: 24px 0 8px; padding-left: 10px; border-left: 4px solid var(--formalin); line-height: 1.5; }
+  p { margin: 8px 0; }
+  ul, ol { padding-left: 1.3em; margin: 8px 0; }
+  li + li { margin-top: 4px; }
+  .note { font-size: 14px; color: var(--bone-3); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
+  .card { background: var(--ink-2); border: 1px solid var(--line); padding: 16px 18px; }
+  .card h4 { margin: 0 0 6px; color: var(--bone); font-size: 16px; }
+  .card .tag { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; color: var(--formalin); }
+  .callout { border: 1px solid var(--line-2); border-left: 4px solid var(--cyan); background: var(--ink-2); padding: 12px 16px; margin: 14px 0; }
+  .callout.kurare { border-left-color: var(--violet); }
+  .callout.kurare::before { content: 'くられ先生のツボ'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--violet); margin-bottom: 4px; }
+  .callout.warn { border-left-color: var(--amber); }
+  .callout.warn::before { content: '気をつけること'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--amber); margin-bottom: 4px; }
+  .callout.next { border-left-color: var(--formalin); }
+  .callout.next::before { content: '次の一歩'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--formalin); margin-bottom: 4px; }
+  .table-wrap { overflow-x: auto; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 560px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--bone); background: var(--ink-3); font-weight: 700; white-space: nowrap; }
+  details { background: var(--ink-2); border: 1px solid var(--line); padding: 10px 14px; margin: 10px 0; }
+  details summary { cursor: pointer; color: var(--bone); }
+  footer { border-top: 1px solid var(--line); margin-top: 48px; padding: 18px 0 40px; font-size: 13px; color: var(--mute); }
+  @media (max-width: 520px) { body { font-size: 15px; } .lead { font-size: 16px; } }
+
+  /* このページで足したもの（色と形はひな形のものだけを使う） */
+  .toc { font-size: 14px; margin-top: 14px; color: var(--bone-3); }
+  .toc a { margin-right: 10px; white-space: nowrap; }
+  .conclusion li { font-size: 17px; }
+  .conclusion li + li { margin-top: 8px; }
+  .callout.kurare.money::before { content: 'くられ先生の考え方（お金と仕事）'; }
+  .callout.rule::before { content: '売らないもの'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--cyan); margin-bottom: 4px; }
+  table.wide { min-width: 900px; font-size: 14px; }
+  table.wide th:nth-child(6), table.wide th:nth-child(7) { min-width: 108px; }
+  td .badge { display: inline-block; white-space: normal; line-height: 1.5; }
+  table.mid { min-width: 680px; }
+  td.n, th.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .plus { color: var(--formalin); }
+  .minus { color: var(--alarm); }
+  .sum td { border-top: 1px solid var(--line-2); color: var(--bone); font-weight: 700; }
+  .est { font-family: var(--mono); font-size: 12px; color: var(--amber); }
+  details > *:not(summary) { margin-top: 8px; }
+  .calc { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 14px; margin: 12px 0; }
+  .calc label { display: flex; flex-direction: column; font-size: 14px; color: var(--bone-3); }
+  .calc input { margin-top: 4px; background: var(--ink-3); color: var(--bone); border: 1px solid var(--line-2); padding: 6px 8px; font: inherit; font-size: 15px; width: 100%; }
+  .calc input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+  ol.src { font-size: 13px; color: var(--bone-3); padding-left: 2em; }
+  ol.src li { word-break: break-word; }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <a class="back" href="../ideas/index.html">← 企画ノートの台帳へ</a>
+    <div class="kicker">STRATEGY · 収益化</div>
+    <h1>収益化の提案</h1>
+    <p class="lead">無料で遊べる入口は残したまま、新しい事件を「買い切り」で売り、学校・自治体の仕事で支える形をおすすめします。広告は、遊びを止めない場所にだけ置きます。</p>
+    <div class="badges"><span class="badge">番号：S-001</span><span class="badge">種類：戦略</span><span class="badge warn">状態：提案（ヨンサンさんの判断待ち）</span><span class="badge">数字：【試算】を含む</span></div>
+    <p class="toc">目次：<a href="#conclusion">1 結論</a><a href="#facts">2 前提</a><a href="#options">3 収入の柱</a><a href="#numbers">4 試算</a><a href="#kurare">5 先生との分け方</a><a href="#plan">6 計画</a><a href="#prep">7 準備</a><a href="#risks">8 危ないところ</a><a href="#next">9 次の一歩</a><a href="#sources">出典</a></p>
+  </div>
+</header>
+<main class="wrap">
+
+  <!-- 1 -->
+  <section id="conclusion"><h2><span class="en">CONCLUSION</span>1. 結論（いちばんおすすめの形）</h2>
+    <ol class="conclusion">
+      <li><strong>今の8件は無料のまま。新しい事件を「事件ファイル」として買い切りで売ります。</strong>最初の目玉は、くられ先生の10件です（1,500円前後。1件は無料で試せる形）。</li>
+      <li><strong>広告は補助です。</strong>解いた後の画面と、見たい人だけの「スペシャルヒント」に限ります。<span class="est">【試算】</span>広告の収入は AI の費用の2〜5割ほどです。<strong>広告だけだと、遊ぶ人が増えるほど赤字が増えます。</strong></li>
+      <li><strong>もう一つの柱は学校・自治体です。</strong>出前授業や探究学習の教材として売ります。1件で数万円になり、ヨンサンさんのつながりを生かせるので、初期費用 約30万円の回収にいちばん確実な道です。</li>
+      <li><strong>くられ先生には「先生の事件パックの売上（決済手数料を引いた額）の30%」をお分けする案を、売り始める1か月前に</strong>、数字と覚書の下書きつきで出します。今は交渉しません。</li>
+      <li>正式公開は無料のまま出します。遊ばれ方（完走率・1事件の AI 費用）を測ってから、有料を始めます（3か月後めど）。</li>
+    </ol>
+    <div class="grid">
+      <div class="card"><div class="tag">PILLAR 1</div><h4>事件ファイル（買い切り）</h4><p>3〜5件で数百円、先生の10件は1,500円前後。購入コードで開く。アカウントは作らない。</p></div>
+      <div class="card"><div class="tag">PILLAR 2</div><h4>学校・自治体</h4><p>出前授業（1コマ4.5万円〜が目安）、授業用のライセンス、イベント。死を扱わない事件と「ツクール」で組む。</p></div>
+      <div class="card"><div class="tag">SUPPORT</div><h4>広告・配信・先生との協業</h4><p>解いた後の広告とスペシャルヒント。配信者向けの決まりとモード。先生のチャンネルやファンクラブとの連携。</p></div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="facts"><h2><span class="en">FACTS</span>2. いまの前提</h2>
+    <ul>
+      <li>事件は8件（入門4件・本編4件。うち殺人1件）。今は全部無料で遊べます（PREVIEW）。</li>
+      <li>くられ先生が、過去回をアレンジした事件を約10件書いてくださいます。監修と合わせて費用は10万円です（1回きり。「費用は変更無し」）。売上の分け方は決まっていません。</li>
+      <li>手描きのキービジュアルは約20万円で打診中です（未確定）。合わせると<strong>初期費用は約30万円</strong>です。</li>
+      <li>AI の判定は1問 約0.045円、1事件で1〜3円です。サーバーは Cloudflare Workers Paid（月5ドル。サイトと共用）。開発はヨンサンさんと AI です。</li>
+      <li>方針：捜査中に広告は出しません。広告は、解いた後か、見たい人だけです。</li>
+      <li>遊ぶ人：くられ先生のファン、家族・子ども、配信者（VTuber・実況）、学校。</li>
+      <li>参考：先生の公開料金では、トリック考案は1件5万円〜です［34］。10件で10万円は、それと比べてかなり抑えていただいています。</li>
+    </ul>
+    <div class="callout warn">いまは AI の1日の上限が1ドル（約110事件ぶん）です。超えると、その日は無料の簡易判定（正答率 約73%）に切り替わります。1人が月3件・1件30問遊ぶとすると、1か月に1,000人を超えるあたりで足りなくなります<span class="est">【試算】</span>。上限は、収入の仕組みとセットで上げます（「7. 必要な準備」）。</div>
+  </section>
+
+  <!-- 3 -->
+  <section id="options"><h2><span class="en">OPTIONS</span>3. 収入の柱の候補</h2>
+    <p>10の候補を比べました。「見込み」は<span class="est">【試算】</span>です（前提は「4. 試算」）。手間は、AI と一緒に作る前提で S＝数日、M＝1〜2週間、L＝1か月以上。</p>
+    <div class="table-wrap"><table class="wide">
+      <thead><tr><th>候補</th><th>しくみ</th><th>見込み</th><th>手間</th><th>危うさ</th><th>先生と</th><th>教育と</th></tr></thead>
+      <tbody>
+        <tr><td><strong>① 解いた後の広告</strong></td><td>結果画面と科学の解説にだけ出す。</td><td>小。5,000人で月 約5千円。</td><td>S</td><td>子どもに合わない広告。審査に通らないことも。</td><td><span class="badge">ふつう</span></td><td><span class="badge warn">学校版は出さない</span></td></tr>
+        <tr><td><strong>② スペシャルヒント</strong>（見たい人だけの動画広告）</td><td>動画広告を見ると、殺人か事故かだけが分かる。対戦では使えない。</td><td>小。1回 約0.5円。5,000人で月 約1千円。</td><td>M</td><td>Web の動画広告は申し込み制で、承認されないことも。見終わったかをサーバーで確かめにくい。</td><td><span class="badge ok">合う</span></td><td><span class="badge warn">学校版は止める</span></td></tr>
+        <tr><td><strong>③ 事件パック</strong>（買い切り）</td><td>3〜5件で600〜900円。先生の10件は1,500円前後。購入コードで開く。</td><td><strong>中〜大</strong>。5,000人×2%×1,000円＝月10万円。</td><td>M</td><td>「無料だったのに」の反発（今の8件は無料のまま）。ネタばれ。</td><td><span class="badge ok">合う</span></td><td><span class="badge ok">コードをまとめ売り</span></td></tr>
+        <tr><td><strong>④ 全部入りの買い切り</strong>（フル版）</td><td>本編と、決めた日までの新作を1本で（1,500〜2,500円）。</td><td>中。売上が最初に偏る。</td><td>S〜M</td><td>後の新作の資金が入らない。約束が重い。</td><td><span class="badge">ふつう</span></td><td>—</td></tr>
+        <tr><td><strong>⑤ 月額・シーズンパス</strong></td><td>月300〜500円で新作。または決まった数の新作を前払い。</td><td>新作のペースしだい。</td><td>L</td><td>新作が遅れると解約・返金。月額は表示と解約の決まりが細かい。</td><td><span class="badge warn">注意</span></td><td>—</td></tr>
+        <tr><td><strong>⑥ 学校・塾・自治体・科学館</strong></td><td>出前授業、授業用ライセンス、イベント、「ツクール」で生徒が謎を作る探究。</td><td><strong>1件 数万円〜</strong>（出前授業1時限 45,000円・税別の例［16］）。</td><td>M＋人の時間</td><td>死の題材への配慮。決まるまで時間がかかる。生徒の入力の扱い。</td><td><span class="badge ok">合う</span></td><td><span class="badge ok">とても合う</span></td></tr>
+        <tr><td><strong>⑦ 薬理凶室との協業</strong></td><td>ファンクラブ限定の事件コード、グッズ、イベントでの公開審問、先生のチャンネルでの紹介。</td><td>直接は小〜中。宣伝の力は最大。</td><td>M</td><td>先生の負担。名前の使い方の行き違い。</td><td><span class="badge ok">合う（頼みすぎない）</span></td><td><span class="badge ok">合う</span></td></tr>
+        <tr><td><strong>⑧ 配信者・クリエイター</strong></td><td>配信の決まり（収益化OK）、配信モード、有料パックのコードを配信者に無料で配る。</td><td>間接（宣伝）。</td><td>S</td><td>有料の事件のネタばれ。</td><td><span class="badge ok">合う</span></td><td>—</td></tr>
+        <tr><td><strong>⑨ クラウドファンディング</strong></td><td>手描きの絵と、先生の事件パックの先行購入。</td><td>目標50万円で手取り 約30万円。</td><td>M〜L</td><td>失敗が公開で残る。先生と絵描きさんの承諾と手間。</td><td><span class="badge warn">先生が乗り気なら</span></td><td><span class="badge">寄贈枠なら合う</span></td></tr>
+        <tr><td><strong>⑩ アプリストア</strong>（PWA を包む）</td><td>Google Play・App Store で配る。</td><td>小〜中（見つけてもらいやすさ）。</td><td>L</td><td>アプリ内の売上に手数料（条件で10〜30%ほど）。年齢区分が高く出るおそれ。</td><td><span class="badge">ふつう</span></td><td><span class="badge">保護者は安心</span></td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>まとめ：</strong>柱にするのは ③ と ⑥。補助は ①②⑦⑧。④⑤⑩ は数字を見てから。⑨ は先生が乗り気なときだけ。</p>
+    <div class="callout rule">質問枠・ランク・ヒントの回数を、お金で売りません（解く力を買わせない。対戦と名探偵度数の公平を守る）。ガチャや、使うと減るアイテムも売りません。子どもと家庭の安心のためです。押すだけの作業になるゲームを好まない、先生の考え［35］にも合わせます。</div>
+
+    <details><summary>各候補のくわしいメモ（出典つき）</summary>
+      <h3>① 解いた後の広告</h3>
+      <ul>
+        <li>Web 広告の目安は、1ページの表示あたり0.2〜0.5円です［1］。10万ページで月3万円という目安もあります［2］。</li>
+        <li>子ども向けとして扱うと、興味に合わせた広告が止まり、単価はさらに下がります［8］。死や毒を扱うので、審査で慎重に見られるおそれがあります（血の描写や手順は書いていないので、通る見込みはあります）［8］。</li>
+        <li>今の画面は安全のため外部の読み込みを止めています（CSP）。広告を入れるなら、この設定とプライバシーポリシーの書き換えが要ります。</li>
+      </ul>
+      <h3>② スペシャルヒント</h3>
+      <ul>
+        <li>Web で「見るとごほうび」の動画広告を出す道は3つです。Google の H5 Games Ads（ベータ版・申し込み制。AdSense の承認が前提で、承認は保証されない）［5］、Ad Manager の Web 向けリワード広告［6］、AdSense の Offerwall（2026-04-13に一般提供。ページ単位で鍵をかける形なので、1画面で動くこのゲームには合わせにくい）［7］。</li>
+        <li>決まり：見るかどうかは利用者が選ぶ。ごほうびにお金の価値を持たせない［5］。</li>
+        <li>単価：日本のスマホアプリの動画リワードは1,000回あたり約10.8ドル［3］。Web はこれより低めと見ました。開発者の実例で1再生0.5円［4］。</li>
+        <li>Web では「最後まで見たか」をサーバーで確かめにくいです。ずるされても困らない中身（死の種類だけ）にしておくのが合います。対戦では使えないようにし、初回の解決の記録には「ヒントあり」の印を付けます。</li>
+        <li>承認が取れないときの代わり：「捜査10分で解放」にする、または応援パス（買い切り・広告なし）で開ける。</li>
+      </ul>
+      <h3>③ 事件パック</h3>
+      <ul>
+        <li>似た商品の値段：Steam の追加事件は3件で700円［10］。マダミスアプリ「ウズ」の1本は400〜800円［11］。AI が出題者の『みんなでウミガメのスープ』は880円［12］。AI のウミガメのスープのアプリでは「広告なし」が300円［13］、脱出ゲームのアプリではヒント用のコインが180円〜、広告なしが2,880円［14］。</li>
+        <li>アカウントは作らず、「購入コード」で開く形をおすすめします。今の仕組み（サーバーと D1）に足しやすく、学校・イベント・先生のファンクラブにもコードでまとめて渡せます。</li>
+        <li>答えはサーバーにだけ置いているので、コードがないと有料の事件は遊べません。答えがブラウザに入る静的版には、有料の事件を入れません。</li>
+        <li>小さく足せるもの：応援パス（買い切り500円前後。広告なし、スペシャルヒントも広告なし、クレジットにお名前）。AI のウミガメのスープのアプリの「広告なし300円」が参考です［13］。</li>
+      </ul>
+      <h3>④ 全部入りの買い切り</h3>
+      <ul><li>分かりやすい反面、あとで作る事件の資金が入りません。「◯月までの新作込み」と約束すると、遅れたときの対応が重くなります。</li></ul>
+      <h3>⑤ 月額・シーズンパス</h3>
+      <ul><li>月額には「定期購入」の表示と解約の決まりがあります［22］。決済会社の月額機能は、売上の0.7%が上乗せです［18］。毎月2件以上の新作を出せるようになってからで十分です。先に出すなら、決まった数の新作をまとめて前払いする「シーズンパス」（買い切り）の方が扱いやすいです。</li></ul>
+      <h3>⑥ 学校・塾・自治体・科学館</h3>
+      <ul>
+        <li>価格の目安<span class="est">【試算】</span>：出前授業 1コマ4.5万円〜（税別）＋交通費［16］。授業用ライセンス 1クラス 年1.5万円、または生徒1人 年500〜1,000円（探究教材の例 生徒1人 年1,430円［15］、米国の脱出型教材 1クラス 年99ドル〜［17］）。自治体・図書館・科学館のイベント 1日10〜20万円（公開審問2〜3回、運営込み）。協賛の事件（安全の啓発など）1件20〜50万円（「PR」の表示が必要［30］）。</li>
+        <li>学校版の中身：「もの」の事件（牛乳びん・雪だるま・水のそばの渇き）と、応急手当を学べる CASE 01 が軸です。殺人の事件は外します。生徒が謎を作る「ツクール」は探究学習に合います。ツクールは作るたびに AI の費用がかかるので、まず学校向け（ライセンスに費用を含める）で始め、一般向けの「作る枠」は後にします。</li>
+        <li>強み：学校は毎年生徒が入れ替わるので、同じ事件を毎年使えます（一度きりの弱点が消える）。AI が自由に話さない作り（返事は書き溜めた台詞）は、学校に説明しやすい点です。</li>
+        <li>注意：先生の「教育目的利用ガイドライン」は、会費を取る講習での利用を認めていません［33］。先生の事件を有料の授業で使うなら、覚書で別に決めます（または学校版はヨンサンさんの事件で組みます）。</li>
+      </ul>
+      <h3>⑦ 薬理凶室との協業</h3>
+      <ul>
+        <li>「ジェーンドゥの死因」は先生のチャンネルでいちばん見られているシリーズで（人気上位15本のうち10本）、視聴者から「商品化してほしい」という声もあります［35］。</li>
+        <li>ファンクラブ会員だけが遊べる事件のコードは、先生の有料チャンネルの特典になります。グッズは手描きの絵ができてから（AI 絵のグッズは逆効果になりやすい）。イベントでは、大きな画面でみんなで質問する「公開審問」ができます。</li>
+        <li>どれも、先生に作業を頼まず、こちらで用意して「使ってよいか」だけ伺う形にします。</li>
+      </ul>
+      <h3>⑧ 配信者・クリエイター</h3>
+      <ul><li>配信の決まり（収益化OK・ネタばれの配慮のお願い）を明記します。部屋コードを隠す仕組みはもうあります。有料パックのコードを配信者に無料で配るのがいちばん簡単です。売れたら1〜2割を返す紹介料は、お金のやりとりが増えるので後にします。</li></ul>
+      <h3>⑨ クラウドファンディング</h3>
+      <ul><li>CAMPFIRE の手数料は17%（税別）です［19］。目標50万円なら、手数料（税込 約9.4万円）とお返しの原価（約10万円と仮定）を引いて手取り 約30万円。失敗は公開で残ります。先生は、書類や手続きが続く仕事を好まれません［34］。</li></ul>
+      <h3>⑩ アプリストア</h3>
+      <ul><li>日本では2025-12-18から、アプリの外での購入への案内などが認められました。手数料は条件で10〜30%ほどです［20］。登録料は Apple が年99ドル、Google が25ドル（1回）です［21］。似た AI のウミガメのスープのアプリに「18+」のものがあります［13］。Web で売れると分かってから、まず Google Play で試すのが安全です。</li></ul>
+    </details>
+  </section>
+
+  <!-- 4 -->
+  <section id="numbers"><h2><span class="en">NUMBERS</span>4. 試算</h2>
+    <p>ここの数字はすべて<span class="est">【試算】</span>です。前提を変えると大きく動きます。下の計算機で、数字を変えて試せます。</p>
+
+    <p><strong>おもな前提：</strong>1人が月3件遊ぶ。完走率60%。1事件の AI 費用2円（実際は1〜3円。1ドル150円）。広告は1回解くごとに約0.6円、スペシャルヒントは1回0.5円。その月に遊んだ人の1%／2%／3%が、平均1,000円のパックを買う。決済手数料3.6%。くられ先生へ30%。消費税と人の作業時間は入れていません。</p>
+    <details><summary>前提の表（置いた数字・理由・出どころ）</summary>
+    <div class="table-wrap"><table class="mid">
+      <thead><tr><th>項目</th><th>置いた数字</th><th>理由・出どころ</th></tr></thead>
+      <tbody>
+        <tr><td>1か月に遊ぶ人</td><td>控えめ 1,000人／ふつう 5,000人／うまくいった 20,000人</td><td>先生のチャンネル登録者（約39万人）の約0.3%／1.3%／5%</td></tr>
+        <tr><td>1人あたりの事件</td><td>月3件</td><td>新しい人は数件、続けている人は新作だけ、の平均</td></tr>
+        <tr><td>完走率</td><td>60%</td><td>入門は高く、本編は低い</td></tr>
+        <tr><td>AI の費用</td><td>1事件2円</td><td>実際は1〜3円（docs/ai.md）。少し高めに置いた</td></tr>
+        <tr><td>サーバー</td><td>月750円</td><td>Workers Paid 5ドル×150円（サイトと共用なので実際はもっと少ない）</td></tr>
+        <tr><td>解いた後の広告</td><td>1回解くごとに2回表示、1回0.3円</td><td>Web の目安 1表示0.2〜0.5円［1］</td></tr>
+        <tr><td>スペシャルヒント</td><td>事件の15%で1回、1回0.5円</td><td>開発者の実例 1再生0.5円［4］。アプリの相場より低めに置いた［3］</td></tr>
+        <tr><td>有料パック</td><td>その月に遊んだ人の1%／2%／3%が買う。平均1,000円</td><td>スマホゲームで課金する人は、多くのジャンルで1%前後（上位の RPG で3%）［9］。ファンが多いので少し上に置いた</td></tr>
+        <tr><td>決済手数料</td><td>3.6%</td><td>Stripe のカード［18］</td></tr>
+        <tr><td>くられ先生へ</td><td>パックの売上（決済手数料を引いた額）の30%</td><td>売上がすべて先生のパックと仮定（ヨンサンさんに厳しめ）</td></tr>
+        <tr><td>入れていないもの</td><td colspan="2">消費税（課税事業者なら売上の約9%）、ヨンサンさんの作業時間、絵の追加、学校の仕事（あとで別に足す）</td></tr>
+      </tbody>
+    </table></div>
+    </details>
+
+    <h3>1か月の結果 <span class="est">【試算】</span></h3>
+    <div class="table-wrap"><table class="mid">
+      <thead><tr><th></th><th class="n">控えめ（1,000人）</th><th class="n">ふつう（5,000人）</th><th class="n">うまくいった（20,000人）</th></tr></thead>
+      <tbody>
+        <tr><td>事件の開始</td><td class="n">3,000件</td><td class="n">15,000件</td><td class="n">60,000件</td></tr>
+        <tr><td>広告の収入</td><td class="n plus">+1,305円</td><td class="n plus">+6,525円</td><td class="n plus">+26,100円</td></tr>
+        <tr><td>パックの売上</td><td class="n plus">+10,000円（10本）</td><td class="n plus">+100,000円（100本）</td><td class="n plus">+600,000円（600本）</td></tr>
+        <tr><td>決済手数料</td><td class="n minus">−360円</td><td class="n minus">−3,600円</td><td class="n minus">−21,600円</td></tr>
+        <tr><td>くられ先生へ（30%）</td><td class="n minus">−2,892円</td><td class="n minus">−28,920円</td><td class="n minus">−173,520円</td></tr>
+        <tr><td>AI の費用</td><td class="n minus">−6,000円</td><td class="n minus">−30,000円</td><td class="n minus">−120,000円</td></tr>
+        <tr><td>サーバー</td><td class="n minus">−750円</td><td class="n minus">−750円</td><td class="n minus">−750円</td></tr>
+        <tr class="sum"><td>手元に残る</td><td class="n">約+1,300円</td><td class="n">約+43,300円</td><td class="n">約+310,200円</td></tr>
+        <tr class="sum"><td>初期費用30万円の回収</td><td class="n">約19年（実質、回収できない）</td><td class="n">約7か月</td><td class="n">約1か月</td></tr>
+        <tr><td><strong>広告だけなら</strong>（パックなし）</td><td class="n minus">毎月 −5,445円</td><td class="n minus">毎月 −24,225円</td><td class="n minus">毎月 −94,650円</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout warn"><strong>広告だけでは、遊ぶ人が増えるほど赤字が増えます。</strong>広告の収入は AI の費用の約2割です（単価と利用を高めに見ても約5割）。AI を安い設定にして1事件1円にしても、基本の前提では広告だけだと毎月赤字で、初期費用は回収できません（下の「数字を変えたとき」）。</div>
+
+    <h3>パックが何本売れれば回収できるか <span class="est">【試算】</span></h3>
+    <ul>
+      <li>先生の10件パック（1,500円）が1本売れると、先生へ 約434円、手元に 約992円（AI の費用を引いた後）が残ります。</li>
+      <li><strong>約100本で監修費10万円、約300本で初期費用30万円</strong>を回収できます。</li>
+      <li>5件980円のパックなら、約150本で10万円、約460本で30万円です。</li>
+    </ul>
+
+    <h3>先生が紹介してくださった月 <span class="est">【試算】</span></h3>
+    <p>先生の動画や X で紹介していただき、その月に1万人が来て、3%が1,500円のパックを買うと、その月だけで売上 約45万円（先生へ 約13万円、AI の費用 約6万円）です。<strong>先生の紹介がいちばん効きます。</strong>だからこそ、売れた分をきちんとお返しする形にします。</p>
+
+    <h3>学校の仕事を足すと <span class="est">【試算】</span></h3>
+    <p>出前授業を月1件（45,000円・税別）取れると、控えめの場合でも約6.5か月で初期費用を回収できます。ただし、ヨンサンさんの準備と授業の時間は数えていません。逆に「広告だけ＋学校1件」では、うまくいった場合でも毎月 約5万円の赤字です（AI の費用が上回る）。</p>
+
+    <details><summary>数字を変えたとき（AI の費用が1円・3円の場合）</summary>
+      <div class="table-wrap"><table class="mid">
+        <thead><tr><th>1か月の手元</th><th class="n">控えめ</th><th class="n">ふつう</th><th class="n">うまくいった</th></tr></thead>
+        <tbody>
+          <tr><td>AI 1円・広告だけ</td><td class="n minus">−2,445円</td><td class="n minus">−9,225円</td><td class="n minus">−34,650円</td></tr>
+          <tr><td>AI 1円・パックあり</td><td class="n">+4,303円（回収 約70か月）</td><td class="n">+58,255円（約5か月）</td><td class="n">+370,230円（1か月以内）</td></tr>
+          <tr><td>AI 3円・広告だけ</td><td class="n minus">−8,445円</td><td class="n minus">−39,225円</td><td class="n minus">−154,650円</td></tr>
+          <tr><td>AI 3円・パックあり</td><td class="n minus">−1,697円（回収できない）</td><td class="n">+28,255円（約11か月）</td><td class="n">+250,230円（約1.2か月）</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note">AI の費用を下げる方法：無料の事件だけ安い判定の設定にする（1問0.012円。正答率は3〜4点下がる。docs/ai.md）。決まった言い回しの質問は今も AI を呼ばない（無料）。最初の事件（CASE 01）は印象を決めるので、精度を優先したままがよいです。</p>
+    </details>
+
+    <details><summary>市場の数字（出典つき）</summary>
+      <ul>
+        <li>Web 広告：1ページの表示あたり0.2〜0.5円［1］。10万ページで月3万円［2］。</li>
+        <li>動画のごほうび広告（日本のスマホアプリ）：1,000回あたり約10.8ドル。全画面広告は約7.2ドル、帯の広告は約0.1ドル［3］。開発者の実例で1再生0.5円［4］。</li>
+        <li>Web で使える動画のごほうび広告：H5 Games Ads（ベータ・申し込み制）［5］、Ad Manager［6］、AdSense Offerwall［7］。</li>
+        <li>課金する人の割合：スマホの上位15%のゲームでも0.8%（2019年5月）。RPG 3%、戦略 2.5%、ほかのジャンルは1%を超えることが少ない［9］。</li>
+        <li>似た商品の値段：追加事件3件 700円［10］、マダミス1本 400〜800円［11］、AI 出題のウミガメのスープ 880円［12］、広告なし 300円［13］、ヒントのコイン 180円〜［14］。</li>
+        <li>学校：探究教材 生徒1人 年1,430円（税込）［15］。豊中市の科学の出前授業 1時限45,000円、2時限連続60,000円、科学教室60分60,000円（いずれも税別・2024年度）［16］。米国の脱出型教材 1クラス 年99ドル〜［17］。くられ先生の学校での講演は1日2万円＋交通費［34］。</li>
+        <li>決済：Stripe のカード3.6%、コンビニ払い3.6%（最低120円）、PayPay はデジタルの商品だと9.48%、月額機能は+0.7%［18］。</li>
+        <li>アプリ：日本の手数料は条件で10〜30%ほど［20］。登録料 Apple 年99ドル、Google 25ドル（1回）［21］。</li>
+        <li>クラウドファンディング：CAMPFIRE 17%（税別）［19］。</li>
+      </ul>
+    </details>
+
+    <details><summary>数字を変えて試す（かんたんな計算機）</summary>
+      <p class="note">はじめは「ふつう」の数字が入っています。広告・完走率・サーバーなどの前提は上の表のままです。</p>
+      <div class="calc">
+        <label>1か月に遊ぶ人（人）<input type="number" id="c-mau" value="5000" min="0" step="100" inputmode="numeric"></label>
+        <label>1人あたりの事件（件/月）<input type="number" id="c-plays" value="3" min="0" step="0.5" inputmode="decimal"></label>
+        <label>1事件の AI 費用（円）<input type="number" id="c-ai" value="2" min="0" step="0.5" inputmode="decimal"></label>
+        <label>買う人の割合（%）<input type="number" id="c-conv" value="2" min="0" step="0.5" inputmode="decimal"></label>
+        <label>平均の値段（円）<input type="number" id="c-price" value="1000" min="0" step="100" inputmode="numeric"></label>
+        <label>先生へのお分け（%）<input type="number" id="c-share" value="30" min="0" max="100" step="5" inputmode="numeric"></label>
+        <label>学校などの仕事（円/月）<input type="number" id="c-b2b" value="0" min="0" step="5000" inputmode="numeric"></label>
+      </div>
+      <div class="table-wrap"><table>
+        <tbody>
+          <tr><td>広告の収入</td><td class="n" id="o-ads">+6,525円</td></tr>
+          <tr><td>パックの売上</td><td class="n" id="o-sales">+100,000円</td></tr>
+          <tr><td>決済手数料</td><td class="n" id="o-fee">−3,600円</td></tr>
+          <tr><td>くられ先生へ</td><td class="n" id="o-kur">−28,920円</td></tr>
+          <tr><td>AI の費用</td><td class="n" id="o-ai">−30,000円</td></tr>
+          <tr><td>サーバー</td><td class="n" id="o-srv">−750円</td></tr>
+          <tr><td>学校などの仕事</td><td class="n" id="o-b2b">+0円</td></tr>
+          <tr class="sum"><td>手元に残る（1か月）</td><td class="n" id="o-net">+43,255円</td></tr>
+          <tr class="sum"><td>初期費用30万円の回収</td><td class="n" id="o-months">約6.9か月</td></tr>
+        </tbody>
+      </table></div>
+    </details>
+  </section>
+
+  <!-- 5 -->
+  <section id="kurare"><h2><span class="en">WITH DR. KURARE</span>5. くられ先生との分け方の考え方</h2>
+    <div class="callout kurare money">「科学者が安く使われることはあってはならない」とコラムに書いておられます［34］。お金とクレジットは先に、はっきり。名前の出ない報道向けの監修は受けておられない。打ち合わせより短い文章。書類は依頼する側が作る［34］。</div>
+
+    <h3>基本の考え（4つ）</h3>
+    <ol>
+      <li><strong>先生の事件が売れたら、売れた分だけお返しします。</strong>10万円の見直しではなく、上乗せのお礼です。</li>
+      <li><strong>数字を先に、短く出します。</strong>「あとで考える」にしません。</li>
+      <li><strong>書類はこちらで全部作ります。</strong>先生は「OK」と返すだけで済むようにします。</li>
+      <li><strong>お名前とリンクをはっきり出し、</strong>遊ぶ人を先生の動画・本・グッズへ送ります。</li>
+    </ol>
+
+    <h3>分け方の案</h3>
+    <div class="table-wrap"><table class="mid">
+      <thead><tr><th>案</th><th>中身</th><th>よいところ</th><th>気になるところ</th><th>おすすめ</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A</strong></td><td>先生の事件パックの売上（決済手数料を引いた額）の<strong>30%</strong></td><td>先生の作品と収入が直接つながる。計算が簡単</td><td>無料で出した先生の事件からは入らない（無料の1件は宣伝用と説明する）</td><td><span class="badge ok">まずこれ</span></td></tr>
+        <tr><td><strong>B</strong></td><td>ゲーム全体の売上の10%</td><td>いちばん簡単。全体が伸びれば先生も伸びる</td><td>ヨンサンさんの事件や学校の仕事まで含む。どちらかが不公平に感じやすい</td><td><span class="badge">先生が簡単さを好むなら</span></td></tr>
+        <tr><td><strong>C</strong></td><td>A＋最低保証（例：発売時に3万円を先払いし、のちのお分けから差し引く）</td><td>先生の安心</td><td>手元のお金が先に出る</td><td><span class="badge warn">余裕ができてから</span></td></tr>
+        <tr><td><strong>D</strong></td><td>利益を半分ずつ</td><td>公平に聞こえる</td><td>費用の数え方でもめやすい</td><td><span class="badge no">すすめない</span></td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">30%の目安：本の印税は一般に5〜10%、自分で出す電子書籍は35%か70%です（そのぶん作者が編集も宣伝も負います）［36］。開発・AI・サーバー・絵・宣伝・問い合わせはこちらが負うので、30%は先生に厚めの数字です。売上が伸びたら率を上げる段階制（例：累計の売上が100万円を超えた分は40%）にすると、先生の考え方にさらに合います。</p>
+
+    <h3>お金以外にお返しできること</h3>
+    <ul>
+      <li><strong>クレジット：</strong>タイトルとクレジットに「科学監修・事件原案　くられ（薬理凶室）」。先生の事件には「原案：くられ」。</li>
+      <li><strong>送客：</strong>科学の解説の画面に、先生の動画・本・グッズへのリンク。</li>
+      <li><strong>道具：</strong>先生の配信で使える対戦・配信モード・視聴者参加。ファンクラブ会員だけの事件のコード。イベントでの公開審問。</li>
+      <li><strong>こちらが受け取るもの：</strong>先生の紹介による来訪、学校や保護者からの信頼。</li>
+    </ul>
+
+    <h3>いつ、何を出すか</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>いつ</th><th>何を</th></tr></thead>
+      <tbody>
+        <tr><td>今</td><td>交渉はしません。次に連絡する機会（10件の受け取りなど）に「有料にする形が決まりましたら、売上のお分けを数字つきでご提案します」と一言だけ添えます。</td></tr>
+        <tr><td>先生の事件を売る1か月前</td><td>3行の提案と、1枚の覚書の下書き（下の項目）。</td></tr>
+        <tr><td>売り始めて3か月後</td><td>売上とお分けの額の短い報告。よければ率を上げる方向で見直し。</td></tr>
+        <tr><td>その後ずっと</td><td>3か月ごとに振り込みと明細。</td></tr>
+      </tbody>
+    </table></div>
+    <details><summary>提案文のたたき台と、覚書に入れる項目</summary>
+      <p><strong>3行の提案（例）</strong></p>
+      <ul>
+        <li>先生の事件10件を「くられ先生の事件ファイル」として1,500円で販売したく存じます（1件は無料でお試しいただける形にします）。</li>
+        <li>売上から決済手数料を引いた額の30%を、3か月ごとに明細つきでお支払いします。</li>
+        <li>お名前はタイトル画面と各事件に「原案：くられ」と入れます。覚書の下書きを添えましたので、ご確認だけいただければ幸いです。</li>
+      </ul>
+      <p><strong>覚書の項目</strong>：対象の事件／使ってよい範囲（無料・有料での配信、学校・イベント、アプリ、配信者の実況、翻訳）／期間／お分けの率と計算のしかた／支払いの時期と方法／報告の形／クレジット／やめるときの扱い／過去回に関わる方（コラボ先・声・絵）の確認。</p>
+      <p class="note">先生のファン活動ガイドラインは営利での利用を認めておらず、個別の許諾もしていません［33］。今回は先生ご本人へのご依頼なので、有料で売る範囲は覚書ではっきりさせます。個人へ原稿料などを払うときは源泉徴収が要ります（10.21%）［25］。お分けの扱いや、先生が会社で受け取るかどうかも含めて、税理士に確かめます。</p>
+    </details>
+  </section>
+
+  <!-- 6 -->
+  <section id="plan"><h2><span class="en">ROADMAP</span>6. 段階的な計画</h2>
+    <div class="table-wrap"><table class="mid">
+      <thead><tr><th>時期</th><th>スイッチを入れるもの</th><th>測るもの</th><th>次へ進む目安</th></tr></thead>
+      <tbody>
+        <tr><td><strong>今</strong>（10月）</td><td>お金はまだ取りません。準備だけ：決済の申し込み、表記・規約の下書き、税理士への相談、広告の審査の申し込み、購入コードの仕組みを裏で作る、AI の専用キーと上限、学校へ体験授業の打診。</td><td>今の公開版で、完走率・1事件の質問数と AI 費用。</td><td>1事件の AI 費用が2円以下。</td></tr>
+        <tr><td><strong>正式公開</strong>（10〜11月）</td><td>8件は無料のまま。配信の決まり（収益化OK）と配信モード。広告は、審査が通っていれば結果画面に1枠だけ（なくてもよい）。学校で体験授業を1件。</td><td>事件の開始数（遊んだ人数の代わり）、完走率、対戦の部屋数、配信での紹介、1事件の AI 費用。</td><td>月1,000人を超えたら、AI の上限を上げる。</td></tr>
+        <tr><td><strong>3か月後</strong>（2027年1月ごろ）</td><td>まずヨンサンさんの新作3件（600〜800円）で決済を試す → くられ先生の事件ファイル（1,500円前後、1件無料）。スペシャルヒント（承認が取れていれば）。学校は価格表で受注。冬休みは家族で遊ぶ時期。</td><td>購入率、1人あたりの売上、返金率、先生へのお分けの額、スペシャルヒントの利用率。</td><td>購入率2%、返金2%以下。</td></tr>
+        <tr><td><strong>6か月後</strong>（2027年4月ごろ）</td><td>数字で次を決める：シーズンパス（購入率2%以上なら）、Google Play で試す（Web で月100本以上売れたら）、ツクールの学校版（授業の実績があれば）、日替わりの1問（毎日来る理由になり、協賛も付けやすい）、協賛の事件（反応しだい）。先生へ報告し、率を見直す。</td><td>月の手元、初期費用の回収の進み、学校の件数。</td><td>初期費用の半分以上を回収。</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">学校や自治体の来年度の予算は、一般に秋から冬に組まれ、3月に決まります。2027年4月からの授業やイベントに入れてもらうなら、今年の秋〜冬に話を出しておくと間に合いやすいです。</p>
+    <details><summary>測るもの（KPI）の決め方</summary>
+      <div class="table-wrap"><table class="mid">
+        <thead><tr><th>指標</th><th>意味・計算</th><th>測り方</th><th>目安</th></tr></thead>
+        <tbody>
+          <tr><td>事件の開始数</td><td>遊んだ人数の代わり</td><td>サーバーの記録（今も1問1行で残している。個人は特定しない）</td><td>—</td></tr>
+          <tr><td>完走率</td><td>解決 ÷ 開始</td><td>同上</td><td>入門80%、本編50%</td></tr>
+          <tr><td>1事件の AI 費用</td><td>AI 費用の合計 ÷ 開始</td><td>判定の記録の費用欄</td><td>2円以下</td></tr>
+          <tr><td>対戦の部屋数</td><td>1週間に作られた部屋</td><td>D1</td><td>—</td></tr>
+          <tr><td>購入率</td><td>購入数 ÷ 遊んだ人</td><td>決済の記録</td><td>2%</td></tr>
+          <tr><td>ARPU</td><td>1人あたりの売上（売上 ÷ 遊んだ人）</td><td>同上</td><td>20円（2%×1,000円）</td></tr>
+          <tr><td>ARPPU</td><td>買った人1人あたりの売上</td><td>同上</td><td>1,000円</td></tr>
+          <tr><td>返金率</td><td>返金 ÷ 購入</td><td>同上</td><td>2%以下</td></tr>
+          <tr><td>広告</td><td>表示回数、1,000回あたりの収入、スペシャルヒントの利用率</td><td>広告の管理画面</td><td>—</td></tr>
+          <tr><td>学校</td><td>授業の件数、参加人数、学校の先生の評価</td><td>手で記録</td><td>月1件</td></tr>
+          <tr><td>先生の事件</td><td>遊ばれた回数、売上、お分けの額</td><td>サーバーと決済の記録</td><td>3か月ごとに報告</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note">遊んだ人数を正しく数えるには、端末ごとの印（ID）が要ります。入れるならプライバシーポリシーに書きます。まずは事件の開始数で代用します。</p>
+    </details>
+  </section>
+
+  <!-- 7 -->
+  <section id="prep"><h2><span class="en">PREPARATION</span>7. 必要な準備</h2>
+    <p>時期ごとに分けると、次のとおりです。くわしい中身は下の一覧にまとめました。</p>
+    <ul>
+      <li><strong>今すぐ：</strong>税理士に1回相談（インボイスの登録、非営利型かどうか）。AI の専用キーと上限。</li>
+      <li><strong>広告を入れる前：</strong>広告の審査。画面の安全設定の変更。プライバシーポリシーの書き足し（今は「広告やアクセス解析のツールは使っていない」と書いている）。子ども向けの設定。</li>
+      <li><strong>有料を始める前：</strong>特定商取引法の表記（運営者の名前を法人名にそろえる）。決済（Stripe）。利用規約。返金と子どもの決まり。くられ先生・絵描きさんとの権利の覚書。</li>
+      <li><strong>学校に出す前：</strong>生徒の入力の扱いを説明する資料。</li>
+    </ul>
+    <details><summary>準備の一覧（項目ごとの中身と出典）</summary>
+    <div class="table-wrap"><table class="mid">
+      <thead><tr><th>項目</th><th>やること</th><th>いつまで</th></tr></thead>
+      <tbody>
+        <tr><td><strong>特定商取引法の表記</strong></td><td>事業者名（一般社団法人フォースプレイス）、代表者、住所・電話（「請求があれば遅滞なく出す」形も可）、価格（税込）、支払いの時期と方法、渡す時期、返品・キャンセル、動作環境。購入の最終確認画面にも、数量・価格・時期・キャンセルの条件を出す［22］。今の規約・ポリシーは運営者を「fourthplace43」と書いているので、法人名にそろえる。</td><td>有料の前</td></tr>
+        <tr><td><strong>決済</strong></td><td>Stripe を法人で申し込む（カード3.6%、月額なし）。カードを持たない人向けにコンビニ払い（最低120円）も。PayPay はデジタルの商品だと9.48%で高い［18］。</td><td>有料の1か月前</td></tr>
+        <tr><td><strong>税・インボイス</strong></td><td>インボイスの登録の有無と、非営利型の一般社団法人かどうかで手続きが変わる（非営利型なら、法人税は収益事業の所得だけにかかる［24］）。法人の2割特例は、2026-09-30を含む課税期間で終わり。登録していない事業者への支払いの控除は2026-10-01から70%［23］。学校・塾・企業との取引ではインボイスを求められることがある。個人への原稿料などは源泉徴収［25］。<strong>税理士に1回相談。</strong></td><td>今</td></tr>
+        <tr><td><strong>広告の審査</strong></td><td>AdSense の審査、H5 Games Ads のベータ申し込み［5］、ads.txt、画面の安全設定（CSP）の変更、子ども向けの扱い（興味に合わせた広告を止める）［8］、ギャンブル・出会いなどのカテゴリを止める。</td><td>正式公開の前に申し込み</td></tr>
+        <tr><td><strong>プライバシーポリシー</strong></td><td>今は「広告やアクセス解析のツールは使っていない」と書いている。広告のタグ、Cookie、外部への送信（何を・どこへ・何のため）［26］、決済、購入コードのメールを書き足す。2026-07-10に成立した改正個人情報保護法（16歳未満は保護者の同意。施行は2028年ごろ）にも備える［27］。</td><td>広告・決済の前</td></tr>
+        <tr><td><strong>利用規約</strong></td><td>「現在無料」を、有料の事件・購入コード・返金・未成年・配信の決まりを含む形に。</td><td>有料の前</td></tr>
+        <tr><td><strong>子ども</strong></td><td>対象年齢の目安、保護者の同意の一文、高額にしない、取り消しの相談窓口。18歳未満が親の同意なしにした契約は、原則として取り消せる［29］。</td><td>有料の前</td></tr>
+        <tr><td><strong>返金</strong></td><td>デジタルの商品は原則返金なし（特約として表示）。不具合・二重購入は返金。特約の表示がないと、8日間の返品の決まりが使われうる［22］。</td><td>有料の前</td></tr>
+        <tr><td><strong>権利</strong></td><td>くられ先生（過去回のコラボ先・声・絵の確認、有料・学校・アプリ・配信での利用）。イラスト（商用・グッズ・アプリでの利用、AI 学習には使わない）。</td><td>先生の事件を売る前</td></tr>
+        <tr><td><strong>商標</strong></td><td>「リトマス審問」「科学捜査官リトマス」を J-PlatPat で確認。出願は1区分 12,000円（3,400円＋8,600円）、登録は1区分 32,900円（10年）［32］。ゲーム（第9類）と、ゲームの提供・教育（第41類）。</td><td>題名を決めたら</td></tr>
+        <tr><td><strong>ステマ規制</strong></td><td>協賛の事件や、配信者へのお願いは「広告」「PR」と表示する。広告であることを隠すのは、2023-10-01から景品表示法の違反［30］。</td><td>協賛・依頼の前</td></tr>
+        <tr><td><strong>学校向けの資料</strong></td><td>生徒の入力が外部の AI（OpenRouter 経由）へ送られること、個人情報を入れない作り、記録の保存期間、文部科学省の生成 AI ガイドライン（Ver.2.0）に沿った説明［31］。</td><td>学校に出す前</td></tr>
+        <tr><td><strong>AI の費用の守り</strong></td><td>専用キーと月の上限（OpenRouter）。1日の上限を人数に合わせる（<span class="est">【試算】</span>5,000人なら1日 約7ドル、2万人なら約27ドル）。有料の事件は上限の外にして、必ず AI で判定する。</td><td>正式公開の前</td></tr>
+      </tbody>
+    </table></div>
+    </details>
+  </section>
+
+  <!-- 8 -->
+  <section id="risks"><h2><span class="en">RISKS</span>8. 危ないところ</h2>
+    <div class="table-wrap"><table class="mid">
+      <thead><tr><th>危うさ</th><th>何が起きるか</th><th>減らし方</th></tr></thead>
+      <tbody>
+        <tr><td><strong>AI の費用が跳ねる</strong></td><td>話題になると1日に数千事件。上限に当たると簡易判定に落ちて質が下がる。判定の AI（Jev）は OpenRouter の試験版の窓口で、値上げや終了もありうる。費用はドル建て。</td><td>専用キーと上限。有料の事件は上限の外。無料の事件は安い設定も選べる。収入とセットで上限を上げる。</td></tr>
+        <tr><td><strong>子ども向けの広告の質</strong></td><td>合わない広告や、だます広告が出る。</td><td>興味に合わせた広告を止める。カテゴリを止める。学校版と入門の事件には広告を出さない。出てくる広告を定期的に見る。</td></tr>
+        <tr><td><strong>コミュニティの反発</strong></td><td>「無料だったのに」「広告だらけ」「先生の名前でお金もうけ」。</td><td>今の8件はずっと無料。捜査中の広告なし。解く力は売らない。売上の一部が監修者に届くことを書く。</td></tr>
+        <tr><td><strong>先生との関係</strong></td><td>期待のずれ、権利の行き違い、お名前の使いすぎ。</td><td>売る前に数字つきで提案。書類はこちらで作る。宣伝は先生の了承を取ってから。頼みすぎない。</td></tr>
+        <tr><td><strong>一度きりの中身</strong></td><td>解いたら終わり。配信やネタばれで価値が下がる。</td><td>新作を決まったペースで足す。対戦・日替わりで遊び直し。学校は毎年生徒が入れ替わる。</td></tr>
+        <tr><td><strong>審査</strong></td><td>広告・決済・ストアが承認されない、遅れる。</td><td>広告なしでも成り立つ計画にする。早めに申し込む。</td></tr>
+        <tr><td><strong>子どもの課金トラブル</strong></td><td>オンラインゲームの相談は2025年度に6,234件。契約した人が小中高生の相談は2022年度に4,024件、平均 約33万円［28］。</td><td>買い切りだけ。高額にしない。保護者の同意の一文。取り消しの窓口。</td></tr>
+        <tr><td><strong>人の時間</strong></td><td>学校の仕事は人が動く。事件づくりも続く。</td><td>学校の先生が自分で授業に使える版も用意する。価格に準備の時間を入れる。</td></tr>
+        <tr><td><strong>似たゲーム</strong></td><td>AI が出題者のウミガメのスープは増えている。AI の答えのぶれが不満になりやすい（遊び方の調べもの）。</td><td>真相を人が固定する作り、科学、監修という強みを前に出す。</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- 9 -->
+  <section id="next"><h2><span class="en">NEXT</span>9. 次の一歩（決めていただきたいこと）</h2>
+    <div class="table-wrap"><table class="mid">
+      <thead><tr><th>#</th><th>決めること</th><th>おすすめ</th><th>理由</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>無料と有料の線</td><td>今の8件は無料のまま。新しい事件を有料パックに。</td><td>反発を避けつつ、一度きりの中身を「1件ずつの価値」で売れる。</td></tr>
+        <tr><td>2</td><td>最初の有料と時期</td><td>3か月以内に、ヨンサンさんの新作3件（600〜800円）で決済を試す。そのあと先生の10件（1,500円前後）。</td><td>先生のパックで失敗しないよう、仕組みを先に確かめる。</td></tr>
+        <tr><td>3</td><td>広告</td><td>審査の申し込みだけ今。正式公開は広告なしでもよい。出すなら解いた後とスペシャルヒントだけ。</td><td>広告の収入は小さく、審査には時間がかかる。</td></tr>
+        <tr><td>4</td><td>学校・自治体</td><td>年内に体験授業を1件。価格の目安は出前授業1コマ4.5万円〜（税別）。</td><td>初期費用の回収にいちばん確実。来年度の予算に間に合わせる。</td></tr>
+        <tr><td>5</td><td>くられ先生へのお分け</td><td>先生のパックの売上（決済手数料を引いた額）の30%。提案は売り始める1か月前。今は一言だけ。</td><td>「安く使われてはならない」に応え、計算も簡単。</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout next">今週できること：① 税理士への相談の予約（インボイスの登録、非営利型かどうか）② AdSense の申し込みと H5 Games Ads のベータ申し込み ③ OpenRouter の専用キーと月の上限 ④ 体験授業をお願いする学校・自治体を1つ決める。</div>
+  </section>
+
+  <!-- 出典 -->
+  <section id="sources"><h2><span class="en">SOURCES</span>出典</h2>
+    <p class="note">日付は公開日・更新日。閲覧はすべて 2026-10-02。【試算】の数字は、ここの数字から上の前提で計算したものです。</p>
+    <ol class="src">
+      <li>エックスサーバー「Googleアドセンスで月1万円」（2025-02-25） https://www.xserver.ne.jp/blog/adsense_10000_a_month/</li>
+      <li>マネーフォワード（アドセンスの収入の目安、2019-02-16） https://media.moneyforward.com/articles/2617</li>
+      <li>Mistplay「Mobile Ads eCPM」（Appodeal の2025年版レポートの紹介。日本：動画リワード $10.80、全画面 $7.20、帯 $0.10） https://business.mistplay.com/resources/mobile-ads-ecpm/</li>
+      <li>ねとらぼ「広告の視聴で全広告削除」（開発者談：1再生あたり0.5円、2019-02-13） https://nlab.itmedia.co.jp/nl/articles/1902/13/news141.html</li>
+      <li>Google「H5 Games Ads」 https://adsense.google.com/start/h5-games-ads/ ／ Ad Placement API ベータの申し込み https://developers.google.com/ad-placement/docs/beta ／ ポリシー https://support.google.com/publisherpolicies/answer/11975916</li>
+      <li>Google Ad Manager ヘルプ「Web 向けリワード広告」 https://support.google.com/admanager/answer/9116812</li>
+      <li>AdSense ヘルプ「Offerwall」 https://support.google.com/adsense/answer/12726063 ／ PPC Land（一般提供、2026-04-13） https://ppc.land/google-adsense-offerwall-is-generally-available-what-it-means/</li>
+      <li>Google パブリッシャー ポリシー https://support.google.com/adsense/answer/10502938 ／ 子ども向けとして扱う設定 https://support.google.com/adsense/answer/3248194</li>
+      <li>GameAnalytics のベンチマーク（wnhub、2019-07-01） https://wnhub.io/news/analytics/item-2261</li>
+      <li>Steam「Golden Idol Mysteries: The Spider of Lanka」（3事件・700円の表示） https://store.steampowered.com/app/2377000</li>
+      <li>アニメ！アニメ！（PR TIMES）小学館のマダミスを「ウズ」で発売（2025-10-03） https://animeanime.jp/release/prtimes/20251003/251356.html</li>
+      <li>電ファミニコゲーマー『みんなでウミガメのスープ』（2025-10-10） https://news.denfaminicogamer.jp/news/2510102g</li>
+      <li>App Store「水平思考クイズ - ウミガメのスープ」 https://apps.apple.com/jp/app/id6477845986</li>
+      <li>App Store「脱出ゲーム EXiTS」 https://apps.apple.com/jp/app/id1454183741</li>
+      <li>大修館書店「探究オンライン ACTUAL」案内（2024-10） https://mirai.kinokuniya.co.jp/wp-content/uploads/2024/10/taishukan-actual_8P_202410.pdf</li>
+      <li>豊中市「未来の科学者育成推進業務委託」随意契約理由（2024-06-01） https://www.city.toyonaka.osaka.jp/jigyosya/keiyaku/zuiikeiyaku/reiwa06/kyoikuiinkai/miariikuseizuikei.files/mirai_ikusei_zuikei_R6.pdf</li>
+      <li>Breakout EDU 料金 https://www.breakoutedu.com/pricing</li>
+      <li>Stripe 料金（日本） https://stripe.com/jp/pricing</li>
+      <li>ASCII「CAMPFIRE の手数料を0〜17%で選べるように」（2023-11-30） https://ascii.jp/elem/000/004/172/4172692/</li>
+      <li>ITmedia「スマホ新法、Apple と Google の手数料」（2025-12-18） https://www.itmedia.co.jp/news/article/2512/18/1251218081/</li>
+      <li>Apple Developer Program https://developer.apple.com/jp/programs/whats-included/ ／ Google Play Console の登録料 https://support.google.com/googleplay/android-developer/answer/6112435</li>
+      <li>消費者庁「特定商取引法ガイド 通信販売」 https://www.no-trouble.caa.go.jp/what/mailorder/</li>
+      <li>マネーフォワード「インボイスの経過措置（令和8年度改正）」（2026-05-29 更新） https://biz.moneyforward.com/invoice/basic/55388</li>
+      <li>国税庁「一般社団法人・一般財団法人と法人税」（2014-03） https://www.nta.go.jp/publication/pamph/hojin/koekihojin/pdf/01.pdf</li>
+      <li>国税庁 タックスアンサー No.2795「原稿料や講演料などを支払ったとき」 https://www.nta.go.jp/taxes/shiraberu/taxanswer/gensen/2795.htm</li>
+      <li>総務省「外部送信規律」 https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html</li>
+      <li>モノリス法律事務所「令和8年改正個人情報保護法」（成立 2026-07-10） https://monolith.law/corporate/appi-amendment-2026-key-points</li>
+      <li>国民生活センター「オンラインゲーム」（2026-07-31 更新） https://www.kokusen.go.jp/soudan_topics/data/game.html ／ 同「子どもの無断課金」（2024-03-13） https://www.kokusen.go.jp/news/data/n-20240313_1.html</li>
+      <li>江東区「成年年齢の引き下げ」（未成年者取消権、2024-11-14 更新） https://www.city.koto.lg.jp/102040/kurashi/shohi/joho/seinennennreihikisage.html</li>
+      <li>消費者庁「ステルスマーケティング」 https://www.caa.go.jp/policies/policy/representation/fair_labeling/stealth_marketing/</li>
+      <li>文部科学省「初等中等教育段階における生成AIの利活用に関するガイドライン（Ver.2.0）」（2024-12-26） https://www.mext.go.jp/zyoukatsu/ai/about.html</li>
+      <li>特許庁「産業財産権関係料金一覧」 https://www.jpo.go.jp/system/process/tesuryo/hyou.html</li>
+      <li>薬理凶室「教育目的利用ガイドライン」（2024-12-12、2025-05-23 更新） https://www.cl20.jp/portal/educational-purpose-guideline/ ／「ファン活動ガイドライン」（2025-05-23） https://www.cl20.jp/portal/guideline/</li>
+      <li>くられ「料金・業務ご案内」（2026-02-10 更新） https://www.cl20.jp/portal/business/ ／ コラム「科学者はワガママであって良い」（2025-07-07 改稿） https://www.cl20.jp/portal/helldoctor-column-16/ （社内の調べもの <code>docs/ideas/research/kurare-profile.md</code>）</li>
+      <li>くられ先生のチャンネル（人気順） https://www.youtube.com/@krr/videos ／ ジェーンドゥ一覧 https://www.cl20.jp/portal/jane-doe/ ／ 動画「ゲーム脳問題って存在するの？」 https://www.youtube.com/watch?v=DWEUmpFt2cs （社内の調べもの <code>docs/ideas/research/kurare-tsubo.md</code> による）</li>
+      <li>ファイナンシャルフィールド「紙と電子、本の印税」（2025-10-21 更新） https://financial-field.com/income/entry-193183</li>
+    </ol>
+    <p class="note">社内の資料：<code>docs/ai.md</code>（§5-5 費用）、<code>docs/DEPLOY.md</code>（§3 Cloudflare の費用と上限）、<code>docs/dev-history.md</code>（J-70〜J-73）、<code>docs/decisions.md</code>（2026-10-01〜02）、<code>promo/proposal/index.html</code>（先生への相談資料の費用の段落）、<code>public/privacy.html</code>・<code>public/terms.html</code>、別の担当による遊び方の調べもの（作成中）。</p>
+  </section>
+</main>
+<footer><div class="wrap">更新：2026-10-02 ／ リトマス審問 企画ノート・戦略（内部資料・公開しない）</div></footer>
+<script>
+(function () {
+  // 「4. 試算」の計算機。前提（完走率60%、広告は1回解くごとに2回×0.3円、ヒントは15%×0.5円、決済3.6%、サーバー750円）は上の表と同じ。
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = function (v, signed) {
+    var r = Math.round(v);
+    var s = Math.abs(r).toLocaleString('ja-JP') + '円';
+    if (r < 0) return '−' + s;
+    return (signed ? '+' : '') + s;
+  };
+  var val = function (id) { var v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : 0; };
+  var setOut = function (id, v, cls) {
+    var el = $(id);
+    el.textContent = fmt(v, true);
+    el.className = 'n' + (cls ? ' ' + cls : '');
+  };
+  function calc() {
+    var mau = val('c-mau'), plays = val('c-plays'), ai = val('c-ai');
+    var conv = val('c-conv') / 100, price = val('c-price');
+    var share = Math.min(val('c-share'), 100) / 100, b2b = val('c-b2b');
+    var p = mau * plays, clears = p * 0.6;
+    var ads = clears * 2 * 0.3 + p * 0.15 * 0.5;
+    var sales = mau * conv * price, fee = sales * 0.036, kur = (sales - fee) * share;
+    var aic = p * ai, srv = 750;
+    var net = ads + sales - fee - kur - aic - srv + b2b;
+    setOut('o-ads', ads, 'plus');
+    setOut('o-sales', sales, 'plus');
+    setOut('o-fee', -fee, 'minus');
+    setOut('o-kur', -kur, 'minus');
+    setOut('o-ai', -aic, 'minus');
+    setOut('o-srv', -srv, 'minus');
+    setOut('o-b2b', b2b, 'plus');
+    setOut('o-net', net, net >= 0 ? 'plus' : 'minus');
+    var m = net > 0 ? 300000 / net : Infinity;
+    $('o-months').textContent = !isFinite(m) ? '回収できない（毎月赤字）' : (m < 1 ? '1か月以内' : (m > 120 ? '10年以上（実質、回収できない）' : '約' + m.toFixed(1) + 'か月'));
+  }
+  ['c-mau', 'c-plays', 'c-ai', 'c-conv', 'c-price', 'c-share', 'c-b2b'].forEach(function (id) { $(id).addEventListener('input', calc); });
+  calc();
+})();
+</script>
+</body>
+</html>

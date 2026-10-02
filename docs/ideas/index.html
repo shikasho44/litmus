@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>企画ノート｜リトマス審問</title>
+<style>
+  :root {
+    --ink: #0B0D12; --ink-2: #141821; --ink-3: #1E2430;
+    --bone: #F2EFE6; --bone-2: #D8D3C4; --bone-3: #A7A08F;
+    --line: rgba(242, 239, 230, 0.14); --line-2: rgba(242, 239, 230, 0.26);
+    --formalin: #C6FF3D; --formalin-deep: #6E9A0C;
+    --alarm: #FF2E63; --cyan: #3DE0FF; --amber: #FFB020; --violet: #9B6BFF; --mute: #8A93A6;
+    --sans: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ink); color: var(--bone-2); font-family: var(--sans); font-size: 16px; line-height: 1.85; letter-spacing: .02em; }
+  a { color: var(--cyan); text-underline-offset: 3px; }
+  strong { color: var(--bone); }
+  code { font-family: var(--mono); font-size: .86em; background: var(--ink-3); border: 1px solid var(--line); padding: .05em .4em; border-radius: 3px; color: var(--bone); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header.hero { border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(198,255,61,.07), transparent 70%); }
+  header.hero .wrap { padding-top: 40px; padding-bottom: 30px; }
+  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: .24em; color: var(--formalin); }
+  h1 { color: var(--bone); font-size: clamp(28px, 5.5vw, 44px); line-height: 1.25; margin: 8px 0 10px; }
+  .lead { max-width: 780px; font-size: 17px; margin: 0; }
+  blockquote { margin: 18px 0 0; padding: 12px 16px; border-left: 4px solid var(--violet); background: var(--ink-2); color: var(--bone-2); max-width: 820px; }
+  blockquote .who { display: block; font-size: 12px; color: var(--violet); letter-spacing: .1em; margin-bottom: 4px; }
+  section { padding: 36px 0 4px; }
+  h2 { color: var(--bone); font-size: clamp(21px, 3.4vw, 26px); margin: 0 0 8px; }
+  h2 .en { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .28em; color: var(--formalin); font-weight: 400; margin-bottom: 4px; }
+  p { margin: 8px 0; }
+  ol, ul { padding-left: 1.3em; }
+  li + li { margin-top: 4px; }
+  .note { font-size: 14px; color: var(--bone-3); }
+  .table-wrap { overflow-x: auto; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 640px; }
+  th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--bone); background: var(--ink-3); white-space: nowrap; }
+  td.id { font-family: var(--mono); color: var(--formalin); white-space: nowrap; }
+  .st { font-size: 12px; padding: 2px 8px; border: 1px solid var(--line-2); white-space: nowrap; }
+  .st.seed { color: var(--bone-3); }
+  .st.doc { color: var(--cyan); border-color: rgba(61,224,255,.45); }
+  .st.wip { color: var(--amber); border-color: rgba(255,176,32,.5); }
+  .st.proto { color: var(--violet); border-color: rgba(155,107,255,.5); }
+  .st.sent { color: var(--formalin); border-color: var(--formalin-deep); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 12px; }
+  .card { background: var(--ink-2); border: 1px solid var(--line); padding: 14px 16px; }
+  .card h3 { margin: 0 0 4px; font-size: 15px; color: var(--bone); }
+  .card .n { font-family: var(--mono); font-size: 11px; color: var(--formalin); letter-spacing: .2em; }
+  footer { border-top: 1px solid var(--line); margin-top: 48px; padding: 18px 0 40px; font-size: 13px; color: var(--mute); }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">LITMUS INQUEST · IDEA NOTEBOOK</div>
+    <h1>企画ノート</h1>
+    <p class="lead">くられ先生に「面白い」「なるほど、その切り口か」と言ってもらえる事件・遊び方・取り組みを、こちらから試作つきで出し続けるための台帳です。</p>
+    <blockquote><span class="who">ヨンサンさんの言葉（2026-10-02）</span>くられ先生が見て面白い、興味を引くようなものを作ることで、「この人面白い」と思ってもらいたい。「なるほど、そういう切り口ね」「この問題いいですね」と言ってもらえるような問題や取り組みを、こっちから「こんな感じで作ってみました」とガンガン増やしていく。実装は後の話で、まず企画を増やす。</blockquote>
+  </div>
+</header>
+<main class="wrap">
+
+<section id="ledger">
+  <h2><span class="en">LEDGER</span>台帳</h2>
+  <p class="note">状態：<span class="st seed">種</span> → <span class="st doc">企画書</span> → <span class="st proto">試作</span> → <span class="st sent">提案済み</span> → 採用／見送り。<span class="st wip">作成中</span>は、いま担当が作っているものです。</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>番号</th><th>種類</th><th>一言</th><th>状態</th><th>先生の反応</th><th>ページ</th></tr></thead>
+    <tbody>
+      <tr><td class="id">I-001</td><td>遊び方</td><td>リトマス審問ツクール：結末を話すと、AIが問題に仕立て、試しに解いて確かめてくれる</td><td><span class="st wip">作成中</span></td><td>—</td><td>—</td></tr>
+      <tr><td class="id">I-002</td><td>遊び方</td><td>対戦の種類を増やす（毎日の1問、ホルマ役、問題の交換 など）</td><td><span class="st wip">作成中</span></td><td>—</td><td>—</td></tr>
+      <tr><td class="id">I-003</td><td>事件</td><td>事件の種 第1弾（12本）</td><td><span class="st wip">作成中</span></td><td>—</td><td>—</td></tr>
+      <tr><td class="id">I-004</td><td>取り組み</td><td>先生と一緒にできる取り組み（実験で確かめる動画 など）</td><td><span class="st wip">作成中</span></td><td>—</td><td>—</td></tr>
+      <tr><td class="id">S-001</td><td>戦略</td><td>収益化の提案（別の担当：収益化の戦略担当）</td><td><span class="st wip">作成中</span></td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="flow">
+  <h2><span class="en">FLOW</span>進め方</h2>
+  <ol>
+    <li><strong>種</strong>：一言のアイデアを台帳に足す。</li>
+    <li><strong>企画書</strong>：1ページにまとめる（どんな遊びか／科学の芯／遊ぶ人にとっての面白さ／先生が面白がりそうな理由／作る大きさ／気をつけること／次の一歩）。</li>
+    <li><strong>試作</strong>：小さくゲームに入れる。本番の画面は変えず、URL の末尾で切り替えて見られる形にする。</li>
+    <li><strong>提案</strong>：先生には短く、遊べる形で見せる。質問を重ねない。</li>
+    <li><strong>反応</strong>：先生の一言を台帳に書く。採用した案は、すぐ形にしてお返しする。</li>
+    <li><strong>本採用</strong>：開発記録と決定の記録に残して、実装する。</li>
+  </ol>
+</section>
+
+<section id="rules">
+  <h2><span class="en">RULES</span>全部の企画で守ること</h2>
+  <div class="grid">
+    <div class="card"><div class="n">01</div><h3>真似できる情報は書かない</h3><p>量・手順・入手の方法など、個人が真似できることは書かない。</p></div>
+    <div class="card"><div class="n">02</div><h3>唐突なものを出さない</h3><p>審問やおとりに使うものは先に見せる。疑いを晴らした先は真相へ戻す。</p></div>
+    <div class="card"><div class="n">03</div><h3>重ねない</h3><p>公式「ジェーンドゥの死因」の公開28話と、くられ先生の10問（過去回のアレンジ）に、死因と仕掛けを重ねない。</p></div>
+    <div class="card"><div class="n">04</div><h3>一般の人の問題は死を扱わない</h3><p>死・けが・犯罪・実在の人物は、公式の事件だけ。将来、条件を満たした人（アンバサダーなど）や、キャンペーンの応募でこちらが採用を決める形で開放するかは、あとで考える（2026-10-02）。</p></div>
+    <div class="card"><div class="n">05</div><h3>先生への提案は短く</h3><p>科学監修以外のことで、意見を求めすぎない。見せて、反応を待つ。</p></div>
+  </div>
+</section>
+
+<section id="research">
+  <h2><span class="en">RESEARCH</span>調べもの</h2>
+  <ul>
+    <li>くられ先生の人物・仕事の進め方（内部資料）… <span class="st wip">HTML にまとめ直し中</span></li>
+    <li>くられ先生の「面白がるツボ」… <span class="st wip">調査中</span></li>
+    <li>遊び方の調査（ウミガメのスープ系・AIで作る仕組み・対戦・学校）… <span class="st wip">調査中</span></li>
+  </ul>
+</section>
+
+</main>
+<footer><div class="wrap">更新：2026-10-02 ／ リトマス審問 企画ノート（内部資料・公開しない）</div></footer>
+</body>
+</html>

@@ -34,6 +34,11 @@ export interface CaseSummary {
   questionBudget?: Partial<Record<Difficulty, number>>;
   /** PROTOTYPE I-005: 矛盾の一文 (case-schema intro.hook). Shown only with `?proto=i005`. */
   hook?: string;
+  /**
+   * A prototype case's switch (case-schema `proto`, shared/proto.ts): the case is listed only to a
+   * caller with that switch on. The UI marks it 「試作」 and keeps it out of online versus.
+   */
+  proto?: string;
 }
 
 export interface PublicFact {

@@ -27,6 +27,10 @@
  *   Online versus: GET /api/versus/config · POST /api/versus/{create,join,start,state,run,progress,leave}
  *   (server/http/versus-routes.ts; every verdict is also shown to the versus service — observeVerdict)
  *
+ * Prototype switches: the header x-janedoe-proto (shared/proto.ts, e.g. `seeds`) — a prototype case
+ * is listed and served only to requests that carry its switch (dev and admin included; the admin
+ * mint-token / ask-debug tools turn every switch on).
+ *
  * Errors: { error: { code, message, retryable } } with code ∈ ApiError codes.
  *
  * Fail closed: in production without a usable SESSION_SECRET (runtime.config.misconfigured)
@@ -45,6 +49,7 @@ import type { ContentRegistry } from '../engine/registry.js';
 import { validateParsedCase, type CaseValidation } from '../engine/validate.js';
 import type { ApiRuntime } from './runtime.js';
 import { observeVerdict, versusRoutes } from './versus-routes.js';
+import { PROTO_HEADER, PROTO_IDS, parseProtos, type ProtoId } from '../../shared/proto.js';
 
 export const MAX_BODY_BYTES = 8 * 1024;
 export const API_VERSION = '1';
@@ -141,7 +146,7 @@ async function validations(rt: ApiRuntime): Promise<{ reg: ContentRegistry; list
   return { reg, list };
 }
 
-type Route = (ctx: { req: Request; url: URL; params: string[]; admin: boolean; ip: string; body: () => Promise<Record<string, unknown>> }) => Promise<Response>;
+type Route = (ctx: { req: Request; url: URL; params: string[]; admin: boolean; ip: string; protos: readonly ProtoId[]; body: () => Promise<Record<string, unknown>> }) => Promise<Response>;
 
 export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Response> {
   const svc = rt.service;
@@ -157,7 +162,7 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
   };
 
   const get: Record<string, Route> = {
-    health: async ({ admin, ip }) => {
+    health: async ({ admin, ip, protos }) => {
       // Public: liveness only (503 while the server is misconfigured). Internal state is for
       // dev / admin (and /api/admin/status) — it used to tell anyone the key was the default.
       if (!admin) {
@@ -171,7 +176,7 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
         version: API_VERSION,
         mode: rt.components.mode,
         requestedMode: rt.config.mode,
-        cases: reg.list(dev).length,
+        cases: reg.list(dev, protos).length,
         contentIssues: reg.issues.filter((i) => i.level === 'error').length,
         dev,
         secretConfigured: !rt.config.secretIsDefault && !rt.config.secretTooShort,
@@ -180,84 +185,84 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
         uptimeSec: Math.round((Date.now() - rt.startedAt) / 1000),
       });
     },
-    cases: async ({ params, admin, ip }) => {
+    cases: async ({ params, admin, ip, protos }) => {
       limit('read', ip);
-      if (params.length === 0) return json(200, await svc.listCases({ admin }));
-      if (params.length === 1) return json(200, await svc.getCase(decodeURIComponent(params[0]), { admin }));
+      if (params.length === 0) return json(200, await svc.listCases({ admin, protos }));
+      if (params.length === 1) return json(200, await svc.getCase(decodeURIComponent(params[0]), { admin, protos }));
       throw new EngineError('bad_request', 'not found', 404);
     },
   };
 
   const post: Record<string, Route> = {
-    token: async ({ body, admin, ip }) => {
+    token: async ({ body, admin, ip, protos }) => {
       limit('write', ip);
       const b = await body();
-      return json(200, await svc.newToken(b.caseId as string, { admin }));
+      return json(200, await svc.newToken(b.caseId as string, { admin, protos }));
     },
-    ask: async ({ body, admin, ip }) => {
+    ask: async ({ body, admin, ip, protos }) => {
       limit('ask', ip);
       const b = await body();
       if (typeof b.question !== 'string') throw new EngineError('bad_request', 'question is required', 400);
       // Over-long is refused — except a message the safety filter answers (support notice first).
       if ([...b.question].length > MAX_QUESTION_CHARS && !detectSafety(b.question)) throw new EngineError('bad_request', `question is too long (max ${MAX_QUESTION_CHARS})`, 400);
       const questionLimit = typeof b.limit === 'number' ? b.limit : undefined;
-      return json(200, await svc.ask({ caseId: b.caseId as string, question: b.question, token: b.token as string | undefined, limit: questionLimit }, { admin, withTrace: dev || admin }));
+      return json(200, await svc.ask({ caseId: b.caseId as string, question: b.question, token: b.token as string | undefined, limit: questionLimit }, { admin, protos, withTrace: dev || admin }));
     },
-    hint: async ({ body, admin, ip }) => {
+    hint: async ({ body, admin, ip, protos }) => {
       limit('write', ip);
       const b = await body();
-      return json(200, await svc.hint({ caseId: b.caseId as string, token: b.token as string }, { admin }));
+      return json(200, await svc.hint({ caseId: b.caseId as string, token: b.token as string }, { admin, protos }));
     },
-    'inquest/start': async ({ body, admin, ip }) => {
+    'inquest/start': async ({ body, admin, ip, protos }) => {
       limit('write', ip);
       const b = await body();
-      return json(200, await svc.inquestStart({ caseId: b.caseId as string, token: b.token as string }, { admin }));
+      return json(200, await svc.inquestStart({ caseId: b.caseId as string, token: b.token as string }, { admin, protos }));
     },
-    'inquest/shot': async ({ body, admin, ip }) => {
+    'inquest/shot': async ({ body, admin, ip, protos }) => {
       limit('write', ip);
       const b = await body();
-      return json(200, await svc.shot(b as never, { admin }));
+      return json(200, await svc.shot(b as never, { admin, protos }));
     },
-    'inquest/grant': async ({ body, admin, ip }) => {
+    'inquest/grant': async ({ body, admin, ip, protos }) => {
       limit('write', ip);
       const b = await body();
-      return json(200, await svc.grant(b as never, { admin }));
+      return json(200, await svc.grant(b as never, { admin, protos }));
     },
-    'inquest/verdict-setup': async ({ body, admin, ip }) => {
+    'inquest/verdict-setup': async ({ body, admin, ip, protos }) => {
       limit('write', ip);
       const b = await body();
-      return json(200, await svc.verdictSetup({ caseId: b.caseId as string, token: b.token as string, mode: b.mode as VerdictMode }, { admin }));
+      return json(200, await svc.verdictSetup({ caseId: b.caseId as string, token: b.token as string, mode: b.mode as VerdictMode }, { admin, protos }));
     },
-    'inquest/verdict': async ({ body, admin, ip }) => {
+    'inquest/verdict': async ({ body, admin, ip, protos }) => {
       limit('verdict', ip);
       const b = await body();
       const mode = parseVerdictMode(b.mode, 'free');
       if (mode === 'free') {
         if (typeof b.text !== 'string') throw new EngineError('bad_request', 'text is required', 400);
         if ([...b.text].length > MAX_VERDICT_CHARS && detectSafety(b.text)?.kind !== 'selfHarm') throw new EngineError('bad_request', `text is too long (max ${MAX_VERDICT_CHARS})`, 400);
-        const res = await svc.verdict({ caseId: b.caseId as string, token: b.token as string, mode, text: b.text }, { admin, withTrace: dev || admin });
+        const res = await svc.verdict({ caseId: b.caseId as string, token: b.token as string, mode, text: b.text }, { admin, protos, withTrace: dev || admin });
         await observeVerdict(rt, b.caseId, b.token, res.token);
         return json(200, res);
       }
       const req: VerdictRequest = { caseId: b.caseId as string, token: b.token as string, mode, choice: b.choice as string | undefined, blanks: b.blanks as Record<string, number> | undefined };
-      const res = await svc.verdict(req, { admin, withTrace: dev || admin });
+      const res = await svc.verdict(req, { admin, protos, withTrace: dev || admin });
       await observeVerdict(rt, b.caseId, b.token, res.token);
       return json(200, res);
     },
-    reconstruction: async ({ body, admin, ip }) => {
+    reconstruction: async ({ body, admin, ip, protos }) => {
       limit('write', ip);
       const b = await body();
-      return json(200, await svc.reconstruction({ caseId: b.caseId as string, token: b.token as string }, { admin }));
+      return json(200, await svc.reconstruction({ caseId: b.caseId as string, token: b.token as string }, { admin, protos }));
     },
-    'reconstruction/submit': async ({ body, admin, ip }) => {
+    'reconstruction/submit': async ({ body, admin, ip, protos }) => {
       limit('write', ip);
       const b = await body();
-      return json(200, await svc.submitReconstruction(b as never, { admin }));
+      return json(200, await svc.submitReconstruction(b as never, { admin, protos }));
     },
-    solution: async ({ body, admin, ip }) => {
+    solution: async ({ body, admin, ip, protos }) => {
       limit('write', ip);
       const b = await body();
-      return json(200, await svc.solution({ caseId: b.caseId as string, token: b.token as string }, { admin }));
+      return json(200, await svc.solution({ caseId: b.caseId as string, token: b.token as string }, { admin, protos }));
     },
   };
 
@@ -287,7 +292,7 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
     cases: async () => {
       const { reg, list } = await validations(rt);
       return json(200, {
-        cases: reg.cases.map((c, i) => ({ id: c.data.id, path: c.path, publish: c.data.publish, reviewStatus: c.data.reviewStatus, validation: list[i], data: c.data })),
+        cases: reg.cases.map((c, i) => ({ id: c.data.id, path: c.path, publish: c.data.publish, ...(c.data.proto ? { proto: c.data.proto } : {}), reviewStatus: c.data.reviewStatus, validation: list[i], data: c.data })),
         issues: reg.issues,
         lines: reg.lines.info,
         prologue: !!reg.prologue,
@@ -304,14 +309,15 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
     'mint-token': async ({ body }) => {
       const b = await body();
       const stage = (['fresh', 'investigated', 'debated', 'solved', 'reconstructed'] as const).find((x) => x === b.stage) ?? 'investigated';
-      return json(200, await svc.mintToken(b.caseId as string, stage, { admin: true }, typeof b.asked === 'number' ? b.asked : undefined));
+      // admin tools reach every case: all prototype switches on
+      return json(200, await svc.mintToken(b.caseId as string, stage, { admin: true, protos: PROTO_IDS }, typeof b.asked === 'number' ? b.asked : undefined));
     },
     'versus-bind': (ctx) => versus.devBind(ctx),
     'ask-debug': async ({ body }) => {
       const b = await body();
       const mode = typeof b.mode === 'string' && (PIPELINE_MODES as readonly string[]).includes(b.mode) ? (b.mode as PipelineMode) : undefined;
       if (typeof b.question !== 'string') throw new EngineError('bad_request', 'question is required', 400);
-      return json(200, await svc.ask({ caseId: b.caseId as string, question: b.question, token: (b.token as string) || undefined }, { admin: true, withTrace: true, mode }));
+      return json(200, await svc.ask({ caseId: b.caseId as string, question: b.question, token: (b.token as string) || undefined }, { admin: true, protos: PROTO_IDS, withTrace: true, mode }));
     },
   };
 
@@ -336,6 +342,8 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
         if (!adminByToken) limit('adminFail', ip);
       }
       const admin = dev || adminByToken;
+      // the caller's prototype switches (shared/proto.ts): a prototype case exists only with its switch
+      const protos = parseProtos(req.headers.get(PROTO_HEADER)?.slice(0, 64));
       let parsed: Promise<Record<string, unknown>> | undefined;
       const body = () => (parsed ??= readJson(req));
       // Fail closed: nothing that signs or verifies a progress token runs with an unusable secret.
@@ -351,20 +359,20 @@ export function createApiHandler(rt: ApiRuntime): (req: Request) => Promise<Resp
         const route = table?.[name];
         if (!route) throw new EngineError('bad_request', (adminGet[name] || adminPost[name]) ? 'method not allowed' : 'not found', adminGet[name] || adminPost[name] ? 405 : 404);
         if (method === 'POST') refuseMisconfigured(); // mint-token / ask-debug sign tokens
-        return await route({ req, url, params: [], admin: true, ip, body });
+        return await route({ req, url, params: [], admin: true, ip, protos, body });
       }
 
       // GET routes are keyed by the first segment (cases/:id); POST routes by the full path.
       if (method === 'GET' || method === 'HEAD') {
         const route = get[segs[0] ?? 'health'];
         if (!route) throw new EngineError('bad_request', post[segs.join('/')] ? 'method not allowed' : 'not found', post[segs.join('/')] ? 405 : 404);
-        return await route({ req, url, params: segs.slice(1), admin, ip, body });
+        return await route({ req, url, params: segs.slice(1), admin, ip, protos, body });
       }
       if (method === 'POST') {
         const route = post[segs.join('/')];
         if (!route) throw new EngineError('bad_request', get[segs[0]] ? 'method not allowed' : 'not found', get[segs[0]] ? 405 : 404);
         refuseMisconfigured(); // every POST route signs or verifies a progress token
-        return await route({ req, url, params: [], admin, ip, body });
+        return await route({ req, url, params: [], admin, ip, protos, body });
       }
       throw new EngineError('bad_request', 'method not allowed', 405);
     } catch (e) {

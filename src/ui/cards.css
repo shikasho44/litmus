@@ -313,6 +313,16 @@ button.ev:disabled {
   color: var(--alarm-deep);
   margin-top: -6px;
 }
+/* a prototype case (?proto=seeds, shared/proto.ts): a small dashed stamp under the title */
+.tag__proto {
+  align-self: flex-start;
+  padding: 1px 8px;
+  border: 1px dashed var(--alarm-deep);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.06em;
+  color: var(--alarm-deep);
+}
 .tag__summary {
   display: grid;
   gap: 4px;

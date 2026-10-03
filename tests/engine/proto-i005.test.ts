@@ -5,7 +5,7 @@
  *     and carried on every judged VerdictResponse
  *   - サイエンスヒント (fact.scienceHint → PublicFact.science), 矛盾の一文 (intro.hook → CaseSummary.hook),
  *     余話 (science.aside, post-solve only): schema, public views, validator checks
- *   - the authored content: one hook per case, one サイエンスヒント per case, asides for c08 and c01,
+ *   - the authored content: one hook per case, one サイエンスヒント per case, asides for c08, c01 and the prototype c09,
  *     one 「先生のひとこと」 sample frame (c01) and never any words of his
  */
 import { describe, expect, it } from 'vitest';
@@ -257,7 +257,8 @@ describe('I-005 validator: hook = pre-solve text, aside = post-solve text, one �
 });
 
 describe('I-005 authored content', () => {
-  const HINTS: Record<string, string> = { c08: 'F15', c05: 'F18', c06: 'F11', c07: 'F28', c01: 'F19', c02: 'F12', c03: 'F30', c04: 'F08' };
+  // c09 = the prototype case 「助けられた朝」 (?proto=seeds, 2026-10-04): the brother's word about her swollen legs
+  const HINTS: Record<string, string> = { c08: 'F15', c05: 'F18', c06: 'F11', c07: 'F28', c01: 'F19', c02: 'F12', c03: 'F30', c04: 'F08', c09: 'F15' };
 
   it('every case has a 矛盾の一文 in the 「それなのに」 form', () => {
     for (const c of cases) {
@@ -293,15 +294,15 @@ describe('I-005 authored content', () => {
     }
   });
 
-  it('asides for CASE 01 (c08) and CASE 05 (c01) only, sourced; the sample frame of 「先生のひとこと」 in c01 only', () => {
+  it('asides for CASE 01 (c08), CASE 05 (c01) and the prototype c09 only, sourced; the sample frame of 「先生のひとこと」 in c01 only', () => {
     const withAside = cases.filter((c) => c.science.aside).map((c) => c.id.slice(0, 3)).sort();
-    expect(withAside).toEqual(['c01', 'c08']);
+    expect(withAside).toEqual(['c01', 'c08', 'c09']);
     for (const c of cases.filter((x) => x.science.aside)) {
       const a = c.science.aside!;
       expect(a.sources.length, c.id).toBeGreaterThanOrEqual(2);
       for (const s of a.sources) {
         expect(s.url, c.id).toMatch(/^https:\/\//);
-        expect(s.accessedDate, c.id).toBe('2026-10-03');
+        expect(s.accessedDate, c.id).toBe(c.id.startsWith('c09') ? '2026-10-04' : '2026-10-03'); // c09: opened the day it was written
         expect(s.supports.length, c.id).toBeGreaterThan(20);
       }
       // nothing is attributed to the supervisor: no quote marks around his name, no 「くられ」 at all

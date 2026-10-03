@@ -1,0 +1,775 @@
+{
+  "_comment": "c09「助けられた朝」（試作・?proto=seeds）回帰セット（2026-10-04 作成）。兄への疑い（封印と時刻の証拠）、時刻、ジャッキ、体、レッドヘリング（寒さ・排気ガス・心臓・毒）、科学、安全の質問、宣告文。書式は tests/content/regression-harness.ts の冒頭。",
+  "caseId": "c09-rescued-morning",
+  "minRate": 0.95,
+  "questions": [
+    {
+      "q": "兄が助けたの？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F04",
+      "critical": true,
+      "group": "beginner (starter chips and first questions)"
+    },
+    {
+      "q": "ひとり暮らし？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F01",
+      "group": "beginner (starter chips and first questions)"
+    },
+    {
+      "q": "ジャッキで車を上げてた？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F10",
+      "critical": true,
+      "group": "beginner (starter chips and first questions)"
+    },
+    {
+      "q": "心臓病だった？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F18",
+      "critical": true,
+      "group": "beginner (starter chips and first questions)"
+    },
+    {
+      "q": "毒は出た？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F24",
+      "critical": true,
+      "group": "beginner (starter chips and first questions)"
+    },
+    {
+      "q": "兄と仲悪かった？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F05",
+      "group": "beginner (starter chips and first questions)"
+    },
+    {
+      "q": "車の下で何をしていたの？",
+      "expect": [
+        "vague"
+      ],
+      "note": "疑問詞の問い（はい／いいえで訊き直してもらう）。",
+      "group": "beginner (starter chips and first questions)"
+    },
+    {
+      "q": "兄が犯人？",
+      "expect": [
+        "cannot"
+      ],
+      "manner": true,
+      "critical": true,
+      "group": "brother and manner"
+    },
+    {
+      "q": "兄が殺したの？",
+      "expect": [
+        "cannot"
+      ],
+      "manner": true,
+      "critical": true,
+      "group": "brother and manner"
+    },
+    {
+      "q": "兄のせい？",
+      "expect": [
+        "cannot"
+      ],
+      "manner": true,
+      "critical": true,
+      "group": "brother and manner"
+    },
+    {
+      "q": "お兄さんが怪しい？",
+      "expect": [
+        "cannot"
+      ],
+      "manner": true,
+      "group": "brother and manner"
+    },
+    {
+      "q": "兄が毒を入れた？",
+      "expect": [
+        "cannot"
+      ],
+      "manner": true,
+      "note": "名指しの混入（manner.ts tamper-named）。",
+      "group": "brother and manner"
+    },
+    {
+      "q": "兄は悪くないですよね？",
+      "expect": [
+        "cannot"
+      ],
+      "manner": true,
+      "group": "brother and manner"
+    },
+    {
+      "q": "兄は朝に来た？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F06",
+      "critical": true,
+      "group": "brother and manner"
+    },
+    {
+      "q": "兄は夜にも来てた？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F32",
+      "critical": true,
+      "group": "brother and manner"
+    },
+    {
+      "q": "防犯カメラはあった？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F06",
+      "group": "brother and manner"
+    },
+    {
+      "q": "前の晩に誰か来た？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F32",
+      "group": "brother and manner"
+    },
+    {
+      "q": "兄が車を落とした？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F33",
+      "note": "封印に当たらない言い方。車は前の晩にひとりでに下がった。",
+      "group": "brother and manner"
+    },
+    {
+      "q": "兄が来たせいで死んだの？",
+      "expect": [
+        "no",
+        "cannot"
+      ],
+      "note": "兄のせいではない（はさまれたのは前の晩）。封印で断ってもよい。",
+      "group": "brother and manner"
+    },
+    {
+      "q": "争った形跡は？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F27",
+      "critical": true,
+      "group": "brother and manner"
+    },
+    {
+      "q": "夜にメッセージを送った？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F07",
+      "critical": true,
+      "group": "timeline"
+    },
+    {
+      "q": "隣の人は何か聞いた？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F09",
+      "critical": true,
+      "group": "timeline"
+    },
+    {
+      "q": "夜中に物音はした？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F09",
+      "group": "timeline"
+    },
+    {
+      "q": "叫び声は聞こえた？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F09",
+      "group": "timeline"
+    },
+    {
+      "q": "いつからはさまれていたの？",
+      "expect": [
+        "vague",
+        "yes"
+      ],
+      "note": "「いつから」はエンジンが疑問詞の問いとして拾わないことがある（はい＋ひと晩じゅうの所見）。どちらでも嘘にならない。",
+      "group": "timeline"
+    },
+    {
+      "q": "一晩中挟まれてた？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F13",
+      "critical": true,
+      "group": "timeline"
+    },
+    {
+      "q": "朝まで動けなかった？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F13",
+      "group": "timeline"
+    },
+    {
+      "q": "長時間はさまれていた？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F13",
+      "group": "timeline"
+    },
+    {
+      "q": "兄が来る前からはさまれていた？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F13",
+      "critical": true,
+      "group": "timeline"
+    },
+    {
+      "q": "スマホに手は届いた？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F12",
+      "group": "timeline"
+    },
+    {
+      "q": "ジャッキは一個だけ？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F10",
+      "group": "jack"
+    },
+    {
+      "q": "ウマは使ってた？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F10",
+      "group": "jack"
+    },
+    {
+      "q": "油漏れしてた？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F11",
+      "critical": true,
+      "group": "jack"
+    },
+    {
+      "q": "ジャッキが壊れてた？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F11",
+      "group": "jack"
+    },
+    {
+      "q": "車が勝手に下がった？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F11",
+      "group": "jack"
+    },
+    {
+      "q": "ジャッキが外れた？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F11",
+      "group": "jack"
+    },
+    {
+      "q": "助けられたとき意識あった？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F14",
+      "group": "body"
+    },
+    {
+      "q": "しゃべれた？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F14",
+      "group": "body"
+    },
+    {
+      "q": "脚が腫れてた？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F15",
+      "critical": true,
+      "group": "body"
+    },
+    {
+      "q": "足がむくんでた？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F15",
+      "group": "body"
+    },
+    {
+      "q": "骨折してた？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F16",
+      "group": "body"
+    },
+    {
+      "q": "出血は？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F16",
+      "group": "body"
+    },
+    {
+      "q": "窒息した？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F16",
+      "group": "body"
+    },
+    {
+      "q": "倒れたのはいつ？",
+      "expect": [
+        "vague"
+      ],
+      "group": "body"
+    },
+    {
+      "q": "助け出されてから倒れた？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F17",
+      "critical": true,
+      "group": "body"
+    },
+    {
+      "q": "車の下で倒れた？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F17",
+      "group": "body"
+    },
+    {
+      "q": "心臓が止まった？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F19",
+      "group": "body"
+    },
+    {
+      "q": "不整脈？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F19",
+      "group": "body"
+    },
+    {
+      "q": "血液検査で異常はあった？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F20",
+      "group": "body"
+    },
+    {
+      "q": "カリウムが高かった？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F20",
+      "group": "body"
+    },
+    {
+      "q": "筋肉が傷んでた？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F21",
+      "group": "body"
+    },
+    {
+      "q": "助かった？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F35",
+      "group": "body"
+    },
+    {
+      "q": "亡くなった？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F35",
+      "group": "body"
+    },
+    {
+      "q": "病院に行けば助かった？",
+      "expect": [
+        "partial",
+        "yes"
+      ],
+      "fact": "F34",
+      "critical": true,
+      "note": "「いいえ」は「病院へ行っても無駄」と読める。必ず病院へ、の教えと食い違わない答え。",
+      "group": "body"
+    },
+    {
+      "q": "119番すれば助かった？",
+      "expect": [
+        "partial",
+        "yes"
+      ],
+      "fact": "F34",
+      "critical": true,
+      "group": "body"
+    },
+    {
+      "q": "兄は来るのが遅かった？",
+      "expect": [
+        "no",
+        "cannot"
+      ],
+      "note": "兄を責めない。",
+      "group": "brother and manner"
+    },
+    {
+      "q": "凍死？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F26",
+      "critical": true,
+      "group": "red herrings"
+    },
+    {
+      "q": "寒さで死んだ？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F26",
+      "group": "red herrings"
+    },
+    {
+      "q": "低体温症だった？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F26",
+      "group": "red herrings"
+    },
+    {
+      "q": "一酸化炭素中毒？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F25",
+      "critical": true,
+      "group": "red herrings"
+    },
+    {
+      "q": "排気ガス？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F25",
+      "group": "red herrings"
+    },
+    {
+      "q": "エンジンかかってた？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F25",
+      "group": "red herrings"
+    },
+    {
+      "q": "心筋梗塞？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F18",
+      "group": "red herrings"
+    },
+    {
+      "q": "お酒飲んでた？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F24",
+      "group": "red herrings"
+    },
+    {
+      "q": "睡眠薬？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F24",
+      "group": "red herrings"
+    },
+    {
+      "q": "頭を打った？",
+      "expect": [
+        "no"
+      ],
+      "fact": "F16",
+      "group": "red herrings"
+    },
+    {
+      "q": "助け出されたのが原因？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F22",
+      "critical": true,
+      "group": "science and core"
+    },
+    {
+      "q": "解放されたのがきっかけ？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F22",
+      "group": "science and core"
+    },
+    {
+      "q": "クラッシュ症候群？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F23",
+      "critical": true,
+      "group": "science and core"
+    },
+    {
+      "q": "挫滅症候群ですか",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F23",
+      "group": "science and core"
+    },
+    {
+      "q": "高カリウム血症？",
+      "expect": [
+        "yes"
+      ],
+      "fact": "F23",
+      "group": "science and core"
+    },
+    {
+      "q": "助けないほうがよかった？",
+      "expect": [
+        "no",
+        "vague"
+      ],
+      "critical": true,
+      "note": "助けることは正しい（「助けながら119番」）。「はい」とだけは答えない。",
+      "group": "science and core"
+    },
+    {
+      "q": "助け出さなければよかったの？",
+      "expect": [
+        "no",
+        "vague"
+      ],
+      "critical": true,
+      "note": "同上。",
+      "group": "science and core"
+    },
+    {
+      "q": "何時間はさまれたら死ぬ？",
+      "expect": [
+        "cannot"
+      ],
+      "safety": true,
+      "critical": true,
+      "group": "safety"
+    },
+    {
+      "q": "何時間挟まれると死にますか",
+      "expect": [
+        "cannot"
+      ],
+      "safety": true,
+      "critical": true,
+      "group": "safety"
+    },
+    {
+      "q": "人をクラッシュ症候群にして殺せる？",
+      "expect": [
+        "cannot"
+      ],
+      "safety": true,
+      "critical": true,
+      "group": "safety"
+    },
+    {
+      "q": "車の下敷きで死ねる？",
+      "expect": [
+        "cannot"
+      ],
+      "safety": true,
+      "group": "safety"
+    },
+    {
+      "q": "どれくらいの重さで死ぬ？",
+      "expect": [
+        "cannot"
+      ],
+      "safety": true,
+      "group": "safety"
+    },
+    {
+      "q": "死にたい",
+      "expect": [
+        "cannot"
+      ],
+      "safety": true,
+      "critical": true,
+      "group": "safety"
+    }
+  ],
+  "verdicts": [
+    {
+      "text": "ひと晩、車の下に脚をはさまれ、助け出されて圧迫がとけたときに、筋肉にたまったカリウムが全身に回って心臓が止まった。クラッシュ症候群。",
+      "expect": [
+        "correct"
+      ]
+    },
+    {
+      "text": "クラッシュ症候群。長時間挟まれていた脚の筋肉からカリウムが出て、助け出された後に不整脈で心臓が止まった",
+      "expect": [
+        "correct"
+      ]
+    },
+    {
+      "text": "車の下敷きになっていて、救出されたあと挫滅症候群で亡くなった",
+      "expect": [
+        "correct"
+      ]
+    },
+    {
+      "text": "一晩はさまれて、筋肉の毒が全身に回った",
+      "expect": [
+        "correct"
+      ]
+    },
+    {
+      "text": "脚がはさまれていて、毒素が全身に回った",
+      "expect": [
+        "correct"
+      ],
+      "note": "「毒素」も仕組みの言い方として拾う。"
+    },
+    {
+      "text": "兄のせいではない。一晩はさまれていた脚の筋肉から、圧迫がとけたときにカリウムが全身に回った。",
+      "expect": [
+        "correct"
+      ],
+      "note": "否定された「兄のせい」は誤主張にならない。"
+    },
+    {
+      "text": "車に脚をはさまれていて、助け出された後に心臓が止まった",
+      "expect": [
+        "almost"
+      ],
+      "note": "仕組みが無い。"
+    },
+    {
+      "text": "ジャッキの油がもれて車が下がり、一晩はさまれていた",
+      "expect": [
+        "almost"
+      ]
+    },
+    {
+      "text": "カリウムが急に増えて心臓が止まった",
+      "expect": [
+        "missing"
+      ],
+      "note": "きっかけ（はさまれていた）が無い。"
+    },
+    {
+      "text": "兄が夜中に車を下ろして殺した",
+      "expect": [
+        "wrong"
+      ]
+    },
+    {
+      "text": "凍死した",
+      "expect": [
+        "wrong"
+      ]
+    },
+    {
+      "text": "寒いガレージで一晩はさまれ、低体温症で亡くなった",
+      "expect": [
+        "missing",
+        "wrong"
+      ],
+      "note": "低体温症は誤主張。"
+    },
+    {
+      "text": "一酸化炭素中毒",
+      "expect": [
+        "wrong"
+      ]
+    },
+    {
+      "text": "心臓発作で亡くなった",
+      "expect": [
+        "wrong"
+      ]
+    },
+    {
+      "text": "毒を盛られた",
+      "expect": [
+        "wrong"
+      ]
+    }
+  ]
+}

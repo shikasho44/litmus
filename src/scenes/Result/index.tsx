@@ -26,7 +26,7 @@ import { motionReduced } from '../../fx/motion';
 import { useImage } from '../../lib/asset';
 import { caseList, loadCases } from '../../lib/cases';
 import { formatClearTime, formatElapsed, useCaseProgress } from '../../state/hooks';
-import { completeCase, getCaseProgress, resetCase, saveData } from '../../state/save';
+import { completeCase, getCaseProgress, resetCase, saveData, shownCases } from '../../state/save';
 import type { CaseResult, Rank } from '../../state/types';
 import { Button } from '../../ui/Button';
 import { HolmaSprite } from '../../ui/HolmaSprite';
@@ -136,7 +136,7 @@ function Result({ caseId, result, best, clears, summary, list, fresh }: { caseId
   const keyRate = s.answered ? Math.round(((s.keyQuestions ?? 0) / s.answered) * 100) : null;
   const par = questionPar(input.difficulty);
   const q = questionTerms(input);
-  const degree = detectiveTotal(saveData.value.cases);
+  const degree = detectiveTotal(shownCases(saveData.value.cases));
   const bestPoints = saveData.value.cases[caseId]?.bestPoints;
   /** The case's first clear (kept forever; absent for cases cleared before it was recorded). */
   const firstClear = saveData.value.cases[caseId]?.firstClear;

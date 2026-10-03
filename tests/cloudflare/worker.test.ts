@@ -71,6 +71,21 @@ describe('embedded content', () => {
   });
 });
 
+describe('the prototype case in the Worker bundle (?proto=seeds, 2026-10-04)', () => {
+  it('ships in the bundle, but the API lists and serves it only with the x-janedoe-proto header', async () => {
+    expect(CASE_DIRS).toContain('c09-rescued-morning');
+    expect(workerContent().cases.map((c) => c.data.id)).toContain('c09-rescued-morning');
+    const env = envWith();
+    const plain = await call(env, '/api/cases');
+    expect(plain.json.map((c: { id: string }) => c.id)).not.toContain('c09-rescued-morning');
+    expect(plain.json).toHaveLength(8);
+    const seeds = await call(env, '/api/cases', undefined, { 'x-janedoe-proto': 'seeds' });
+    expect(seeds.json.map((c: { id: string }) => c.id)).toContain('c09-rescued-morning');
+    expect((await call(env, '/api/cases/c09-rescued-morning')).status).toBe(404);
+    expect((await call(env, '/api/cases/c09-rescued-morning', undefined, { 'x-janedoe-proto': 'seeds' })).status).toBe(200);
+  });
+});
+
 describe('worker routing', () => {
   it('serves static files from ASSETS and /api from the handler', async () => {
     const env = envWith();

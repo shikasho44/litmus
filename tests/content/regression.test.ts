@@ -37,6 +37,7 @@ describe('regression sets', () => {
     expect(sets.map((s) => s.caseId).sort()).toEqual([
       'c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper',
       'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-thirst-beside-water', 'c08-half-folded-towel',
+      'c09-rescued-morning', // the prototype case (?proto=seeds, 2026-10-04)
     ]);
   });
 });

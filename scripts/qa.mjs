@@ -9,6 +9,8 @@
 //   node scripts/qa.mjs --port 5198 (default; a dev server already answering there is reused if it runs in rules mode)
 //   node scripts/qa.mjs --proto i005   the same runs with a feature prototype switched on (?proto=i005, src/config/proto.ts):
 //                                   I-005 adds checks + shots of its four pieces; without the switch the runs check that none shows
+//   node scripts/qa.mjs --proto seeds --case c09   the prototype cases (case.json `proto`) join the run only with their switch
+//                                   (several: --proto i005,seeds); without it the files screen must not list them
 //   node scripts/qa.mjs --viewport 1280x800   another PC size     --seed-random   seeded Math.random (before/after screenshot diffs)
 //
 // Full flow: title (gate → 審問を始める) → prologue (skip) → files → difficulty chooser → intro
@@ -26,6 +28,7 @@
 //   c08 審問官 (cloze) — CASE 01, the tutorial —
 //   c05 審問官 (cloze) · c06 見習い (choice) · c07 教授 (free) — the intro cases CASE 02–04 —
 //   c01 審問官 (cloze) · c02 見習い (choice, noise break skipped after round 1) · c03 教授 (free) · c04 審問官 (cloze).
+//   c09 審問官 (cloze) — the prototype case, only with --proto seeds —
 // Game over: 審問官 on the last light → the case restarts (new token, other cases untouched);
 // 見習い on the last light → back to the start of the inquest with the lights refilled.
 //
@@ -50,9 +53,10 @@ const PORT = Number(arg('--port', process.env.QA_PORT || 5198));
 const BASE = `http://127.0.0.1:${PORT}/`;
 const SMOKE = !argv.includes('--no-smoke');
 const SMOKE_ONLY = argv.includes('--smoke-only');
-/** Feature prototype to switch on (?proto=…); '' = the live default. */
+/** Feature prototypes to switch on (?proto=…, comma separated: i005, seeds); '' = the live default. */
 const PROTO = arg('--proto', '');
-const I005 = PROTO === 'i005';
+const PROTOS = PROTO.toLowerCase().split(/[\s,]+/).filter(Boolean);
+const I005 = PROTOS.includes('i005');
 const VIEW = /^(\d{3,4})x(\d{3,4})$/.exec(arg('--viewport', '')) ?? null;
 const SEED_RANDOM = argv.includes('--seed-random');
 const SIZE = MOBILE
@@ -69,7 +73,14 @@ const CASES = readdirSync(resolve(root, 'content', 'cases'))
   .filter((d) => /^c\d\d/.test(d))
   .sort()
   .map((d) => JSON.parse(readFileSync(resolve(root, 'content', 'cases', d, 'case.json'), 'utf8')))
+  // a prototype case (case.json `proto`, shared/proto.ts) exists only with its switch (--proto seeds)
+  .filter((c) => !c.proto || PROTOS.includes(c.proto))
   .sort((a, b) => a.number - b.number);
+/** Prototype cases left out of this run (their switch is off): the files screen must not show them. */
+const HIDDEN_PROTO_CASES = readdirSync(resolve(root, 'content', 'cases'))
+  .filter((d) => /^c\d\d/.test(d))
+  .map((d) => JSON.parse(readFileSync(resolve(root, 'content', 'cases', d, 'case.json'), 'utf8')))
+  .filter((c) => c.proto && !PROTOS.includes(c.proto));
 const findCase = (k) => CASES.find((c) => c.id === k || c.id.startsWith(k));
 /** CASE 01 by its display number (the tutorial case), whatever its id. */
 const FIRST = CASES.find((c) => c.number === 1) ?? CASES[0];
@@ -82,7 +93,7 @@ if (!SMOKE_ONLY && !FULL.length) {
 const SMOKES = SMOKE ? CASES.filter((c) => !FULL.includes(c)) : [];
 
 /** Difficulty per case (VERDICT_MODE_BY_DIFFICULTY: easy choice · normal cloze · hard free). */
-const LEVEL = { c01: 'normal', c02: 'easy', c03: 'hard', c04: 'normal', c05: 'normal', c06: 'easy', c07: 'hard', c08: 'normal' };
+const LEVEL = { c01: 'normal', c02: 'easy', c03: 'hard', c04: 'normal', c05: 'normal', c06: 'easy', c07: 'hard', c08: 'normal', c09: 'normal' };
 const MODE = { easy: 'choice', normal: 'cloze', hard: 'free' };
 const LIVES = { easy: 10, normal: 3, hard: 3 };
 /** Smoke runs that skip the rest of the noise break after this many rounds. */
@@ -101,6 +112,7 @@ const INCOMPLETE = {
   c06: '日光で雪だるまがとけた。',
   c07: '水が足りなくてしおれた。',
   c08: 'ハチに刺されて倒れた。',
+  c09: '車の下に脚をはさまれて亡くなった。',
 };
 
 /**
@@ -344,7 +356,7 @@ async function drainRoutes(page, into) {
   for (const s of r) if (into[into.length - 1] !== s) into.push(s);
 }
 
-async function boot(page, { url = `${BASE}?mute=1${PROTO ? `&proto=${encodeURIComponent(PROTO)}` : ''}`, reload = false } = {}) {
+async function boot(page, { url = `${BASE}?mute=1${PROTOS.length ? `&proto=${encodeURIComponent(PROTOS.join(','))}` : ''}`, reload = false } = {}) {
   if (reload) {
     await page.evaluate(() => window.__JD?.flushSave?.());
     await page.reload({ waitUntil: 'load', timeout: 120000 });
@@ -405,6 +417,12 @@ async function titleToFiles(page, name) {
   await tick(page, 1600);
   await shot(page, name('files'));
   await protoCount(page, '.hookline--tag', 'files: 矛盾の一文 on the case cards', (n) => (I005 ? n === CASES.filter((c) => c.intro.hook).length : n === 0));
+  // the case list: exactly the cases of this run (a prototype case only with its switch, ?proto=seeds)
+  const tagIds = await page.evaluate(() => [...document.querySelectorAll('article.tag h3[id^="case-"]')].map((h) => h.id.replace(/^case-/, '').replace(/-title$/, '')));
+  check(tagIds.length === CASES.length && CASES.every((c) => tagIds.includes(c.id)), `files: ${tagIds.length} case cards (expected ${CASES.length}: ${CASES.map((c) => c.id.slice(0, 3)).join(' ')})`);
+  check(HIDDEN_PROTO_CASES.every((c) => !tagIds.includes(c.id)), `files: no prototype case without its switch (${HIDDEN_PROTO_CASES.map((c) => c.id).join(', ') || 'none'})`);
+  const protoTags = await page.locator('.tag__proto').count();
+  check(protoTags === CASES.filter((c) => c.proto).length, `files: ${protoTags} 「試作」 stamp(s) (expected ${CASES.filter((c) => c.proto).length})`);
   const seen = await page.evaluate(() => window.__JD.getState().save.meta.prologueSeen);
   check(seen === true, 'prologue skip marks the prologue as seen');
 }
@@ -1115,11 +1133,13 @@ async function quiz(page, c, name, { full }) {
   await waitSel(page, '.qz-card', { label: 'quiz card' });
   await tick(page, 700);
   await shot(page, name('quiz'));
-  const answers = await page.evaluate(async (id) => {
+  const answers = await page.evaluate(async ([id, protos]) => {
     const token = window.__JD.getState().save.cases[id].token;
-    const r = await fetch('api/solution', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ caseId: id, token }) });
+    // a prototype case answers only with its switch (the x-janedoe-proto header, shared/proto.ts)
+    const headers = { 'content-type': 'application/json', ...(protos ? { 'x-janedoe-proto': protos } : {}) };
+    const r = await fetch('api/solution', { method: 'POST', headers, body: JSON.stringify({ caseId: id, token }) });
     return (await r.json()).quiz.map((q) => q.answer);
-  }, c.id);
+  }, [c.id, PROTOS.join(',')]);
   for (const [qi, ans] of answers.entries()) {
     await waitSel(page, '.qz-choice');
     await tick(page, 400);

@@ -154,13 +154,16 @@ describe('free answers never unlock a finding (every real case, every probe, rul
   it('holds for all authored probes asked on a fully open investigation', async () => {
     const { loadRegistry, resolveContentRoot } = await import('../../server/node/content-fs');
     const { GameService } = await import('../../server/engine/game');
+    const { PROTO_IDS } = await import('../../shared/proto');
     const registry = loadRegistry(resolveContentRoot({}));
     const svc = new GameService({ content: () => registry, secret: SECRET, components: { mode: 'rules', warnings: [] }, dev: true });
     let checked = 0;
     for (const loaded of registry.list(true)) {
-      const t0 = await svc.newToken(loaded.data.id);
+      // every switch on: the prototype cases (?proto=seeds) are checked too
+      const o = { protos: PROTO_IDS };
+      const t0 = await svc.newToken(loaded.data.id, o);
       for (const p of loaded.data.probes) {
-        const r = await svc.ask({ caseId: loaded.data.id, question: p.q, token: t0.token });
+        const r = await svc.ask({ caseId: loaded.data.id, question: p.q, token: t0.token }, o);
         const counted = r.answers.filter((a) => !a.free).length;
         expect((r.progress.spent ?? -1) - (t0.progress.spent ?? 0), p.q).toBe(counted);
         for (const a of r.answers) if (a.free) expect(a.unlocked, `${loaded.data.id}: ${p.q}`).toEqual([]);

@@ -166,3 +166,29 @@ describe('first clear and clear time (2026-09-29)', () => {
     expect(sanitize(blob({ examples: { seed: 3, ms: 70_000, dealt: 3, shown: ['a？'], used: ['b？'] } })).cases[ID].examples).toEqual({ seed: 3, ms: 70_000, dealt: 3, shown: ['a？'], used: ['b？'] });
   });
 });
+
+describe('a prototype case (?proto=seeds) without its switch — src/config/proto.ts', () => {
+  const PROTO = 'c09-rescued-morning'; // shared/proto.ts PROTO_CASES; no switch in tests
+
+  it('its save stays out of the 名探偵度数 and 「続きから」, and is kept for when the switch is back', async () => {
+    const { resumableCaseId, shownCases } = await import('./save');
+    completeCase(ID, run('A', 80, 'hard'));
+    completeCase(PROTO, run('S', 100, 'hard'));
+    expect(Object.keys(saveData.value.cases).sort()).toEqual([ID, PROTO].sort());
+    expect(Object.keys(shownCases(saveData.value.cases))).toEqual([ID]);
+    expect(detectiveTotal(shownCases(saveData.value.cases))).toBe(112);
+    // an unfinished prototype run is never the case 「続きから」 reopens
+    resetAll();
+    updateCase(PROTO, { stage: 'investigation' });
+    expect(saveData.value.cases[PROTO]?.stage).toBe('investigation');
+    expect(resumableCaseId.value).toBeNull();
+    updateCase(ID, { stage: 'investigation' });
+    expect(resumableCaseId.value).toBe(ID);
+  });
+
+  it('shownCases returns the same object when nothing is hidden', async () => {
+    const { shownCases } = await import('./save');
+    const cases = { [ID]: freshCase(ID) };
+    expect(shownCases(cases)).toBe(cases);
+  });
+});

@@ -92,6 +92,11 @@ export function CaseTag({ summary: c, status, bestRank, bestPoints, onOpen, onSe
           {c.title}
         </h3>
         <p class="tag__title-en">{c.titleEn}</p>
+        {c.proto && (
+          <p class="tag__proto" data-proto-case={c.proto}>
+            試作 — ?proto={c.proto} のときだけの事件
+          </p>
+        )}
         {PROTO_I005 && <HookLine text={c.hook} class="hookline--tag" />}
         <div class="tag__summary">
           {body && <p class="tag__summary-body">{body}</p>}

@@ -210,3 +210,42 @@ checked by eye. Take 1 is `art-src/rejected/c08-portrait.take1.png`. The backgro
 | c08 p5 | Evening: the half-folded towel (tangerine) on the tatami beside the basket; a black backlit silhouette of a man at the doorway. Nobody lying anywhere. |
 
 Generation count (whole project): batch 1 = 12, batch 2 = 17, batch 3 = 7, batch 4 = 18 + 9 retakes, c07 bg rework = 1, batch 5 = 7 + 1 retake. Total 72.
+
+## Prototype case「助けられた朝」(batch 6, 2026-10-04)
+
+The prototype case c09「助けられた朝」(shown only with `?proto=seeds`; 事件の種 No.4): a 36-year-old
+librarian pinned overnight under her late father's old car when an old hydraulic jack leaked, pulled out
+by her estranged brother, who collapses minutes later (crush syndrome). Seven images from ONE
+`batch_imagegen.py` launch (codex-imagegen skill, re-read before generating; session
+`01a10291-5523-75c3-81a3-64f81d5f0ece`, 16 round trips, 420 s, weekly quota 10.0% → 10.0%). Prompts:
+`scripts/art/jobs_batch6.py` (its own `STYLE_C09` / `panel_style()` on the shared `NEGATIVE` /
+`PANEL_NEGATIVE` of `style.py`); jobs `art-src/jobs/batch6-c09.json`; full prompts and validation in
+`art-src/manifest.json`. Spot colour: pale dawn mint #5EE6B4, used for light (the work lamp, the
+morning light, the blanket, a phone screen). The victim is shown alive only (the portrait; in the panels
+from behind, as her legs in sneakers under the car, or wrapped in a blanket), never lying collapsed; the
+brother is a featureless silhouette. No existing works or artists are named; no reference images.
+
+Checked by eye. Two retakes, both for the story, not for style: panel 2 take 1 put a standing man's
+silhouette in the garage at night (it would say someone was there), panel 3 take 1 drew the woman
+kneeling beside the car while her brother arrived (she is trapped under it). Retakes in one launch of 2
+(session `01a10299-b263-7ee1-9526-23dfdc857222`, 9 round trips, weekly quota 10.0% → 10.0%; prompts
+spell out "nobody else" / "only her sneakers under the car", `art-src/jobs/batch6-retry.json`). Codex
+generated both but did not copy them to their paths (the take-1 files were still there); they were taken
+from its `generated_images` folder and matched to the items by looking at each picture (p2 = night, the
+jack and the oil, no person; p3 = morning, the brother at the shutter), as recorded in the manifest
+(`recovered_from`). Take 1 of both is in `art-src/rejected/`. The background came back at 1672×941 and
+is resized to 1920×1080; panels are cover-resized to 1024×683, the portrait kept at 1024×1536 (the
+`export_art.py` / `export_panels.py` helpers, run for c09 only so the other cases' files stay untouched).
+The portrait sits in the bust shard mask like c08's (checked with the mask drawn over it).
+
+| File | Prompt summary |
+|---|---|
+| `cases/c09/bg.webp` | A home garage on a freezing January morning: an old boxy sedan lifted on one side by a single small bottle jack (no stands), a dark oil stain under it, flattened cardboard, a work lamp, a workbench with tools and a phone face down, the roller shutter open to frost and pale mint morning light. No person. |
+| `cases/c09/portrait.webp` | Chest-up portrait: a 36-year-old Japanese woman, dark hair in a low ponytail, grey knit sweater and an open navy work jacket, calm faint smile; dark navy ground, mint rim light. Alive and healthy. |
+| c09 p1 | Night, shutter closed: the car up on one old bottle jack; only her legs in work trousers and white sneakers stick out from under it; the work lamp glows mint; far away, the phone glows on the workbench. |
+| c09 p2 | Low at floor level: dark oil runs down the old jack into a puddle (a mint glint of lamp light); the car has sunk; her sneakers still under the sill. Nobody else. (take 2) |
+| c09 p3 | Morning: the shutter up, mint winter light; the brother's black silhouette in the doorway with a scissor jack; the sunken car with her sneakers under it. (take 2) |
+| c09 p4 | The car raised high; she sits on the floor from behind, wrapped in a mint blanket; the brother's silhouette crouches beside her, a hand on her shoulder. |
+| c09 p5 | Floor level: a man's hand holds a phone with a blank mint screen (the call); behind, the empty blanket slipped down and one sneaker on its side. Nobody lying anywhere. |
+
+Generation count (whole project): batch 1 = 12, batch 2 = 17, batch 3 = 7, batch 4 = 18 + 9 retakes, c07 bg rework = 1, batch 5 = 7 + 1 retake, batch 6 = 7 + 2 retakes. Total 81.

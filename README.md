@@ -131,6 +131,7 @@ npx tsc --noEmit && npx vitest run && npm run validate && npx vite build && npm 
 2. `npm run validate` を実行し、エラーが 0 になるまで直す（警告は通る）。
    検査内容: 形式、ヒント3つ、答えの要素、出典3件以上、公開してよい文に答えの語（`leakTerms`）が無いこと、想定質問との自己一致率95%以上 など（`docs/engine.md` §4）。
 3. `npm run dev` で遊んで確かめる。`publish: false` の間は本番の一覧に出ません。
+   試作の事件は `"proto": "seeds"` を付けると、URL に `?proto=seeds` を付けたときだけ出ます（dev・本番・静的版・Cloudflare とも。2026-10-04 の「助けられた朝」c09 がこれ。`shared/proto.ts`、`docs/decisions.md`）。
 4. `npm test` と `npm run qa -- --case <id>` を通す。書き方の決まり（ホルマの口調・安全の配慮）は `content/VOICE.md`。
 
 科学解説は人の専門家が確認するまで `reviewStatus` を `ai-reviewed` のままにします（画面に「専門家確認前の下書き」と出ます）。

@@ -8,6 +8,7 @@
  */
 import { CaseSchema, type Case } from '../../shared/case-schema.js';
 import { ScriptSchema, type Script } from '../../shared/lines-schema.js';
+import { caseVisible } from '../../shared/proto.js';
 import { buildCaseIndex, type CaseIndex } from './case-index.js';
 import { LineBank } from './lines.js';
 
@@ -113,12 +114,20 @@ export class ContentRegistry {
     return new ContentRegistry(cases, issues, lines, prologue);
   }
 
-  list(includeUnpublished = false): LoadedCase[] {
-    return this.cases.filter((c) => includeUnpublished || c.data.publish);
+  /**
+   * The cases a caller may see. `includeUnpublished`: dev / admin. `protos`: the prototype switches
+   * of the request (shared/proto.ts): a prototype case (case.json `proto`) is there only when its
+   * switch is on, whatever `publish` and `includeUnpublished` say — GameService always passes them,
+   * so the dev server lists the public cases only unless the switch is on. Without `protos` (tools,
+   * tests, the admin catalogue) a prototype counts as unpublished: `list(true)` is every case,
+   * `list()` the public ones.
+   */
+  list(includeUnpublished = false, protos?: readonly string[]): LoadedCase[] {
+    return this.cases.filter((c) => caseVisible(c.data, includeUnpublished, protos));
   }
 
-  get(id: string, includeUnpublished = false): LoadedCase | undefined {
+  get(id: string, includeUnpublished = false, protos?: readonly string[]): LoadedCase | undefined {
     const c = this.byId.get(id);
-    return c && (includeUnpublished || c.data.publish) ? c : undefined;
+    return c && caseVisible(c.data, includeUnpublished, protos) ? c : undefined;
   }
 }

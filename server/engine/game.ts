@@ -60,6 +60,12 @@ export interface CallOptions {
   withTrace?: boolean;
   /** Admin-only pipeline mode override. */
   mode?: PipelineMode;
+  /**
+   * The caller's prototype switches (shared/proto.ts: the http header x-janedoe-proto, or the
+   * embedded client's ?proto). A prototype case exists for the call only when its switch is here
+   * (admin and dev included); absent = none.
+   */
+  protos?: readonly string[];
 }
 
 const str = (v: unknown, name: string, max = 200): string => {
@@ -95,7 +101,7 @@ export class GameService {
   private async loaded(caseId: unknown, o?: CallOptions): Promise<LoadedCase> {
     const id = str(caseId, 'caseId', 80);
     const reg = await this.registry();
-    const c = reg.get(id, this.visible(o));
+    const c = reg.get(id, this.visible(o), o?.protos ?? []);
     if (!c) throw notFound(`unknown case: ${id}`);
     return c;
   }
@@ -136,7 +142,7 @@ export class GameService {
 
   async listCases(o?: CallOptions): Promise<CaseSummary[]> {
     const reg = await this.registry();
-    return reg.list(this.visible(o)).map((c) => toSummary(c.data));
+    return reg.list(this.visible(o), o?.protos ?? []).map((c) => toSummary(c.data));
   }
 
   async getCase(caseId: string, o?: CallOptions): Promise<CasePublic> {

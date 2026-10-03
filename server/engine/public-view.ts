@@ -49,6 +49,7 @@ export function toSummary(c: Case): CaseSummary {
   if (c.contentWarning) s.contentWarning = c.contentWarning;
   if (c.questionBudget && Object.keys(c.questionBudget).length > 0) s.questionBudget = { ...c.questionBudget };
   if (c.intro.hook) s.hook = c.intro.hook; // PROTOTYPE I-005 (shown only with ?proto=i005)
+  if (c.proto) s.proto = c.proto; // a prototype case (listed only with its switch, shared/proto.ts)
   return s;
 }
 

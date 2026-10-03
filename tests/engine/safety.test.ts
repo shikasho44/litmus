@@ -48,6 +48,12 @@ describe('detectSafety', () => {
       ['ボールで心臓を止められますか？', 'harmOthers'],
       ['どこを狙えば心臓が止まりますか？', 'harmOthers'],
       ['わざと心臓震盪を起こせますか？', 'harmOthers'],
+      // a lethal time / weight asked as a condition (rule how-long-if, 2026-10-04, the prototype c09)
+      ['何時間はさまれたら死ぬ？', 'method'],
+      ['何時間挟まれると死にますか', 'method'],
+      ['2時間はさまれると危ない？', 'method'],
+      ['何キロ乗ったら心臓が止まる？', 'method'],
+      ['何時間たったら死ぬの？', 'method'],
     ];
     for (const [q, kind] of cases) expect(detectSafety(q)?.kind, q).toBe(kind);
   });
@@ -62,6 +68,8 @@ describe('detectSafety', () => {
       '酸素濃度計の画面は消えていましたか？', '何秒で倒れた？', '何時間も生きていた？', '自殺しようとした形跡は？', 'どのくらい苦しんだ？',
       'どれくらい寒かった？', '心臓震盪の死亡率は？', '一瞬で亡くなったの？', '彼女の死に方は穏やかでしたか', '普通の死に方ですか',
       'スマホは使えましたか？', '酸素がなくなると息苦しい？', '死ね', 'ころころ転がった？',
+      // c09: questions about her night under the car stay case questions
+      '何時間もはさまれていましたか？', '何時間はさまれていましたか？', '何分後に倒れましたか？', '1時間たったら救急車は来た？', '一晩はさまれていたのですか？',
     ];
     for (const q of negatives) expect(detectSafety(q), q).toBeUndefined();
   });

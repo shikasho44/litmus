@@ -11,6 +11,8 @@
  *   something instead of only showing the EXAMINING dots
  * - every failure is an ApiError with a code the UI can switch on:
  *     network · timeout · rate_limited · bad_request · bad_token · server
+ * - the tab's prototype switches (?proto=…, src/config/proto.ts) ride along in the x-janedoe-proto
+ *   header, so the server lists a prototype case only for this tab (shared/proto.ts)
  */
 import { signal } from '@preact/signals';
 import type {
@@ -20,6 +22,8 @@ import type {
   VerdictRequest, VerdictResponse, VerdictSetupRequest, VerdictSetupResponse,
 } from '../../shared/api';
 import { ApiError } from '../../shared/api';
+import { PROTO_HEADER } from '../../shared/proto';
+import { PROTOS } from '../config/proto';
 
 type Code = ApiError['code'];
 const CODES: readonly Code[] = ['network', 'timeout', 'rate_limited', 'bad_request', 'bad_token', 'server'];
@@ -35,6 +39,8 @@ export const SLOW_MS = 5_000;
 /** Number of HTTP calls in flight for longer than SLOW_MS (UI: Holma's "still examining" line). */
 export const slowRequests = signal(0);
 const API_BASE = String((import.meta.env.VITE_API_BASE as string | undefined) || '/api').replace(/\/+$/, '');
+/** Headers every call carries: the prototype switches of this tab, when any is on. */
+const BASE_HEADERS: Record<string, string> = PROTOS.length > 0 ? { [PROTO_HEADER]: PROTOS.join(',') } : {};
 
 function codeFor(status: number, bodyCode: unknown): Code {
   if (typeof bodyCode === 'string' && (CODES as readonly string[]).includes(bodyCode)) return bodyCode as Code;
@@ -56,7 +62,7 @@ async function once<T>(method: 'GET' | 'POST', path: string, body: unknown, time
     try {
       res = await fetch(`${API_BASE}${path}`, {
         method,
-        headers: body !== undefined ? { 'content-type': 'application/json' } : undefined,
+        headers: body !== undefined ? { ...BASE_HEADERS, 'content-type': 'application/json' } : PROTOS.length > 0 ? BASE_HEADERS : undefined,
         body: body !== undefined ? JSON.stringify(body) : undefined,
         signal: ac.signal,
         credentials: 'same-origin',

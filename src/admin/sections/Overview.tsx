@@ -157,7 +157,10 @@ export function OverviewSection() {
                           <small class="adm-dim">{x.id}</small>
                         </span>
                       </td>
-                      <td>{x.publish ? <Badge tone="ok">公開</Badge> : <Badge tone="mute">非公開</Badge>}</td>
+                      <td>
+                        {x.publish ? <Badge tone="ok">公開</Badge> : <Badge tone="mute">非公開</Badge>}
+                        {x.proto && <Badge tone="amber">試作 ?proto={x.proto}</Badge>}
+                      </td>
                       <td>
                         <Badge tone={x.reviewStatus === 'human-reviewed' ? 'ok' : x.reviewStatus === 'ai-reviewed' ? 'info' : 'amber'}>{x.reviewStatus}</Badge>
                       </td>

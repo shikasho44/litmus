@@ -250,7 +250,7 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
 2. `npm run validate` — エラー 0 まで直す（警告は通る）
 3. `npm run dev` — dev サーバーは case.json の変更を次のリクエストで自動再読込
 4. `publish: false` の間は本番の一覧に出ない（dev と管理者には見える）
-5. 試作の事件（`proto: "seeds"`、2026-10-04〜）は、プレイヤーの切り替え `?proto=seeds` があるときだけ一覧・取得できる（`publish` によらず、dev と管理者でも同じ。管理 API の mint-token・ask-debug と管理画面の一覧は全部見える）。ブラウザはヘッダー `x-janedoe-proto` で切り替えを送り、静的版は埋め込みエンジンに渡す。オンライン対戦の部屋には使えない。正本は `shared/proto.ts`・`registry.ts` の `list(includeUnpublished, protos)` / `get(id, includeUnpublished, protos)`。ブラウザ側の写し `PROTO_CASES` と case.json の `proto` は validate とテストが一致を確かめる
+5. 試作の事件（`proto: "seeds"`・`proto: "tsukuru"`、2026-10-04〜）は、プレイヤーの切り替え `?proto=seeds`・`?proto=tsukuru` があるときだけ一覧・取得できる（`publish` によらず、dev と管理者でも同じ。管理 API の mint-token・ask-debug と管理画面の一覧は全部見える）。ブラウザはヘッダー `x-janedoe-proto` で切り替えを送り、静的版は埋め込みエンジンに渡す。オンライン対戦の部屋には使えない。正本は `shared/proto.ts`・`registry.ts` の `list(includeUnpublished, protos)` / `get(id, includeUnpublished, protos)`。ブラウザ側の写し `PROTO_CASES` と case.json の `proto` は validate とテストが一致を確かめる
 
 読込経路:
 | 実行環境 | 読み方 |

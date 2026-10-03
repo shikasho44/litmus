@@ -29,6 +29,7 @@
 //   c05 審問官 (cloze) · c06 見習い (choice) · c07 教授 (free) — the intro cases CASE 02–04 —
 //   c01 審問官 (cloze) · c02 見習い (choice, noise break skipped after round 1) · c03 教授 (free) · c04 審問官 (cloze).
 //   c09 審問官 (cloze) — the prototype case, only with --proto seeds —
+//   c10 審問官 (cloze) · c11 見習い (choice) · c12 教授 (free) — the I-001 ツクール samples, only with --proto tsukuru —
 // Game over: 審問官 on the last light → the case restarts (new token, other cases untouched);
 // 見習い on the last light → back to the start of the inquest with the lights refilled.
 //
@@ -93,7 +94,7 @@ if (!SMOKE_ONLY && !FULL.length) {
 const SMOKES = SMOKE ? CASES.filter((c) => !FULL.includes(c)) : [];
 
 /** Difficulty per case (VERDICT_MODE_BY_DIFFICULTY: easy choice · normal cloze · hard free). */
-const LEVEL = { c01: 'normal', c02: 'easy', c03: 'hard', c04: 'normal', c05: 'normal', c06: 'easy', c07: 'hard', c08: 'normal', c09: 'normal' };
+const LEVEL = { c01: 'normal', c02: 'easy', c03: 'hard', c04: 'normal', c05: 'normal', c06: 'easy', c07: 'hard', c08: 'normal', c09: 'normal', c10: 'normal', c11: 'easy', c12: 'hard' };
 const MODE = { easy: 'choice', normal: 'cloze', hard: 'free' };
 const LIVES = { easy: 10, normal: 3, hard: 3 };
 /** Smoke runs that skip the rest of the noise break after this many rounds. */
@@ -113,6 +114,9 @@ const INCOMPLETE = {
   c07: '水が足りなくてしおれた。',
   c08: 'ハチに刺されて倒れた。',
   c09: '車の下に脚をはさまれて亡くなった。',
+  c10: '振ったから凍った。',
+  c11: '窓が冷たかった。',
+  c12: '影がふたつあった。',
 };
 
 /**
@@ -423,6 +427,9 @@ async function titleToFiles(page, name) {
   check(HIDDEN_PROTO_CASES.every((c) => !tagIds.includes(c.id)), `files: no prototype case without its switch (${HIDDEN_PROTO_CASES.map((c) => c.id).join(', ') || 'none'})`);
   const protoTags = await page.locator('.tag__proto').count();
   check(protoTags === CASES.filter((c) => c.proto).length, `files: ${protoTags} 「試作」 stamp(s) (expected ${CASES.filter((c) => c.proto).length})`);
+  // the ツクール samples say what they are on the card (2026-10-04)
+  const tsukuruTags = await page.$$eval('.tag__proto[data-proto-case="tsukuru"]', (els) => els.map((e) => e.textContent));
+  check(tsukuruTags.length === CASES.filter((c) => c.proto === 'tsukuru').length && tsukuruTags.every((t) => t === 'ツクールの見本（やさしい謎・AIと作った）'), `files: ${tsukuruTags.length} card(s) labelled 「ツクールの見本（やさしい謎・AIと作った）」`);
   const seen = await page.evaluate(() => window.__JD.getState().save.meta.prologueSeen);
   check(seen === true, 'prologue skip marks the prologue as seen');
 }

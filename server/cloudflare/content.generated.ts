@@ -10,10 +10,13 @@ import case5 from '../../content/cases/c06-snowman-below-zero/case.json';
 import case6 from '../../content/cases/c07-thirst-beside-water/case.json';
 import case7 from '../../content/cases/c08-half-folded-towel/case.json';
 import case8 from '../../content/cases/c09-rescued-morning/case.json';
+import case9 from '../../content/cases/c10-shaken-bottle/case.json';
+import case10 from '../../content/cases/c11-wet-window/case.json';
+import case11 from '../../content/cases/c12-two-shadows/case.json';
 import lines from '../../content/holma-lines.json';
 import prologue from '../../content/prologue.json';
 
-export const CASE_DIRS: readonly string[] = ["c01-room-without-breath","c02-ball-at-dusk","c03-shed-in-snow","c04-white-flower-supper","c05-tiptoe-milk-bottle","c06-snowman-below-zero","c07-thirst-beside-water","c08-half-folded-towel","c09-rescued-morning"];
+export const CASE_DIRS: readonly string[] = ["c01-room-without-breath","c02-ball-at-dusk","c03-shed-in-snow","c04-white-flower-supper","c05-tiptoe-milk-bottle","c06-snowman-below-zero","c07-thirst-beside-water","c08-half-folded-towel","c09-rescued-morning","c10-shaken-bottle","c11-wet-window","c12-two-shadows"];
 
 export function rawContent(): RawContent {
   return {
@@ -27,6 +30,9 @@ export function rawContent(): RawContent {
       { dir: "c07-thirst-beside-water", path: "content/cases/c07-thirst-beside-water/case.json", data: case6 as unknown },
       { dir: "c08-half-folded-towel", path: "content/cases/c08-half-folded-towel/case.json", data: case7 as unknown },
       { dir: "c09-rescued-morning", path: "content/cases/c09-rescued-morning/case.json", data: case8 as unknown },
+      { dir: "c10-shaken-bottle", path: "content/cases/c10-shaken-bottle/case.json", data: case9 as unknown },
+      { dir: "c11-wet-window", path: "content/cases/c11-wet-window/case.json", data: case10 as unknown },
+      { dir: "c12-two-shadows", path: "content/cases/c12-two-shadows/case.json", data: case11 as unknown },
     ],
     lines: lines as unknown,
     prologue: prologue as unknown,

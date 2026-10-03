@@ -244,6 +244,11 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
   // ── verdict modes (difficulty) ────────────────────────────────
   validateVerdictModes(c, errors, warnings, info);
 
+  // ── no portrait art (2026-10-04, the I-001 ツクール samples): the shard portrait draws the outline ──
+  if (!c.victim.portrait.trim() && !/^[Mm]/.test(c.victim.silhouette ?? '')) {
+    warnings.push('victim.portrait is empty but victim.silhouette is not an SVG path: the shard portrait would fall back to the bust of a person');
+  }
+
   // ── image files (warnings: art may land later than the case) ──
   if (opts.assetExists) {
     const images: [string, string | undefined][] = [

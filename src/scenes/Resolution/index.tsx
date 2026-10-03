@@ -254,7 +254,7 @@ function Record({ caseId, sol, summary, num, onReplay }: { caseId: string; sol: 
         <div class="res-rec__grid">
           <aside class="res-rec__hero">
             <figure class="res-rec__portrait">
-              {portrait ? <img src={portrait} alt={`${v.name}の肖像`} /> : <ShardPortrait image={v.portrait} solved seed={caseId} label={`${v.name}の肖像`} />}
+              {portrait ? <img src={portrait} alt={`${v.name}の肖像`} /> : <ShardPortrait image={v.portrait} silhouette={summary?.silhouette} solved seed={caseId} label={`${v.name}の肖像`} />}
               <figcaption class="res-rec__tag t-mono">
                 No.{pad2(num)} · RESTORED
               </figcaption>

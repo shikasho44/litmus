@@ -258,7 +258,8 @@ describe('I-005 validator: hook = pre-solve text, aside = post-solve text, one �
 
 describe('I-005 authored content', () => {
   // c09 = the prototype case 「助けられた朝」 (?proto=seeds, 2026-10-04): the brother's word about her swollen legs
-  const HINTS: Record<string, string> = { c08: 'F15', c05: 'F18', c06: 'F11', c07: 'F28', c01: 'F19', c02: 'F12', c03: 'F30', c04: 'F08', c09: 'F15' };
+  // c10–c12 = the I-001 ツクール samples (?proto=tsukuru, 2026-10-04): clouds of supercooled drops, the cold cup, the operating lamp
+  const HINTS: Record<string, string> = { c08: 'F15', c05: 'F18', c06: 'F11', c07: 'F28', c01: 'F19', c02: 'F12', c03: 'F30', c04: 'F08', c09: 'F15', c10: 'F17', c11: 'F14', c12: 'F17' };
 
   it('every case has a 矛盾の一文 in the 「それなのに」 form', () => {
     for (const c of cases) {

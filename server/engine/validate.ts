@@ -103,6 +103,9 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
     warnings.push(`truth.culpritSeal is set but the manner fact ${mannerFacts[0].id} says ${mannerFacts[0].manner} (the seal is for cases whose verdict names a culprit)`);
   }
 
+  // ── PROTOTYPE I-005 (2026-10-03): サイエンスヒント・矛盾の一文・余話 ──────
+  validatePrototypeI005(c, errors, warnings);
+
   // ── unique ids ────────────────────────────────────────────────
   for (const f of c.facts) {
     if (factIds.has(f.id)) errors.push(`duplicate fact id ${f.id}`);
@@ -252,6 +255,8 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
   // ── leak terms in public fields ───────────────────────────────
   const publicFields: [string, string][] = [
     ['intro.summary', c.intro.summary],
+    // 矛盾の一文 (prototype I-005): on the case file card and the intro title card, before anything is asked
+    ['intro.hook', c.intro.hook ?? ''],
     ['contentWarning', c.contentWarning ?? ''],
     ['intro.location', c.intro.location],
     ['intro.time', c.intro.time],
@@ -395,6 +400,48 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
     info,
     stats: { facts: c.facts.length, probes: c.probes.length, kinds, selfConsistency: self, generalization: gen },
   };
+}
+
+/** Dose / lethality wording that an aside (a story told after the solve) must never carry. */
+const ASIDE_DANGER = /致死量|致死濃度|致死率|ld50|ld 50|mg\/kg|ミリグラム毎|何グラムで|何ミリで|作り方|作りかた|入手方法/iu;
+
+/**
+ * PROTOTYPE I-005 (docs/decisions.md 2026-10-03): the optional data of the four ideas from the
+ * supervisor's original design. The hook's leakTerms / secretTerms scan runs with the other public
+ * fields below (it is pre-solve text); the aside is post-solve (shown with the science), so it is
+ * not scanned for leakTerms, but it gets the safety and sources checks here.
+ */
+function validatePrototypeI005(c: Case, errors: string[], warnings: string[]): void {
+  // サイエンスヒント: at most one, a finding the player earns by asking, never the answer itself
+  const hints = c.facts.filter((f) => f.scienceHint);
+  if (hints.length > 1) errors.push(`more than one scienceHint fact (${hints.map((f) => f.id).join(', ')}) — the case has one サイエンスヒント`);
+  for (const f of hints) {
+    if (f.manner) errors.push(`${f.id}: the scienceHint must not be the sealed manner fact`);
+    if (f.spoilerLevel >= 4 || f.importance >= 4) errors.push(`${f.id}: the scienceHint is the answer itself (importance ${f.importance}, spoilerLevel ${f.spoilerLevel}) — mark a finding that leads there`);
+    if (f.visibleFromStart) errors.push(`${f.id}: the scienceHint must be earned by asking (not visibleFromStart)`);
+  }
+  // 矛盾の一文: a restatement of the case file; never a finding's card title (cheap check)
+  const hook = c.intro.hook?.trim();
+  if (hook) {
+    const nh = normalize(hook);
+    if (nh === normalize(c.title)) errors.push('intro.hook repeats the title');
+    for (const f of c.facts) {
+      const t = f.cardTitle ? normalize(f.cardTitle) : '';
+      if (!f.visibleFromStart && t.length >= 4 && nh.includes(t)) warnings.push(`intro.hook names the finding ${f.id} 「${f.cardTitle}」 — the hook may only restate the case file and the prologue`);
+    }
+  }
+  // 余話: true, sourced, nothing dangerous; its sources do not collide with the case's
+  const aside = c.science.aside;
+  if (aside) {
+    if (ASIDE_DANGER.test(`${aside.title} ${aside.text}`)) errors.push('science.aside: dose / lethality / how-to wording (an aside tells history and science, never methods or amounts)');
+    const caseIds = new Set(c.sources.map((s) => s.id));
+    const seen = new Set<string>();
+    for (const s of aside.sources) {
+      if (!isHttps(s.url)) errors.push(`science.aside source ${s.id} url is not https: ${s.url}`);
+      if (caseIds.has(s.id) || seen.has(s.id)) errors.push(`science.aside source id ${s.id} is not unique`);
+      seen.add(s.id);
+    }
+  }
 }
 
 /** Option ids are sent to the browser: an id that names its own correctness gives the answer away. */

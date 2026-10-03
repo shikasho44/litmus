@@ -1,5 +1,7 @@
 import type { PublicFact } from '../../shared/api';
 import { audio } from '../audio';
+import { PROTO_I005 } from '../config/proto';
+import { ScienceMark } from '../features/i005/bits';
 import { Icon } from './Icon';
 import { resolveIcon } from './icons';
 import './cards.css';
@@ -50,7 +52,15 @@ export function EvidenceCard({ fact, isNew, selected, onSelect, compact, disable
           ))}
           <span class="ev__imp-label">{importanceLabel(fact.importance)}</span>
         </span>
-        {core && <span class="ev__core">CORE</span>}
+        {PROTO_I005 && fact.science ? (
+          // PROTOTYPE I-005: the サイエンスヒント's mark (no explanation of why)
+          <span class="ev__foot-r">
+            <ScienceMark />
+            {core && <span class="ev__core">CORE</span>}
+          </span>
+        ) : (
+          core && <span class="ev__core">CORE</span>
+        )}
       </span>
       {isNew && <span class="ev__new">NEW</span>}
     </>

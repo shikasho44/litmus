@@ -2,6 +2,8 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { CasePublic, PublicFact, ScienceMemoView } from '../../../shared/api';
 import { audio } from '../../audio';
+import { PROTO_I005 } from '../../config/proto';
+import { ScienceMark } from '../i005/bits';
 import type { CaseProgress, LogEntry } from '../../state/types';
 import { EvidenceCard, factTitle, importanceLabel } from '../../ui/EvidenceCard';
 import { resolveIcon } from '../../ui/icons';
@@ -67,6 +69,7 @@ function FindingChip({ fact, index }: { fact: PublicFact; index: number }) {
         <span class="fchip__title" aria-hidden="true">
           {factTitle(fact)}
         </span>
+        {PROTO_I005 && fact.science && <ScienceMark compact />}
         <span class="fchip__cat" aria-hidden="true">
           {fact.category}
         </span>

@@ -32,6 +32,8 @@ export interface CaseSummary {
   contentWarning?: string;
   /** Exact question budgets per play difficulty when the case overrides the default (shared/budget.ts). */
   questionBudget?: Partial<Record<Difficulty, number>>;
+  /** PROTOTYPE I-005: 矛盾の一文 (case-schema intro.hook). Shown only with `?proto=i005`. */
+  hook?: string;
 }
 
 export interface PublicFact {
@@ -41,6 +43,8 @@ export interface PublicFact {
   importance: number;     // UI uses ≥2 to decide "所見カード" treatment
   cardTitle?: string;
   icon?: string;
+  /** PROTOTYPE I-005: the case's サイエンスヒント (case-schema fact.scienceHint). Marked only with `?proto=i005`. */
+  science?: true;
 }
 
 export interface ScienceMemoView { id: string; title: string; text: string }
@@ -251,9 +255,27 @@ export interface VerdictResponse {
    * calm serious line; the UI shows no stamp, only the support card (same as AskAnswer.notice).
    */
   notice?: 'support';
+  /** PROTOTYPE I-005: how close the judged verdict came (server/engine/closeness.ts). Absent on a support reply / re-declaration. */
+  closeness?: VerdictCloseness;
   token: ProgressToken;
   progress: ProgressSnapshot;
   trace?: TurnTrace;
+}
+
+/**
+ * PROTOTYPE I-005 (2026-10-03): the 近い・遠い of a verdict, drawn as the red-cabbage band with
+ * `?proto=i005`. Derived only from what the judge already decided (server/engine/closeness.ts):
+ *   far      not accepted, under half of what the format measures, or it states a known false story
+ *   near     not accepted, at least half of it and no false story
+ *   correct  accepted
+ *   perfect  accepted with everything the format can express (free text: the optional elements too;
+ *            cloze: every blank — the full truth sentence). A picked option can only be correct.
+ * `ratio` (0..1): the share that matched — required answer elements (free text, and the picked
+ * option's text for a wrong choice) or blanks (cloze). It never names what is missing.
+ */
+export interface VerdictCloseness {
+  level: 'far' | 'near' | 'correct' | 'perfect';
+  ratio: number;
 }
 
 export interface ReconstructionView {

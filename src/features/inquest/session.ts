@@ -30,11 +30,13 @@ import type {
   ProgressSnapshot,
   PublicFact,
   ReconstructionView,
+  VerdictCloseness,
   VerdictMode,
   VerdictRequest,
   VerdictResult,
   VerdictSetupResponse,
 } from '../../../shared/api';
+import { readCloseness } from '../i005/closeness';
 import { ApiError, LIVES_BY_DIFFICULTY, VERDICT_MODE_BY_DIFFICULTY } from '../../../shared/api';
 import { api } from '../../api';
 import type { Speaker } from '../../audio';
@@ -96,6 +98,8 @@ export interface VerdictView {
   gameOver?: boolean;
   /** What this miss costs the 事件スコア (0 for a correct verdict or at a cap). */
   penalty?: number;
+  /** PROTOTYPE I-005: 近い・遠い from the server (drawn only with ?proto=i005; not saved). */
+  closeness?: VerdictCloseness;
 }
 
 export { parseCloze, type ClozePart } from './cloze';
@@ -755,6 +759,7 @@ export class InquestSession {
       const level = this.caseLevel();
       const retry = miss ? penaltyStep('verdict', before, level) : 0;
       const penalty = !gameOver ? retry : this.gameOverPenalty() + (this.difficulty.peek() === 'easy' ? retry : 0);
+      const closeness = readCloseness(res.closeness);
       const view: VerdictView = {
         result: res.result,
         matched: res.matched ?? [],
@@ -764,6 +769,7 @@ export class InquestSession {
         text,
         mode,
         ...(required.length ? { required } : {}),
+        ...(closeness ? { closeness } : {}),
         ...(gameOver ? { gameOver: true } : {}),
         ...(penalty > 0 ? { penalty } : {}),
       };

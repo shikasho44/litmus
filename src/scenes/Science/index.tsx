@@ -32,6 +32,8 @@ import { resolveIcon, type IconName } from '../../ui/icons';
 import { EndingError, EndingLoading, SectionHead } from '../Resolution/common';
 import { advanceStage, caseNumber, pad2, useSolution } from '../Resolution/solution';
 import { paragraphs, placeDiagrams, pullQuote, readingMinutes, sectionChars } from './text';
+import { PROTO_I005 } from '../../config/proto';
+import { ScienceAside } from '../../features/i005/bits';
 import './science.css';
 
 export function ScienceScene({ params }: SceneProps) {
@@ -466,6 +468,9 @@ function Science({ caseId, sol, summary }: { caseId: string; sol: SolutionRespon
                 <p class="safety__text">{s.safetyNote}</p>
               </div>
             </Section>
+
+            {/* PROTOTYPE I-005: 余話 — after the explanation, before the memos and sources (?proto=i005) */}
+            {PROTO_I005 && s.aside && <ScienceAside aside={s.aside} />}
 
             {/* 11 memos */}
             <Section {...secProps('memos')} note={`${memoCount} / ${sol.memos.length}枚`}>

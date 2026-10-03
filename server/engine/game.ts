@@ -28,6 +28,7 @@ import { budgetRule, questionBudget } from '../../shared/budget.js';
 import { optionOrder, parseSegments, publicFact, reconstructionView, roundViews, solutionView, toPublic, toSummary, verdictSetupView } from './public-view.js';
 import { evaluateVerdict } from './verdict.js';
 import { judgeChoice, judgeCloze, parseVerdictMode, type PickVerdict } from './verdict-modes.js';
+import { freeCloseness } from './closeness.js';
 import { StageTimer, traceId, type EngineTrace, type TraceSink } from './trace.js';
 
 export const MAX_VERDICT_CHARS = 600;
@@ -429,7 +430,7 @@ export class GameService {
       degraded: !!fallback,
     };
     this.opts.traces?.write({ id: traceId(), at: new Date(this.clock()).toISOString(), kind: 'verdict', caseId: c.data.id, input: text, result: [ev.result], trace });
-    const res: VerdictResponse = { result: ev.result, matched: ev.matched, labels, lines: out, ...(await this.issue(c, ns)) };
+    const res: VerdictResponse = { result: ev.result, matched: ev.matched, labels, lines: out, closeness: freeCloseness(c.data, ev), ...(await this.issue(c, ns)) };
     if (o?.withTrace) res.trace = trace;
     return res;
   }
@@ -473,7 +474,7 @@ export class GameService {
       costUsd: 0,
     };
     this.opts.traces?.write({ id: traceId(), at: new Date(this.clock()).toISOString(), kind: 'verdict', caseId: c.data.id, input: pv.input, result: [pv.result], trace });
-    const res: VerdictResponse = { result: pv.result, matched: pv.matched, labels: pv.labels, lines: out, ...(await this.issue(c, ns)) };
+    const res: VerdictResponse = { result: pv.result, matched: pv.matched, labels: pv.labels, lines: out, closeness: pv.closeness, ...(await this.issue(c, ns)) };
     if (o?.withTrace) res.trace = trace;
     return res;
   }

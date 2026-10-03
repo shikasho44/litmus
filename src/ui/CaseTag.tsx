@@ -4,6 +4,8 @@ import { DIFFICULTY_META } from '../features/difficulty/meta';
 import { formatClearTime } from '../state/hooks';
 import { CASE_STATUS_LABEL } from '../state/types';
 import { audio } from '../audio';
+import { PROTO_I005 } from '../config/proto';
+import { HookLine } from '../features/i005/bits';
 import { Icon } from './Icon';
 import './cards.css';
 
@@ -90,6 +92,7 @@ export function CaseTag({ summary: c, status, bestRank, bestPoints, onOpen, onSe
           {c.title}
         </h3>
         <p class="tag__title-en">{c.titleEn}</p>
+        {PROTO_I005 && <HookLine text={c.hook} class="hookline--tag" />}
         <div class="tag__summary">
           {body && <p class="tag__summary-body">{body}</p>}
           {hook && <p class="tag__hook">{hook}</p>}

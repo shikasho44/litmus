@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow" />
-<title>リトマス審問ツクール｜リトマス審問 企画ノート</title>
+<title>リトマス・ラボ（旧称：ツクール）｜リトマス審問 企画ノート</title>
 <style>
   :root {
     --ink: #0B0D12; --ink-2: #141821; --ink-3: #1E2430;
@@ -95,12 +95,35 @@
   <div class="wrap">
     <a class="back" href="index.html">← 企画ノートの台帳へ</a>
     <div class="kicker">IDEA · I-001</div>
-    <h1>リトマス審問ツクール</h1>
+    <h1>リトマス・ラボ<span style="font-size:.5em;color:var(--bone-3);"> （仮称。旧称：リトマス審問ツクール）</span></h1>
     <p class="lead">「こんな結末の謎にしたい」と話すだけで、ホルマ（AI）が解ける謎に組み立て、試しに解いて確かめてくれる。できた謎は、友だちにコードで送って一緒に遊べる。</p>
-    <div class="badges"><span class="badge">種類：遊び方（みんなで作る）</span><span class="badge ok">状態：企画書</span><span class="badge">作る大きさ：第1段階 M ／ 全部 L</span><span class="badge">名前は仮</span></div>
+    <div class="badges"><span class="badge">種類：遊び方（みんなで作る）</span><span class="badge ok">状態：企画書</span><span class="badge">作る大きさ：第1段階 M ／ 全部 L</span><span class="badge warn">2026-10-04 に方針を更新</span></div>
   </div>
 </header>
 <main class="wrap">
+
+
+<section>
+  <h2><span class="en">OWNER DIRECTION · 2026-10-04</span>持ち主の方針（この企画の正）</h2>
+  <div class="callout">
+    <ul>
+      <li><strong>名前：</strong>「ツクール」は RPGツクールと重なるので使わない。仮の名前を「リトマス・ラボ」にする（試作の URL も <code>?proto=lab</code> に変更）。</li>
+      <li><strong>作るにはお金（AIの費用）がかかる</strong>ので、ゲームの中でAIに作ってもらうのは<strong>1人3問まで</strong>。それ以上は<strong>クレジット制</strong>か<strong>月額プラン</strong>（入っていると毎月クレジットが入る）。</li>
+      <li><strong>自分のAIで作る道を基本に：</strong>ChatGPT や Claude などに貼る<strong>専用のプロンプト（定型文）を配布</strong>する（ゲームの中でコピーできる）。できあがった問題を JSON（または CSV）で取り込むと、ゲームに反映される。取り込んだあと、<strong>項目ごとに自分で書き直せる</strong>。こちらのクレジットを使わず、遊ぶ人の負担も小さい。</li>
+      <li><strong>将来：</strong>ChatGPT を外のサービスにつなぐ仕組みが整えば、自分の ChatGPT をつないで作れるようにする。</li>
+    </ul>
+  </div>
+  <h3>作る道は3つ</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>道</th><th>流れ</th><th>費用</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A. ゲームの中で頼む</strong></td><td>結末を話す → ホルマ（AI）が組み立てて、自動で検査・配置</td><td>1人3問まで無料。それ以上はクレジット（月額プランで毎月付与）</td></tr>
+      <tr><td><strong>B. 自分のAIで作る</strong></td><td>配布のプロンプトをコピー → 自分の ChatGPT／Claude で作る → JSON／CSV を取り込む → 項目ごとに手直し → 無料の検査 → 公開</td><td>こちらの費用はほぼ0（検査はAIを使わない）</td></tr>
+      <tr><td><strong>C. 自分の ChatGPT をつなぐ（将来）</strong></td><td>ゲームから自分の ChatGPT を呼び出して作る</td><td>本人の ChatGPT の利用枠</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">どの道でも、公開の前の検査（安全・答えの漏れ・自己一致）と「作った人が自分で1回解く」は同じ。AIの試し遊び（費用がかかる）は、A の道か、クレジットを使うときだけにする。クレジットや月額の値段は、収益化の担当（別のチャット）が考える。</p>
+</section>
 
 <section>
   <h2><span class="en">PLAY</span>どんな遊びか</h2>

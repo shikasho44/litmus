@@ -176,6 +176,8 @@ describe('content rules', () => {
         ...s.foreshadowing.map((x): [string, string] => [`clue ${x.fact}`, x.meaning]),
         ...c.scienceMemos.map((m): [string, string] => [`memo ${m.id}`, `${m.title} ${m.text}`]),
         ...c.quiz.map((q, i): [string, string] => [`quiz ${i + 1}`, `${q.q} ${q.explain}`]),
+        // prototype I-005: the 余話 reads like the rest of the science page
+        ...(s.aside ? [['aside', `${s.aside.title} ${s.aside.text}`] as [string, string]] : []),
       ];
       const names = c.victim.name.split(/\s+/u).filter(Boolean);
       const bad: string[] = [];

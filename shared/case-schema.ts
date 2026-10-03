@@ -59,6 +59,13 @@ export const FactSchema = z.object({
    * スペシャルヒント (a long ad) that reveals only the manner (manner.ts mannerReveal).
    */
   manner: z.enum(['accident', 'homicide', 'suicide']).optional(),
+  /**
+   * PROTOTYPE I-005 (2026-10-03, `?proto=i005`): THE サイエンスヒント of the case (at most one;
+   * validate.ts). A finding that a science-literate player can use as a shortcut while it looks
+   * ordinary to everyone else — true, never the answer itself. Once unlocked its card carries a
+   * small 「SCIENCE」 mark (PublicFact.science); nothing explains why.
+   */
+  scienceHint: z.boolean().optional(),
 });
 export type Fact = z.infer<typeof FactSchema>;
 
@@ -205,6 +212,23 @@ export const ScienceSchema = z.object({
   everyday: z.array(z.string()).min(2),
   takeaways: z.array(z.string()).min(2).max(4),
   safetyNote: z.string(),                    // prevention / what to do (never how to harm)
+  /**
+   * PROTOTYPE I-005 (2026-10-03, `?proto=i005`): 余話 — one short, TRUE history / science anecdote
+   * around the case, shown after the science explanation (post-solve text). Its own sources, in
+   * the case `sources` style, so the science page's reference list does not change. Nothing
+   * dangerous (no methods, no doses; validate.ts).
+   * `supervisorNote: 'placeholder'` shows the empty sample frame of the future 「先生のひとこと」
+   * slot (the supervisor's own comment on his cases). Only the placeholder exists: words of the
+   * supervisor are never written by us.
+   */
+  aside: z
+    .object({
+      title: z.string().min(2).max(30),
+      text: z.string().min(40).max(420),
+      sources: z.array(SourceSchema).min(1).max(4),
+      supervisorNote: z.literal('placeholder').optional(),
+    })
+    .optional(),
 });
 
 export const ScienceMemoSchema = z.object({
@@ -274,6 +298,13 @@ export const CaseSchema = z.object({
      * answers it as labelled) and is checked for leakTerms like every public line.
      */
     exampleQuestions: z.array(z.string().min(2)).max(24).optional(),
+    /**
+     * PUBLIC, optional. PROTOTYPE I-005 (2026-10-03, `?proto=i005`): 矛盾の一文 — one line in the
+     * 「〜なのに」 form under the title on the case file card and the intro title card. It may only
+     * restate what the summary / prologue already shows (no finding, no cause, no resolution of
+     * the misdirection, no manner). Pre-solve text: scanned for leakTerms and secretTerms.
+     */
+    hook: z.string().min(6).max(64).optional(),
   }),
 
   /** SECRET until solved (except codename & look). */

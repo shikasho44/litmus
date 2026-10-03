@@ -21,6 +21,8 @@ import { motionReduced } from '../../fx/motion';
 import { useImage } from '../../lib/asset';
 import { layout } from '../../lib/viewport';
 import { getCaseProgress, setStage } from '../../state/save';
+import { PROTO_I005 } from '../../config/proto';
+import { HookLine } from '../../features/i005/bits';
 import { Button, IconButton } from '../../ui/Button';
 import { DialogueBox } from '../../ui/DialogueBox';
 import { HolmaSprite } from '../../ui/HolmaSprite';
@@ -87,6 +89,8 @@ function TitleCard({ pub, onDone, finishKey }: { pub: CasePublic; onDone: () => 
       .fromTo(q('.itc__title'), { clipPath: 'inset(0 100% 0 0)', x: 30 }, { clipPath: 'inset(0 0% 0 0)', x: 0, duration: 0.6, ease: 'expo.out' }, 1.05)
       .add(() => audio.sfx('whoosh'), 1.05)
       .fromTo(q('.itc__title-en'), { opacity: 0, letterSpacing: '0.9em' }, { opacity: 1, letterSpacing: '0.38em', duration: 0.8, ease: 'power3.out' }, 1.3);
+    // PROTOTYPE I-005: the 矛盾の一文 settles in under the title (only rendered with ?proto=i005)
+    if (el.querySelector('.hookline')) t.fromTo(q('.hookline'), { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power2.out' }, 1.75);
     q('.itc__row').forEach((row, i) => {
       t.to(row, { clipPath: 'inset(0 0% 0 0)', duration: 0.42, ease: 'steps(18)' }, 1.9 + i * 0.36).add(() => audio.blip('system'), 1.9 + i * 0.36);
     });
@@ -131,6 +135,7 @@ function TitleCard({ pub, onDone, finishKey }: { pub: CasePublic; onDone: () => 
       </p>
       <h1 class="itc__title">{pub.title}</h1>
       <p class="itc__title-en">{pub.titleEn}</p>
+      {PROTO_I005 && <HookLine text={pub.hook} class="hookline--intro" />}
       <dl class="itc__readout t-mono" aria-label="発見記録">
         <div class="itc__row">
           <dt>LOCATION</dt>

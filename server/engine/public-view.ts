@@ -14,6 +14,7 @@ export function publicFact(f: Fact): PublicFact {
   const out: PublicFact = { id: f.id, text: f.text, category: f.category, importance: f.importance };
   if (f.cardTitle) out.cardTitle = f.cardTitle;
   if (f.icon) out.icon = f.icon;
+  if (f.scienceHint) out.science = true; // PROTOTYPE I-005 (the browser marks it only with ?proto=i005)
   return out;
 }
 
@@ -47,6 +48,7 @@ export function toSummary(c: Case): CaseSummary {
   if (c.victim.silhouette && c.victim.silhouette !== 'bust') s.silhouette = c.victim.silhouette;
   if (c.contentWarning) s.contentWarning = c.contentWarning;
   if (c.questionBudget && Object.keys(c.questionBudget).length > 0) s.questionBudget = { ...c.questionBudget };
+  if (c.intro.hook) s.hook = c.intro.hook; // PROTOTYPE I-005 (shown only with ?proto=i005)
   return s;
 }
 

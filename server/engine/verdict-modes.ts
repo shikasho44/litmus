@@ -10,7 +10,8 @@
  * struck-out option, a missing / out-of-range blank) is a bad_request and is not counted.
  */
 import type { Case, VerdictModes } from '../../shared/case-schema.js';
-import type { VerdictMode, VerdictResult } from '../../shared/api.js';
+import type { VerdictCloseness, VerdictMode, VerdictResult } from '../../shared/api.js';
+import { choiceCloseness, clozeCloseness } from './closeness.js';
 import { badRequest } from './errors.js';
 import { verdictAssists, verdictBlankOrder } from './public-view.js';
 import { evaluateVerdict } from './verdict.js';
@@ -34,6 +35,8 @@ export interface PickVerdict {
   wrongClaims: string[];
   /** Trace-safe description of the pick (no free text). */
   input: string;
+  /** PROTOTYPE I-005: 近い・遠い of this pick (closeness.ts). */
+  closeness: VerdictCloseness;
 }
 
 function modes(c: Case, mode: VerdictMode): VerdictModes {
@@ -52,8 +55,9 @@ export function judgeChoice(c: Case, cleared: readonly string[], choice: unknown
   const labels: Record<string, string> = {};
   for (const e of c.answerElements) labels[e.id] = e.label;
   const input = `choice:${opt.id}`;
-  if (opt.correct) return { result: 'correct', matched: c.answerElements.map((e) => e.id), labels, wrongClaims: [], input };
-  return { result: 'wrong', matched: [], labels, wrongClaims: evaluateVerdict(c, opt.text).wrongClaims, input };
+  const closeness = choiceCloseness(c, opt);
+  if (opt.correct) return { result: 'correct', matched: c.answerElements.map((e) => e.id), labels, wrongClaims: [], input, closeness };
+  return { result: 'wrong', matched: [], labels, wrongClaims: evaluateVerdict(c, opt.text).wrongClaims, input, closeness };
 }
 
 export function judgeCloze(c: Case, cleared: readonly string[], blanks: unknown): PickVerdict {
@@ -79,5 +83,5 @@ export function judgeCloze(c: Case, cleared: readonly string[], blanks: unknown)
     shown.push(`${b.id}=${pos}`);
   }
   const result = matched.length === vm.cloze.blanks.length ? 'correct' : matched.length > 0 ? 'missing' : 'wrong';
-  return { result, matched, labels, wrongClaims: [], input: `cloze:${shown.join(',')}` };
+  return { result, matched, labels, wrongClaims: [], input: `cloze:${shown.join(',')}`, closeness: clozeCloseness(matched.length, vm.cloze.blanks.length) };
 }

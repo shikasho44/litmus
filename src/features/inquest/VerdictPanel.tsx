@@ -11,7 +11,9 @@ import { gsap } from 'gsap';
 import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { VerdictResult, VerdictSetupResponse } from '../../../shared/api';
+import { PROTO_I005 } from '../../config/proto';
 import { motionReduced } from '../../fx/motion';
+import { ClosenessBand } from '../i005/ClosenessBand';
 import { BottomSheet } from '../../ui/BottomSheet';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
@@ -604,6 +606,8 @@ export function VerdictPanel({ session: s, onSubmit, onOpenEvidence, onBackToDeb
           </span>
           {/* choice: the elements say nothing about a picked option — the stamp and Holma's note do */}
           {mode !== 'choice' && <ElementChecklist key={`${stampKey}-${step}`} view={view} animate={step === 'result'} order={mode === 'cloze' ? setup?.cloze?.blanks.map((b) => b.id) : undefined} />}
+          {/* PROTOTYPE I-005: the red-cabbage 近い・遠い band (?proto=i005) */}
+          {PROTO_I005 && view.closeness && <ClosenessBand key={`cb-${stampKey}-${step}`} closeness={view.closeness} animate={step === 'result'} />}
           {step === 'write' && view.notes.length > 0 && (
             <div class="vnote" role="note" aria-label="ホルマの指摘">
               <span class="vnote__k">

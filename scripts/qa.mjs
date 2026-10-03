@@ -7,6 +7,9 @@
 //   node scripts/qa.mjs --case c02  full flow for another case (id or prefix; 'all' = every case, in number order)
 //   node scripts/qa.mjs --no-smoke  full flow only          --smoke-only   smoke runs only
 //   node scripts/qa.mjs --port 5198 (default; a dev server already answering there is reused if it runs in rules mode)
+//   node scripts/qa.mjs --proto i005   the same runs with a feature prototype switched on (?proto=i005, src/config/proto.ts):
+//                                   I-005 adds checks + shots of its four pieces; without the switch the runs check that none shows
+//   node scripts/qa.mjs --viewport 1280x800   another PC size     --seed-random   seeded Math.random (before/after screenshot diffs)
 //
 // Full flow: title (gate → 審問を始める) → prologue (skip) → files → difficulty chooser → intro
 // (title card, narration, skip → catch cut-in) → investigation (coach-mark tutorial on CASE 01 = number 1,
@@ -47,9 +50,14 @@ const PORT = Number(arg('--port', process.env.QA_PORT || 5198));
 const BASE = `http://127.0.0.1:${PORT}/`;
 const SMOKE = !argv.includes('--no-smoke');
 const SMOKE_ONLY = argv.includes('--smoke-only');
+/** Feature prototype to switch on (?proto=…); '' = the live default. */
+const PROTO = arg('--proto', '');
+const I005 = PROTO === 'i005';
+const VIEW = /^(\d{3,4})x(\d{3,4})$/.exec(arg('--viewport', '')) ?? null;
+const SEED_RANDOM = argv.includes('--seed-random');
 const SIZE = MOBILE
   ? { tag: 'sp', ctx: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true } }
-  : { tag: 'pc', ctx: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 } };
+  : { tag: 'pc', ctx: { viewport: VIEW ? { width: Number(VIEW[1]), height: Number(VIEW[2]) } : { width: 1440, height: 900 }, deviceScaleFactor: 1 } };
 const NARROW = MOBILE;
 
 const out = resolve(root, 'qa', 'flow');
@@ -300,6 +308,32 @@ const ROUTE_RECORDER = () => {
   }
   addEventListener('popstate', rec);
 };
+/** --seed-random: a fixed Math.random sequence per page load (shakes, shards …), for pixel diffs between builds. */
+const SEEDED_RANDOM = () => {
+  let a = 0x2f6e2b1;
+  Math.random = () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+/* ------------------------------------------------------------------ prototype I-005 (?proto=i005) */
+// The four pieces: SCIENCE mark on the サイエンスヒント's card, the 近い・遠い band after a verdict, the
+// 余話 after the science page, the 矛盾の一文 on the case file / intro. Off = none of them in the DOM.
+const scienceHintOf = (c) => c.facts.find((f) => f.scienceHint);
+async function protoCount(page, sel, label, want) {
+  const n = await page.locator(sel).count();
+  check(want(n), `${label}: ${I005 ? 'proto i005' : 'no proto'} → ${n} × ${sel}`);
+  return n;
+}
+async function protoBand(page, c, label, levels) {
+  const lv = await page.evaluate(() => document.querySelector('.cband')?.getAttribute('data-closeness') ?? null);
+  if (I005) check(levels.includes(lv), `${c.id}: ${label}: the red-cabbage band shows ${lv} (expected ${levels.join(' / ')})`);
+  else check(lv === null && !(await has(page, '.cband')), `${c.id}: ${label}: no closeness band without the switch`);
+}
+
 async function drainRoutes(page, into) {
   const r = await page.evaluate(() => {
     const a = JSON.parse(sessionStorage.getItem('qa:routes') || '[]');
@@ -310,7 +344,7 @@ async function drainRoutes(page, into) {
   for (const s of r) if (into[into.length - 1] !== s) into.push(s);
 }
 
-async function boot(page, { url = `${BASE}?mute=1`, reload = false } = {}) {
+async function boot(page, { url = `${BASE}?mute=1${PROTO ? `&proto=${encodeURIComponent(PROTO)}` : ''}`, reload = false } = {}) {
   if (reload) {
     await page.evaluate(() => window.__JD?.flushSave?.());
     await page.reload({ waitUntil: 'load', timeout: 120000 });
@@ -338,6 +372,7 @@ async function newPage(browser, tag) {
   const ctx = await browser.newContext({ ...SIZE.ctx, locale: 'ja-JP', reducedMotion: 'no-preference' });
   const page = await ctx.newPage();
   await page.addInitScript(ROUTE_RECORDER);
+  if (SEED_RANDOM) await page.addInitScript(SEEDED_RANDOM);
   await page.clock.install();
   watch(page, tag);
   return { ctx, page };
@@ -369,6 +404,7 @@ async function titleToFiles(page, name) {
   await waitSel(page, '.tag__open');
   await tick(page, 1600);
   await shot(page, name('files'));
+  await protoCount(page, '.hookline--tag', 'files: 矛盾の一文 on the case cards', (n) => (I005 ? n === CASES.filter((c) => c.intro.hook).length : n === 0));
   const seen = await page.evaluate(() => window.__JD.getState().save.meta.prologueSeen);
   check(seen === true, 'prologue skip marks the prologue as seen');
 }
@@ -400,6 +436,7 @@ async function intro(page, c, name, { watchSome = true } = {}) {
   await waitSel(page, '.itc__continue');
   await tick(page, 400);
   if (watchSome) await shot(page, name('intro-title'));
+  await protoCount(page, '.hookline--intro', `${c.id}: intro: 矛盾の一文 under the title`, (n) => (I005 && c.intro.hook ? n === 1 : n === 0));
   await page.click('.intro__stage', { position: { x: 20, y: 120 } });
   await waitSel(page, '.intro.is-narration');
   await tick(page, 1400);
@@ -622,6 +659,39 @@ async function investigation(page, c, name, { questions, full }) {
       await ask(page, c, p.q);
     }
   }
+  // I-005: the サイエンスヒント — with the switch, ask for it (full runs) and look at its mark
+  const sh = scienceHintOf(c);
+  if (sh && full) {
+    // (教授's hard budget may already be used up here: then the dock is closed and the run goes on without it)
+    const closed = await has(page, '[data-budget-closed]');
+    if (I005 && !closed && !(await held()).has(sh.id)) {
+      const p = probeFor(sh.id, used);
+      if (p) {
+        used.add(p.q);
+        await ask(page, c, p.q);
+      }
+    }
+    const got = (await held()).has(sh.id);
+    if (I005 && !got && closed) console.log(`  · the サイエンスヒント ${sh.id} was not asked for: the question budget is used up`);
+    else if (I005) check(got, `${c.id}: the サイエンスヒント ${sh.id} was unlocked by questioning`);
+    if (got) {
+      const chip = page.locator('.fchip', { has: page.locator('[data-science-mark]') }).last();
+      if (I005) {
+        check((await chip.count()) === 1, `${c.id}: the chat chip of ${sh.id} carries the SCIENCE mark`);
+        await chip.locator('.fchip__btn').click();
+        await tick(page, 500);
+        await chip.locator('.fchip__card').scrollIntoViewIfNeeded();
+        await tick(page, 300);
+        check((await chip.locator('.ev [data-science-mark]').count()) === 1, `${c.id}: the opened finding card of ${sh.id} carries the SCIENCE mark`);
+        const tip = await chip.locator('.ev [data-science-mark]').getAttribute('title');
+        check(tip === '知っていれば近道になる所見', `${c.id}: the mark explains only 「${tip}」`);
+        await shot(page, name('proto-science-card'));
+        await chip.locator('.fchip__btn').click();
+        await tick(page, 300);
+      }
+      await protoCount(page, '[data-science-mark]', `${c.id}: investigation: SCIENCE marks in the chat`, (n) => (I005 ? n >= 1 : n === 0));
+    }
+  }
   const h = await held();
   if (full || questions === undefined) {
     for (const r of c.debate) {
@@ -637,6 +707,7 @@ async function investigation(page, c, name, { questions, full }) {
       await waitSel(page, '.sheet-root');
       await tick(page, 700);
       await shot(page, name('inv-notebook'));
+      if (sh && h.has(sh.id)) await protoCount(page, '.sheet-root [data-science-mark]', `${c.id}: notebook: SCIENCE mark on ${sh.id}`, (n) => (I005 ? n === 1 : n === 0));
       await page.keyboard.press('Escape');
       await waitGone(page, '.sheet-root');
     } else {
@@ -905,6 +976,7 @@ async function inquest(page, c, name, { full, held, level = levelOf(c), skipAfte
     check(lv && lv !== 'correct', `${c.id}: a wrong ${mode} verdict is not accepted (${lv})`);
     check(res[c.id]?.inquest?.lives === LIVES[level] - 1, `${c.id}: the miss puts out one light (${res[c.id]?.inquest?.lives}/${LIVES[level]})`);
     await shot(page, name('verdict-miss'));
+    await protoBand(page, c, `a wrong ${mode} verdict`, ['far', 'near']);
     await until(page, (s) => s.vstep === 'write' && s.dlg === 'off' && s.writable, { label: 'rewrite' });
     if (full) {
       // resume check at the verdict
@@ -919,6 +991,7 @@ async function inquest(page, c, name, { full, held, level = levelOf(c), skipAfte
   await until(page, (s) => s.vstep === 'result', { advance: false, label: 'verdict correct' });
   await tick(page, 1100);
   await shot(page, name('verdict-correct'));
+  await protoBand(page, c, `the right ${mode} verdict`, mode === 'choice' ? ['correct'] : ['correct', 'perfect']);
 
   // reconstruction
   await until(page, (s) => s.phase === 'reconstruction' && s.dlg === 'off' && !s.cut, { label: 'reconstruction' });
@@ -1016,6 +1089,19 @@ async function science(page, c, name, { full }) {
       await dg.evaluate((el) => el.scrollIntoView({ block: 'center' }));
       await tick(page, 3600);
       await shot(page, name('science-diagram'));
+    }
+  }
+  const aside = c.science.aside;
+  await protoCount(page, '.sci-aside', `${c.id}: science: 余話`, (n) => (I005 && aside ? n === 1 : n === 0));
+  if (I005 && aside) {
+    await page.evaluate(() => document.querySelector('.sci-aside')?.scrollIntoView({ block: 'start' }));
+    await tick(page, 600);
+    await shot(page, name('proto-science-aside'));
+    const ph = await page.locator('[data-supervisor-placeholder]').count();
+    check(ph === (aside.supervisorNote === 'placeholder' ? 1 : 0), `${c.id}: the 「先生のひとこと」 sample frame ${ph ? 'is shown' : 'is not shown'}`);
+    if (ph) {
+      const t = (await page.locator('[data-supervisor-placeholder]').textContent()) ?? '';
+      check(t.includes('（見本）ここに、くられ先生のひとことが入ります'), `${c.id}: the sample frame says only that it is a sample`);
     }
   }
   await page.evaluate(() => document.querySelector('.sci-end')?.scrollIntoView({ block: 'center' }));
@@ -1179,7 +1265,8 @@ async function smoke(browser, c) {
   try {
     await boot(page);
     await page.evaluate(() => {
-      window.__JD.setMeta({ prologueSeen: true });
+      // the coach-mark tutorial of CASE 01 belongs to its full run, not to a smoke run
+      window.__JD.setMeta({ prologueSeen: true, tutorial: { state: 'done', step: 0 } });
       window.__JD.setSettings({ textSpeed: 'fast' });
     });
     await titleGate(page);

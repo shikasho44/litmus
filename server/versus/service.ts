@@ -237,10 +237,15 @@ export class VersusService {
     return Array.from(sha256(utf8.encode(`vs-cid|${cid}`)).slice(0, 8), (b) => b.toString(16).padStart(2, '0')).join('');
   }
 
-  private async caseFor(caseId: unknown, visible: boolean): Promise<LoadedCase> {
+  /**
+   * `forRoom`: a new room's case. Never a prototype case (shared/proto.ts: the guests may not have
+   * its switch), so it is looked up with no switches on. Existing rooms and verdicts look the case
+   * up in the whole catalogue (a room never holds a prototype case).
+   */
+  private async caseFor(caseId: unknown, visible: boolean, forRoom = false): Promise<LoadedCase> {
     if (typeof caseId !== 'string' || !caseId || caseId.length > 80) throw badRequest('caseId is required');
     const reg = await this.o.content();
-    const c = reg.get(caseId, visible);
+    const c = forRoom ? reg.get(caseId, visible, []) : reg.get(caseId, visible);
     if (!c) throw notFound(`unknown case: ${caseId}`);
     return c;
   }
@@ -320,7 +325,7 @@ export class VersusService {
     if (!name) throw badRequest(VERSUS_ERR.badName);
     if (!DIFFICULTIES.includes(input.difficulty as Difficulty)) throw badRequest('difficulty must be easy, normal or hard');
     const difficulty = input.difficulty as Difficulty;
-    const c = await this.caseFor(input.caseId, !!(this.o.dev || o.admin));
+    const c = await this.caseFor(input.caseId, !!(this.o.dev || o.admin), true);
     const now = this.clock();
     for (let i = 0; i < 6; i++) {
       const code = newRoomCode(this.rand);

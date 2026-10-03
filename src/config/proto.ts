@@ -1,32 +1,39 @@
 /**
- * Feature PROTOTYPES behind a URL switch (2026-10-03, docs/decisions.md 「I-005 の試作」).
+ * Feature PROTOTYPES behind a URL switch (docs/decisions.md 「I-005 の試作」 2026-10-03 and
+ * 「事件の種 No.4『助けられた朝』を試作」 2026-10-04). The switches themselves live in
+ * shared/proto.ts (the server reads them too).
  *
- * `?proto=i005` shows the four ideas from the supervisor's original 「ジェーンドゥの死因」 design
- * (docs/ideas/I-005-original-design.html): the サイエンスヒント mark on a finding card, the
- * red-cabbage 近い・遠い band after a verdict, the 余話 after the science page and the 矛盾の一文
- * under the case title. The choice is remembered for this tab (sessionStorage), so hash
- * navigation and reloads keep it; `?proto=off` forgets it. Without the switch nothing changes —
- * the case data fields are optional and every UI piece checks PROTO_I005.
+ *   ?proto=i005        the four ideas from the supervisor's original 「ジェーンドゥの死因」 design
+ *                      (docs/ideas/I-005-original-design.html): the サイエンスヒント mark on a finding
+ *                      card, the red-cabbage 近い・遠い band after a verdict, the 余話 after the science
+ *                      page and the 矛盾の一文 under the case title (src/features/i005)
+ *   ?proto=seeds       the prototype cases made from the 事件の種 (case.json `proto: "seeds"`):
+ *                      listed, playable and counted only with the switch (shared/proto.ts)
+ *   ?proto=i005,seeds  both (`?proto=seeds&proto=i005` works too)
  *
- * To adopt the prototype later: drop the PROTO_I005 checks (src/features/i005 holds the pieces).
- * To remove it: delete src/features/i005, this file, and the optional fields in shared/.
+ * The URL says exactly which switches are on; the choice is remembered for this tab
+ * (sessionStorage), so hash navigation and reloads keep it; `?proto=off` forgets it. Without a
+ * switch nothing changes — the case data fields are optional, every UI piece checks PROTO_I005,
+ * and the server hides a prototype case from requests without its switch (src/api/http.ts sends them).
+ *
+ * To adopt I-005 later: drop the PROTO_I005 checks (src/features/i005 holds the pieces).
+ * To publish a seeds case: drop its `proto` field and its PROTO_CASES entry, set `publish: true`.
  */
+import { PROTO_CASES, parseProtos, type ProtoId } from '../../shared/proto';
 
-export type ProtoId = 'i005';
-const KNOWN: readonly ProtoId[] = ['i005'];
+export type { ProtoId };
 export const PROTO_STORAGE_KEY = 'janedoe:proto';
 
-const isId = (v: unknown): v is ProtoId => typeof v === 'string' && (KNOWN as readonly string[]).includes(v);
-
 /**
- * Pure resolution (tests): the URL wins (`off` clears, a known id sets), otherwise the remembered
- * value of this tab. `store` says what to write back to sessionStorage.
+ * Pure resolution (tests): the URL wins (`off` clears, known ids set exactly those), otherwise the
+ * remembered value of this tab. `store` says what to write back to sessionStorage.
  */
-export function resolveProto(query: string | null | undefined, stored: string | null | undefined): { id: ProtoId | null; store: 'set' | 'clear' | 'keep' } {
-  const q = query?.trim().toLowerCase();
-  if (q === 'off' || q === '0' || q === 'none') return { id: null, store: 'clear' };
-  if (isId(q)) return { id: q, store: 'set' };
-  return { id: isId(stored) ? stored : null, store: 'keep' };
+export function resolveProto(query: readonly string[] | string | null | undefined, stored: string | null | undefined): { ids: ProtoId[]; store: 'set' | 'clear' | 'keep' } {
+  const words = (Array.isArray(query) ? query : query == null ? [] : [query]).map((q) => q.trim().toLowerCase());
+  if (words.some((q) => q === 'off' || q === '0' || q === 'none')) return { ids: [], store: 'clear' };
+  const fromUrl = parseProtos(words);
+  if (fromUrl.length > 0) return { ids: fromUrl, store: 'set' };
+  return { ids: parseProtos(stored ?? ''), store: 'keep' };
 }
 
 interface StorageLike {
@@ -35,25 +42,25 @@ interface StorageLike {
   removeItem(k: string): void;
 }
 
-/** Reads the switch from a query string and a storage (both injectable for tests). */
-export function readProto(search: string, storage: StorageLike | null): ProtoId | null {
+/** Reads the switches from a query string and a storage (both injectable for tests). */
+export function readProto(search: string, storage: StorageLike | null): ProtoId[] {
   let stored: string | null = null;
   try {
     stored = storage?.getItem(PROTO_STORAGE_KEY) ?? null;
   } catch {
     /* blocked storage: the URL alone decides */
   }
-  const r = resolveProto(new URLSearchParams(search).get('proto'), stored);
+  const r = resolveProto(new URLSearchParams(search).getAll('proto'), stored);
   try {
-    if (r.store === 'set' && r.id) storage?.setItem(PROTO_STORAGE_KEY, r.id);
+    if (r.store === 'set') storage?.setItem(PROTO_STORAGE_KEY, r.ids.join(','));
     else if (r.store === 'clear') storage?.removeItem(PROTO_STORAGE_KEY);
   } catch {
     /* blocked storage: this page view only */
   }
-  return r.id;
+  return r.ids;
 }
 
-function boot(): ProtoId | null {
+function boot(): ProtoId[] {
   try {
     let storage: StorageLike | null = null;
     try {
@@ -63,10 +70,22 @@ function boot(): ProtoId | null {
     }
     return readProto(location.search, storage);
   } catch {
-    return null; // no location (tests, workers)
+    return []; // no location (tests, workers)
   }
 }
 
-export const PROTO: ProtoId | null = boot();
+/** The switches on in this tab, in shared/proto.ts PROTO_IDS order. */
+export const PROTOS: readonly ProtoId[] = boot();
 /** The I-005 prototype (サイエンスヒント・近さの色・余話・矛盾の一文) is on. */
-export const PROTO_I005 = PROTO === 'i005';
+export const PROTO_I005 = PROTOS.includes('i005');
+/** The 事件の種 prototype cases are on (listed, playable, counted). */
+export const PROTO_SEEDS = PROTOS.includes('seeds');
+
+/**
+ * A prototype case whose switch is off in this tab: its save stays out of 「続きから」, the
+ * 名探偵度数 and the counts (the server does not list or serve it either).
+ */
+export function caseHiddenByProto(caseId: string, on: readonly string[] = PROTOS): boolean {
+  const p = Object.prototype.hasOwnProperty.call(PROTO_CASES, caseId) ? PROTO_CASES[caseId] : undefined;
+  return !!p && !on.includes(p);
+}

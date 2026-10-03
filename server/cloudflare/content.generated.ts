@@ -9,10 +9,11 @@ import case4 from '../../content/cases/c05-tiptoe-milk-bottle/case.json';
 import case5 from '../../content/cases/c06-snowman-below-zero/case.json';
 import case6 from '../../content/cases/c07-thirst-beside-water/case.json';
 import case7 from '../../content/cases/c08-half-folded-towel/case.json';
+import case8 from '../../content/cases/c09-rescued-morning/case.json';
 import lines from '../../content/holma-lines.json';
 import prologue from '../../content/prologue.json';
 
-export const CASE_DIRS: readonly string[] = ["c01-room-without-breath","c02-ball-at-dusk","c03-shed-in-snow","c04-white-flower-supper","c05-tiptoe-milk-bottle","c06-snowman-below-zero","c07-thirst-beside-water","c08-half-folded-towel"];
+export const CASE_DIRS: readonly string[] = ["c01-room-without-breath","c02-ball-at-dusk","c03-shed-in-snow","c04-white-flower-supper","c05-tiptoe-milk-bottle","c06-snowman-below-zero","c07-thirst-beside-water","c08-half-folded-towel","c09-rescued-morning"];
 
 export function rawContent(): RawContent {
   return {
@@ -25,6 +26,7 @@ export function rawContent(): RawContent {
       { dir: "c06-snowman-below-zero", path: "content/cases/c06-snowman-below-zero/case.json", data: case5 as unknown },
       { dir: "c07-thirst-beside-water", path: "content/cases/c07-thirst-beside-water/case.json", data: case6 as unknown },
       { dir: "c08-half-folded-towel", path: "content/cases/c08-half-folded-towel/case.json", data: case7 as unknown },
+      { dir: "c09-rescued-morning", path: "content/cases/c09-rescued-morning/case.json", data: case8 as unknown },
     ],
     lines: lines as unknown,
     prologue: prologue as unknown,

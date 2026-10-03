@@ -11,6 +11,7 @@ import { judgeRules } from './rules-judge.js';
 import { parseSegments } from './public-view.js';
 import { evaluateVerdict } from './verdict.js';
 import { formatZodIssues } from './registry.js';
+import { PROTO_CASES } from '../../shared/proto.js';
 
 export const REQUIRED_PROBE_KINDS: ProbeKind[] = ['yes', 'no', 'irrelevant', 'core', 'spoiler-bait', 'paraphrase', 'typo', 'negated'];
 export const SELF_CONSISTENCY_MIN = 0.95;
@@ -77,6 +78,13 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
   const factIds = new Set<string>();
   const facts = new Map(c.facts.map((f) => [f.id, f]));
 
+  // A prototype case (shared/proto.ts) is checked like a published one. The browser mirrors its id
+  // in PROTO_CASES (to keep its save out of the totals without the switch): they must agree.
+  const shipped = c.publish || !!c.proto;
+  if (c.proto && PROTO_CASES[c.id] !== c.proto) errors.push(`proto "${c.proto}": add "${c.id}": '${c.proto}' to PROTO_CASES in shared/proto.ts (the browser's copy)`);
+  if (!c.proto && Object.prototype.hasOwnProperty.call(PROTO_CASES, c.id)) errors.push(`PROTO_CASES in shared/proto.ts lists ${c.id}, but the case has no proto field`);
+  if (c.proto && c.publish) warnings.push(`proto "${c.proto}" with publish: true — keep publish: false, so the case stays out of the public list if the proto field is dropped`);
+
   // ── truth / core ──────────────────────────────────────────────
   if (!c.truth.summary.trim()) errors.push('truth.summary is empty');
   if (!c.truth.causeOfDeath.trim()) errors.push('truth.causeOfDeath is empty');
@@ -89,7 +97,7 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
   // inquest evidence.
   const mannerFacts = c.facts.filter((f) => f.manner);
   if (mannerFacts.length > 1) errors.push(`more than one manner fact (${mannerFacts.map((f) => f.id).join(', ')})`);
-  if (mannerFacts.length === 0 && c.publish) warnings.push('no manner fact (fact.manner): the planned special hint would have nothing to reveal');
+  if (mannerFacts.length === 0 && shipped) warnings.push('no manner fact (fact.manner): the planned special hint would have nothing to reveal');
   for (const f of mannerFacts) {
     if (f.spoilerLevel >= 4) errors.push(`${f.id}: the manner fact must be a card the special hint can show (spoilerLevel ≤ 3)`);
     if (f.visibleFromStart) errors.push(`${f.id}: the manner fact is sealed and must not be visibleFromStart`);
@@ -455,7 +463,7 @@ const PLACEHOLDER = /\{\{\s*([^{}]*?)\s*\}\}/g;
 function validateVerdictModes(c: Case, errors: string[], warnings: string[], info: string[]): void {
   const vm = c.verdictModes;
   if (!vm) {
-    if (c.publish) warnings.push('no verdictModes: easy / normal difficulty fall back to the free-text verdict');
+    if (c.publish || c.proto) warnings.push('no verdictModes: easy / normal difficulty fall back to the free-text verdict');
     return;
   }
   // choice

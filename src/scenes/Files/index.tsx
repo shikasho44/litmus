@@ -5,7 +5,7 @@ import { ART, useImage } from '../../lib/asset';
 import { caseList, caseListError, caseListState, loadCases } from '../../lib/cases';
 import { DegreeMeter } from '../../features/rank/Badge';
 import { detectiveTotal } from '../../features/rank/points';
-import { caseStatus, saveData } from '../../state/save';
+import { caseStatus, saveData, shownCases } from '../../state/save';
 import { formatElapsed } from '../../state/hooks';
 import { Button, IconButton } from '../../ui/Button';
 import { CaseTag } from '../../ui/CaseTag';
@@ -70,9 +70,10 @@ export function FilesScene(_: SceneProps) {
 
   const solvedCount = list ? list.filter((c) => ['solved', 'complete'].includes(caseStatus(save.cases[c.id]))).length : 0;
   const completeCount = list ? list.filter((c) => caseStatus(save.cases[c.id]) === 'complete').length : 0;
-  const anyStarted = Object.values(save.cases).some((c) => c.stage !== 'new');
+  // a prototype case without its switch (?proto) is not counted (shownCases)
+  const anyStarted = Object.values(shownCases(save.cases)).some((c) => c.stage !== 'new');
   const focused = list?.find((c) => c.id === focus);
-  const degree = detectiveTotal(save.cases);
+  const degree = detectiveTotal(shownCases(save.cases));
   // 初見タイム合計: the first-clear times of every case that has one (owner: how fast can you do them all on first sight)
   const firsts = list ? list.map((c) => save.cases[c.id]?.firstClear).filter((f) => !!f) : [];
   const firstTotal = firsts.reduce((sum, f) => sum + f.clearMs, 0);

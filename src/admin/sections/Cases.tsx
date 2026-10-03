@@ -829,7 +829,10 @@ export function CasesSection() {
           </div>
           <div>
             <dt>公開</dt>
-            <dd>{c.publish ? <Badge tone="ok">公開</Badge> : <Badge tone="mute">非公開</Badge>}</dd>
+            <dd>
+              {c.publish ? <Badge tone="ok">公開</Badge> : <Badge tone="mute">非公開</Badge>}
+              {c.proto && <Badge tone="amber">試作 ?proto={c.proto}</Badge>}
+            </dd>
           </div>
           <div>
             <dt>確認状態</dt>

@@ -31,9 +31,13 @@ const here = dirname(fileURLToPath(import.meta.url));
 const contentDir = resolve(here, '../../content');
 const read = (p: string) => readFileSync(resolve(contentDir, p), 'utf8');
 
+// every case file, the prototype cases (case.json `proto`, shown only with ?proto=seeds) included:
+// the content rules hold for them too
 const cases: Case[] = contentRegistry()
   .list(true)
   .map((l) => l.data);
+/** The cases every player sees (no prototype switch). */
+const publicCases = cases.filter((c) => !c.proto);
 
 /** Holma's verbal tics (VOICE.md). Jane never uses them. */
 const HOLMA_VOICE = /ですねェ|ですとも|ございま|クックック|ククッ|なさい|さァ|わたくし|私(?:は|の|が|も|に|を)|おやおや|いやはや|ましょう|審問官(?!さん)/u;
@@ -41,15 +45,16 @@ const HOLMA_VOICE = /ですねェ|ですとも|ございま|クックック|ク�
 const KEIGO = /(?:です|ます|でした|ました|ません|でしょう)(?=[。、…！？」』]|$)/u;
 
 describe('content rules', () => {
-  it('loads all eight cases', () => {
-    expect(cases.map((c) => c.id).sort()).toEqual([
+  it('loads the eight public cases, plus the prototype case behind ?proto=seeds', () => {
+    expect(cases.filter((c) => c.proto).map((c) => [c.id, c.proto, c.publish])).toEqual([['c09-rescued-morning', 'seeds', false]]);
+    expect(publicCases.map((c) => c.id).sort()).toEqual([
       'c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper',
       'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-thirst-beside-water', 'c08-half-folded-towel',
     ]);
   });
 
   it('opens with the short human tutorial case (CASE 01), then the three intro cases (02–04), then the four full cases (05–08)', () => {
-    const byNumber = [...cases].sort((a, b) => a.number - b.number);
+    const byNumber = [...publicCases].sort((a, b) => a.number - b.number);
     expect(byNumber.map((c) => c.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(byNumber.map((c) => c.id)).toEqual([
       'c08-half-folded-towel',

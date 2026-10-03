@@ -74,7 +74,7 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
 
 ### 安全フィルター（safety.ts・公開の必須条件）
 - **判定より前に**走る（想定質問・rules・Jev・LLM のどれよりも先）。当たった質問は**モデルに一切送らない**。
-- 対象: 死にたい・消えたい・自殺したい などの打ち明け（`selfHarm`）／死ねる・楽に死ぬ・死に方・致死量・何分で死ぬ・どのくらいで死ぬ・吸ったら死ぬ・同じ方法で／真似して・自殺に使える・○○死する方法 など（`method`）／殺せる・殺し方・人を殺す・毒を盛る方法・心臓を止められる・わざと起こせる など（`harmOthers`）。
+- 対象: 死にたい・消えたい・自殺したい などの打ち明け（`selfHarm`）／死ねる・楽に死ぬ・死に方・致死量・何分で死ぬ・どのくらいで死ぬ・何時間はさまれたら死ぬ／何キロ乗ったら止まる（時間・重さを条件にした問い、2026-10-04 の規則 `how-long-if`）・吸ったら死ぬ・同じ方法で／真似して・自殺に使える・○○死する方法 など（`method`）／殺せる・殺し方・人を殺す・毒を盛る方法・心臓を止められる・わざと起こせる など（`harmOthers`）。
 - 誤検知を避ける設計: 過去形（「毒で死んだ？」「苦しまずに死んだ？」）、被害者についての問い（「自殺ですか」「彼女の死に方は」「死にたいと言っていた？」）、話題語だけ（「窒素は関係ありますか」）では**鳴らない**（「自殺ですか」は下の 1c 死の種類の封印で、support カードなしに断る）。鳴るのは可能形（死ねる／殺せる）・方法／量／時間の語・一人称の願い・「〜に使える」「〜したら死ぬ」の形。`tests/engine/safety.test.ts` が**全事件の全想定質問**（SAFETY 以外）で鳴らないことを毎回確かめる。
 - 返答: メッセージ全体で1つの答え。`answerClass: 'cannot'`・`mood: 'serious'`・`notice: 'support'`（UI は相談窓口カードを出す）・所見もメモも開かない・nearCore も変えない・質問数は1。台詞は固定（ホルマの声だが冗談なし。`SAFETY_LINES`: selfHarm / method / harmOthers の3種）。
 - モデル判定の `JudgeDecision.flags.selfHarm ≥ 0.5` も同じ扱い（`safety:model:judge-flag`）。LLM の言い換えは呼ばない。
@@ -250,6 +250,7 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
 2. `npm run validate` — エラー 0 まで直す（警告は通る）
 3. `npm run dev` — dev サーバーは case.json の変更を次のリクエストで自動再読込
 4. `publish: false` の間は本番の一覧に出ない（dev と管理者には見える）
+5. 試作の事件（`proto: "seeds"`、2026-10-04〜）は、プレイヤーの切り替え `?proto=seeds` があるときだけ一覧・取得できる（`publish` によらず、dev と管理者でも同じ。管理 API の mint-token・ask-debug と管理画面の一覧は全部見える）。ブラウザはヘッダー `x-janedoe-proto` で切り替えを送り、静的版は埋め込みエンジンに渡す。オンライン対戦の部屋には使えない。正本は `shared/proto.ts`・`registry.ts` の `list(includeUnpublished, protos)` / `get(id, includeUnpublished, protos)`。ブラウザ側の写し `PROTO_CASES` と case.json の `proto` は validate とテストが一致を確かめる
 
 読込経路:
 | 実行環境 | 読み方 |

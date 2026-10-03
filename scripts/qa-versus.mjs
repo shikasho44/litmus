@@ -35,7 +35,9 @@ for (const f of readdirSync(out)) if (f.endsWith('.png')) rmSync(resolve(out, f)
 const CASES = readdirSync(resolve(root, 'content', 'cases'))
   .filter((d) => /^c\d\d/.test(d))
   .sort()
-  .map((d) => JSON.parse(readFileSync(resolve(root, 'content', 'cases', d, 'case.json'), 'utf8')));
+  .map((d) => JSON.parse(readFileSync(resolve(root, 'content', 'cases', d, 'case.json'), 'utf8')))
+  // a prototype case (case.json `proto`) never goes into a versus room (shared/proto.ts)
+  .filter((c) => !c.proto);
 const C = CASES.find((c) => c.id.startsWith(arg('--case', 'c01'))) ?? CASES[0];
 const HOST_NAME = 'ホスト審問官';
 const GUEST_NAME = 'スマホの審問官';

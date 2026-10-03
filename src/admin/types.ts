@@ -58,6 +58,8 @@ export interface AdminCase {
   id: string;
   path: string;
   publish: boolean;
+  /** A prototype case's switch (shared/proto.ts): players see it only with ?proto=<this>. */
+  proto?: string;
   reviewStatus: Case['reviewStatus'];
   validation: CaseValidation;
   data: Case;

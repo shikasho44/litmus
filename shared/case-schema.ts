@@ -11,6 +11,7 @@
  */
 import { z } from 'zod';
 import { ANSWER_CLASSES, FACT_CATEGORIES, PROBE_KINDS } from './constants.js';
+import { PROTO_IDS } from './proto.js';
 
 // The enum constants live in the zod-free ./constants (the browser imports them from there);
 // re-exported here so server code and scripts can keep a single import site.
@@ -280,6 +281,15 @@ export const CaseSchema = z.object({
   categories: z.array(z.string()).min(1),    // e.g. ['化学', '生理学']
   estimatedMinutes: z.number().int().min(5),
   publish: z.boolean(),
+  /**
+   * PROTOTYPE case (2026-10-04, shared/proto.ts): listed and playable only while the player has
+   * this switch on (`?proto=seeds`), in every build, whatever `publish` says; never offered in
+   * online versus. Without the switch the case does not exist for the player (the dev server
+   * included, so the default QA sees the public cases only). Keep `publish: false` with it, so the
+   * case stays out of the public list if the field is ever dropped. The browser mirrors the id in
+   * PROTO_CASES (shared/proto.ts).
+   */
+  proto: z.enum(PROTO_IDS).optional(),
   reviewStatus: z.enum(['draft-ai', 'ai-reviewed', 'human-reviewed']),
   contentWarning: z.string().optional(),
 

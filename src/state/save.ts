@@ -10,6 +10,7 @@
  */
 import { batch, computed, effect, signal } from '@preact/signals';
 import { APP_CONFIG } from '../config/app';
+import { caseHiddenByProto } from '../config/proto';
 import { resultPoints } from '../features/rank/points';
 import { sanitizeExamples } from '../features/examples/examples';
 import { runModeOf } from './runMode';
@@ -506,10 +507,21 @@ export function caseStatus(c: CaseProgress | undefined): CaseStatus {
   return 'active';
 }
 
+/**
+ * The saved cases this tab may show: without its switch (?proto=…, src/config/proto.ts) a
+ * prototype case's save stays out of 「続きから」, the 名探偵度数 and the counts. It is kept, not
+ * deleted: with the switch on again the case picks up where it was.
+ */
+export function shownCases<T>(cases: Record<string, T>): Record<string, T> {
+  const ids = Object.keys(cases);
+  if (!ids.some((id) => caseHiddenByProto(id))) return cases;
+  return Object.fromEntries(ids.filter((id) => !caseHiddenByProto(id)).map((id) => [id, cases[id]]));
+}
+
 /** The case the 「続きから」 button resumes, or null. */
 export const resumableCaseId = computed<string | null>(() => {
   const s = saveData.value;
-  const active = Object.values(s.cases).filter((c) => c.stage !== 'new' && c.stage !== 'complete');
+  const active = Object.values(shownCases(s.cases)).filter((c) => c.stage !== 'new' && c.stage !== 'complete');
   if (!active.length) return null;
   const last = s.meta.lastCaseId && active.find((c) => c.caseId === s.meta.lastCaseId);
   if (last) return last.caseId;

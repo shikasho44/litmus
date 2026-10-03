@@ -1,9 +1,10 @@
 /**
- * PROTOTYPE I-005 — the browser side: the `?proto=i005` switch (src/config/proto.ts) and the
- * red-cabbage band mapping (src/features/i005/closeness.ts).
+ * PROTOTYPES — the browser side: the `?proto=` switches (src/config/proto.ts: i005, seeds and both
+ * at once), the hidden saves of a prototype case, and the I-005 red-cabbage band mapping
+ * (src/features/i005/closeness.ts).
  */
 import { describe, expect, it } from 'vitest';
-import { PROTO, PROTO_I005, PROTO_STORAGE_KEY, readProto, resolveProto } from '../src/config/proto';
+import { PROTOS, PROTO_I005, PROTO_SEEDS, PROTO_STORAGE_KEY, caseHiddenByProto, readProto, resolveProto } from '../src/config/proto';
 import { CLOSENESS_LABEL, CLOSENESS_LEVELS, TICK_AT, bandColor, bandPosition, readCloseness } from '../src/features/i005/closeness';
 
 function memoryStorage(init: Record<string, string> = {}) {
@@ -18,29 +19,46 @@ function memoryStorage(init: Record<string, string> = {}) {
 
 describe('the ?proto switch', () => {
   it('is off by default (no location in tests → the live default)', () => {
-    expect(PROTO).toBeNull();
+    expect(PROTOS).toEqual([]);
     expect(PROTO_I005).toBe(false);
+    expect(PROTO_SEEDS).toBe(false);
   });
 
   it('resolves URL first, then the remembered value of the tab', () => {
-    expect(resolveProto('i005', null)).toEqual({ id: 'i005', store: 'set' });
-    expect(resolveProto('I005', null)).toEqual({ id: 'i005', store: 'set' });
-    expect(resolveProto(null, 'i005')).toEqual({ id: 'i005', store: 'keep' });
-    expect(resolveProto(null, null)).toEqual({ id: null, store: 'keep' });
-    expect(resolveProto('off', 'i005')).toEqual({ id: null, store: 'clear' });
-    expect(resolveProto('banana', 'i005')).toEqual({ id: 'i005', store: 'keep' }); // an unknown value changes nothing
-    expect(resolveProto('banana', 'evil')).toEqual({ id: null, store: 'keep' }); // a tampered store is ignored
+    expect(resolveProto('i005', null)).toEqual({ ids: ['i005'], store: 'set' });
+    expect(resolveProto('I005', null)).toEqual({ ids: ['i005'], store: 'set' });
+    expect(resolveProto(null, 'i005')).toEqual({ ids: ['i005'], store: 'keep' });
+    expect(resolveProto(null, null)).toEqual({ ids: [], store: 'keep' });
+    expect(resolveProto('off', 'i005')).toEqual({ ids: [], store: 'clear' });
+    expect(resolveProto('banana', 'i005')).toEqual({ ids: ['i005'], store: 'keep' }); // an unknown value changes nothing
+    expect(resolveProto('banana', 'evil')).toEqual({ ids: [], store: 'keep' }); // a tampered store is ignored
+  });
+
+  it('several switches coexist: ?proto=i005,seeds or ?proto=seeds&proto=i005; the URL says exactly which are on', () => {
+    expect(resolveProto('seeds', null)).toEqual({ ids: ['seeds'], store: 'set' });
+    expect(resolveProto('i005,seeds', null)).toEqual({ ids: ['i005', 'seeds'], store: 'set' });
+    expect(resolveProto(['seeds', 'I005'], null)).toEqual({ ids: ['i005', 'seeds'], store: 'set' });
+    expect(resolveProto('seeds,banana', 'i005')).toEqual({ ids: ['seeds'], store: 'set' }); // replaces, does not add
+    expect(resolveProto(null, 'i005,seeds')).toEqual({ ids: ['i005', 'seeds'], store: 'keep' });
+    expect(resolveProto(['seeds', 'off'], 'seeds')).toEqual({ ids: [], store: 'clear' });
+    const s = memoryStorage();
+    expect(readProto('?proto=i005,seeds', s)).toEqual(['i005', 'seeds']);
+    expect(s.dump()).toEqual({ [PROTO_STORAGE_KEY]: 'i005,seeds' });
+    expect(readProto('?proto=seeds&proto=i005', s)).toEqual(['i005', 'seeds']);
+    expect(readProto('#/files', s)).toEqual(['i005', 'seeds']);
+    expect(readProto('?proto=seeds', s)).toEqual(['seeds']);
+    expect(s.dump()).toEqual({ [PROTO_STORAGE_KEY]: 'seeds' });
   });
 
   it('remembers ?proto=i005 for the session, so hash navigation (no query) keeps it; ?proto=off forgets it', () => {
     const s = memoryStorage();
-    expect(readProto('?mute=1&proto=i005', s)).toBe('i005');
+    expect(readProto('?mute=1&proto=i005', s)).toEqual(['i005']);
     expect(s.dump()).toEqual({ [PROTO_STORAGE_KEY]: 'i005' });
-    expect(readProto('', s)).toBe('i005'); // e.g. #/files after a reload without the query
-    expect(readProto('?debug=1', s)).toBe('i005');
-    expect(readProto('?proto=off', s)).toBeNull();
+    expect(readProto('', s)).toEqual(['i005']); // e.g. #/files after a reload without the query
+    expect(readProto('?debug=1', s)).toEqual(['i005']);
+    expect(readProto('?proto=off', s)).toEqual([]);
     expect(s.dump()).toEqual({});
-    expect(readProto('', s)).toBeNull();
+    expect(readProto('', s)).toEqual([]);
   });
 
   it('works without storage (blocked / private mode): the URL alone decides', () => {
@@ -55,9 +73,17 @@ describe('the ?proto switch', () => {
         throw new Error('blocked');
       },
     };
-    expect(readProto('?proto=i005', blocked)).toBe('i005');
-    expect(readProto('', blocked)).toBeNull();
-    expect(readProto('?proto=i005', null)).toBe('i005');
+    expect(readProto('?proto=i005', blocked)).toEqual(['i005']);
+    expect(readProto('', blocked)).toEqual([]);
+    expect(readProto('?proto=i005', null)).toEqual(['i005']);
+  });
+
+  it('hides a prototype case’s save only while its switch is off', () => {
+    expect(caseHiddenByProto('c09-rescued-morning')).toBe(true); // no switch in tests
+    expect(caseHiddenByProto('c09-rescued-morning', ['seeds'])).toBe(false);
+    expect(caseHiddenByProto('c09-rescued-morning', ['i005'])).toBe(true);
+    expect(caseHiddenByProto('c08-half-folded-towel')).toBe(false);
+    expect(caseHiddenByProto('toString')).toBe(false); // not fooled by Object.prototype
   });
 });
 

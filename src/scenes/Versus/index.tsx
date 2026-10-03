@@ -108,7 +108,8 @@ function Entry({ joinCode }: { joinCode?: string }) {
   const [code, setCode] = useState((joinCode ?? '').toUpperCase().slice(0, ROOM_CODE_LENGTH));
   const [busy, setBusy] = useState<'create' | 'join' | null>(null);
   const [error, setError] = useState<string | null>(vsEnded.peek());
-  const list = caseList.value;
+  // a prototype case (?proto=seeds) never goes into a room: the guests may not have the switch
+  const list = caseList.value?.filter((c) => !c.proto) ?? null;
   const chosen = caseId ?? list?.[0]?.id ?? null;
   const nameOk = [...name.trim()].length >= 1 && [...name.trim()].length <= VERSUS_NAME_MAX;
 

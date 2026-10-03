@@ -13,6 +13,7 @@ import { GameService } from '../../server/engine/game';
 import { ContentRegistry, type RawCaseFile } from '../../server/engine/registry';
 import { EMBEDDED_SESSION_SECRET } from '../../server/engine/env';
 import { TraceRing } from '../../server/engine/trace';
+import { PROTOS } from '../config/proto';
 
 const caseFiles = import.meta.glob('../../content/cases/*/case.json', { eager: true, import: 'default' });
 const extraFiles = import.meta.glob('../../content/{holma-lines,prologue}.json', { eager: true, import: 'default' });
@@ -44,19 +45,21 @@ export function createEmbeddedApi(): GameApi {
   });
   // Results are cloned so UI code can never mutate the bundled case data.
   const clone = <T>(p: Promise<T>): Promise<T> => p.then((v) => structuredClone(v));
+  // the tab's prototype switches (?proto=…): a prototype case exists only with its switch (shared/proto.ts)
+  const o = { protos: PROTOS };
   return {
-    listCases: () => clone(svc.listCases()),
-    getCase: (id) => clone(svc.getCase(id)),
-    newToken: (id) => clone(svc.newToken(id)),
-    ask: (req) => clone(svc.ask(req)),
-    hint: (req) => clone(svc.hint(req)),
-    inquestStart: (req) => clone(svc.inquestStart(req)),
-    shot: (req) => clone(svc.shot(req)),
-    grant: (req) => clone(svc.grant(req)),
-    verdictSetup: (req) => clone(svc.verdictSetup(req)),
-    verdict: (req) => clone(svc.verdict(req)),
-    reconstruction: (req) => clone(svc.reconstruction(req)),
-    submitReconstruction: (req) => clone(svc.submitReconstruction(req)),
-    solution: (req) => clone(svc.solution(req)),
+    listCases: () => clone(svc.listCases(o)),
+    getCase: (id) => clone(svc.getCase(id, o)),
+    newToken: (id) => clone(svc.newToken(id, o)),
+    ask: (req) => clone(svc.ask(req, o)),
+    hint: (req) => clone(svc.hint(req, o)),
+    inquestStart: (req) => clone(svc.inquestStart(req, o)),
+    shot: (req) => clone(svc.shot(req, o)),
+    grant: (req) => clone(svc.grant(req, o)),
+    verdictSetup: (req) => clone(svc.verdictSetup(req, o)),
+    verdict: (req) => clone(svc.verdict(req, o)),
+    reconstruction: (req) => clone(svc.reconstruction(req, o)),
+    submitReconstruction: (req) => clone(svc.submitReconstruction(req, o)),
+    solution: (req) => clone(svc.solution(req, o)),
   };
 }

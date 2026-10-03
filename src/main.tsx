@@ -8,6 +8,7 @@ import { installDebug } from './app/debug';
 import { initRouter } from './app/router';
 import { bindAudioSettings } from './audio';
 import { APP_CONFIG } from './config/app';
+import { TITLE_VARIANT } from './config/titleVariant';
 import { ART, probeImage } from './lib/asset';
 import { DEBUG } from './lib/env';
 import { initViewport } from './lib/viewport';
@@ -24,7 +25,8 @@ const BOOT_CAP_MS = 2500;
 const FONT_GRACE_MS = 700;
 
 function applyDocumentMeta() {
-  document.title = APP_CONFIG.OFFICIAL_RELEASE_ENABLED ? APP_CONFIG.APP_TITLE : `${APP_CONFIG.APP_TITLE}（PREVIEW）`;
+  const name = TITLE_VARIANT.appTitle; // APP_CONFIG.APP_TITLE unless a title prototype is picked
+  document.title = APP_CONFIG.OFFICIAL_RELEASE_ENABLED ? name : `${name}（PREVIEW）`;
   // Runtime safety net for crawlers that execute JS: noindex until the official release.
   let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
   if (!APP_CONFIG.OFFICIAL_RELEASE_ENABLED) {
@@ -53,6 +55,9 @@ async function waitFonts() {
       Promise.all([
         fontsCss,
         document.fonts.load('400 64px "Dela Gothic One"', APP_CONFIG.GAME_TITLE),
+        // a title prototype's own glyphs (科学捜査官 …) are not in the inline logo subsets
+        ...(TITLE_VARIANT.id === 'current' ? [] : [fontsCss.then(() => document.fonts.load('400 64px "Dela Gothic One"', TITLE_VARIANT.logoTitle))]),
+        ...(TITLE_VARIANT.subtitle ? [import('./styles/fonts-extra.css').then(() => document.fonts.load('500 32px "Shippori Mincho B1"', TITLE_VARIANT.subtitle?.jp))] : []),
         document.fonts.load('500 16px "Zen Kaku Gothic New"', 'あア'),
         document.fonts.load('400 32px "Anton"', 'CASE'),
       ]),

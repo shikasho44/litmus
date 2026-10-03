@@ -616,7 +616,7 @@
   height: 100%;
   background: var(--db-edge);
 }
-.rs-deg.dtier--5 .rs-deg__bar > span {
+.rs-deg.dtier--11 .rs-deg__bar > span {
   background: linear-gradient(90deg, var(--alarm), var(--amber), var(--formalin), var(--cyan), var(--violet));
 }
 .rs-deg__next {
@@ -638,7 +638,7 @@
   box-shadow: 3px 3px 0 var(--alarm);
   transform: rotate(-6deg);
 }
-.rs-deg.dtier--5 .rs-deg__up {
+.rs-deg.dtier--11 .rs-deg__up {
   background: linear-gradient(90deg, var(--amber), var(--formalin), var(--cyan));
 }
 [data-layout='narrow'] .rs-left {

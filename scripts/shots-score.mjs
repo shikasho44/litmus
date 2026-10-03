@@ -3,7 +3,9 @@
 //   a replay that did not beat the case best, reduced motion), the Files header meter and the
 //   BEST points on the case tags, the 遊び方 page, and the in-play 「減点 −n」 floats in real
 //   play (hint, noise-break miss, 泣きつき, wrong verdict, recall-test retry) plus the game-over
-//   tag — at PC 1280x800 (DPR 1.5) and phone 390x844 (DPR 2).
+//   tag — at PC 1280x800 (DPR 1.5) and phone 390x844 (DPR 2). Since 2026-10-04 also the top of
+//   the 11-level ladder (`--only ladder`): a rank-up into 伝説の名探偵 and the ★ tail on the meter,
+//   with a long archive of future cases faked into the save (only the total matters).
 //
 //   node scripts/shots-score.mjs                  both sizes
 //   node scripts/shots-score.mjs --size sp        one size      --only result,files   subset
@@ -188,7 +190,7 @@ async function seed(page, caseId, stage, scene, patch = {}) {
 
 const STATS = (o = {}) => ({ score: 100, asked: 18, keyQuestions: 10, answered: 18, hintsUsed: 0, debateMisses: 0, grants: 0, verdictAttempts: 1, suspensions: 0, gameOvers: 0, quizMisses: 0, debateRounds: 2, debateCleared: 2, difficulty: 1, estimatedMinutes: 15, ...o });
 
-/** c01 just sealed (S+ on 教授 = +150) with c02 already at +100: the total goes 100 → 250 (Lv1 → Lv3). */
+/** c01 just sealed (S+ on 教授 = +150) with c02 already at +100: the total goes 100 → 250 (Lv2 → Lv3). */
 async function seedFirstClear(page) {
   await page.evaluate(
     ({ C1, C2, stats }) => {
@@ -207,6 +209,36 @@ async function seedFirstClear(page) {
       J.flushSave();
     },
     { C1, C2, stats: STATS({ points: 150 }) },
+  );
+}
+
+/**
+ * The top of the ladder (2026-10-04): a long archive of future cases faked into the save (only the
+ * 名探偵度数 total reads them; the case list and its counts ignore unknown ids). `archive` = the sum
+ * of their bests; with `sealC1`, c01 has just been sealed (S+ on 教授 = +150) on top of it.
+ */
+async function seedArchive(page, archive, sealC1) {
+  await page.evaluate(
+    ({ C1, archive, sealC1, stats }) => {
+      const J = window.__JD;
+      for (let i = 0, left = archive; left > 0; i++, left -= 150) {
+        J.updateCase(`c9${String(i).padStart(2, '0')}-future-archive`, { stage: 'complete', completed: true, clears: 1, bestRank: 'S', bestPoints: Math.min(150, left), gameOversAtClear: 0 });
+      }
+      if (sealC1) {
+        J.updateCase(C1, {
+          stage: 'complete',
+          completed: true,
+          clears: 1,
+          difficulty: 'hard',
+          bestRank: 'S+',
+          bestPoints: 150,
+          gameOversAtClear: 0,
+          lastResult: { rank: 'S+', title: '完全無欠の審問官', at: Date.now(), elapsedMs: 9 * 60000 + 41000, playDifficulty: 'hard', stats },
+        });
+      }
+      J.flushSave();
+    },
+    { C1, archive, sealC1, stats: STATS({ points: 150 }) },
   );
 }
 
@@ -255,9 +287,9 @@ async function runSize(browser, size) {
       await shot(page, 'result-degree-block', 300);
     }
     check((await text(page, '.rs-deg__gain-num')) === '+150', `${size}: 獲得 +150 (100 × 1.4 + S+ 10)`);
-    check((await text(page, '.rs-deg__name')) === 'Lv.3 腕利き探偵', `${size}: the badge ends at Lv.3 腕利き探偵 (${await text(page, '.rs-deg__name')})`);
+    check((await text(page, '.rs-deg__name')) === 'Lv.3 所見を読む探偵', `${size}: the badge ends at Lv.3 所見を読む探偵 (${await text(page, '.rs-deg__name')})`);
     check((await page.getAttribute('.rs-deg .detb', 'data-level')) === '3', `${size}: the badge shows level 3`);
-    check(/あと110/.test((await text(page, '.rs-deg__next')) ?? ''), `${size}: next badge 名探偵 in 110 (${await text(page, '.rs-deg__next')})`);
+    check(/「腕利き探偵」まで あと50/.test((await text(page, '.rs-deg__next')) ?? ''), `${size}: next badge 腕利き探偵 in 50 (${await text(page, '.rs-deg__next')})`);
     check(!(await has(page, '.rs-deg__note')), `${size}: a first clear has no best-record note`);
   });
 
@@ -326,7 +358,7 @@ async function runSize(browser, size) {
     check(await page.isVisible('.dmeter'), `${size}: the meter shows once there is a degree`);
     await shot(page, 'files-degree', 600);
     check((await text(page, '.dmeter__total')) === '250', `${size}: the header shows 名探偵度数 250`);
-    check((await text(page, '.dmeter__name')) === 'Lv.3 腕利き探偵', `${size}: the header shows Lv.3 腕利き探偵`);
+    check((await text(page, '.dmeter__name')) === 'Lv.3 所見を読む探偵', `${size}: the header shows Lv.3 所見を読む探偵`);
     const pts = await text(page, `article.tag:has(#case-${C1}-title) .tag__rank-pts`);
     check(pts === '+150', `${size}: the case tag shows its best +150 under BEST (${pts})`);
     const tag = page.locator(`article.tag:has(#case-${C1}-title)`);
@@ -342,6 +374,49 @@ async function runSize(browser, size) {
       await page.evaluate(() => document.querySelector('.modal__body')?.scrollTo(0, 9999));
       await shot(page, 'howto-degree-text', 400);
     }
+  });
+
+  /* ---- 4b. the top of the ladder: into 伝説の名探偵, and the ★ tail (2026-10-04) ---- */
+  await section('ladder', async (ctx) => {
+    const page = await fresh(ctx, `${size}-ladder`);
+    // 2,400 in the archive + c01's +150 → 2,550: Lv10 零番安置室の名探偵 → Lv11 伝説の名探偵
+    await seedArchive(page, 2400, true);
+    await page.evaluate((C1) => window.__JD.goto('result', { caseId: C1, fresh: '1' }), C1);
+    await page.waitForSelector('.rs-deg', { state: 'attached', timeout: 30000 });
+    if (narrow) {
+      await wait(1500);
+      await page.evaluate(() => document.querySelector('.rs-deg')?.scrollIntoView({ block: 'center' }));
+    }
+    await waitFn(page, () => !!document.querySelector('.rs-deg__up'), null, { label: 'rank-up into 伝説', timeout: 12000 });
+    await waitFn(page, () => document.querySelector('.rs-deg__total-num')?.textContent === '2550' && getComputedStyle(document.querySelector('.rs-deg')).opacity === '1', null, { label: 'count finished', timeout: 12000 });
+    await wait(1200);
+    if (narrow) await page.evaluate(() => document.querySelector('.rs-deg')?.scrollIntoView({ block: 'center' }));
+    await shot(page, 'ladder-result-legend', 300);
+    check((await text(page, '.rs-deg__name')) === 'Lv.11 伝説の名探偵', `${size}: the badge ends at Lv.11 伝説の名探偵 (${await text(page, '.rs-deg__name')})`);
+    check((await page.getAttribute('.rs-deg .detb', 'data-level')) === '11', `${size}: the badge shows level 11`);
+    check(/「伝説の名探偵 ★2」まで あと450/.test((await text(page, '.rs-deg__next')) ?? ''), `${size}: the ladder goes on: ★2 in 450 (${await text(page, '.rs-deg__next')})`);
+
+    // the files header at Lv10 (the longest name) and in the ★ tail
+    for (const [archive, name, label] of [
+      [2000, 'Lv.10 零番安置室の名探偵', 'ladder-files-lv10'],
+      [3050, 'Lv.12 伝説の名探偵 ★2', 'ladder-files-star2'],
+    ]) {
+      await page.evaluate(() => localStorage.clear());
+      await page.reload({ waitUntil: 'load' });
+      await page.waitForFunction(() => !!window.__JD && document.documentElement.classList.contains('app-ready'), null, { timeout: 60000 });
+      await page.evaluate(() => window.__JD.setMeta({ prologueSeen: true, tutorial: { state: 'done', step: 0 } }));
+      await seedArchive(page, archive, false);
+      await page.evaluate(() => window.__JD.goto('files'));
+      await page.waitForSelector('.dmeter', { state: 'visible', timeout: 30000 });
+      await shot(page, label, 700);
+      check((await text(page, '.dmeter__total')) === String(archive), `${size}: the header shows 名探偵度数 ${archive}`);
+      check((await text(page, '.dmeter__name')) === name, `${size}: the header shows ${name} (${await text(page, '.dmeter__name')})`);
+    }
+    check((await page.getAttribute('.dmeter .detb', 'data-stars')) === '2', `${size}: the ★ tail badge carries its star count`);
+    await page.click('[data-degree-meter]');
+    await page.waitForSelector('.howto-degree', { timeout: 10000 });
+    await shot(page, 'ladder-howto', 700);
+    check((await page.locator('.howto-degree__row').count()) === 12, `${size}: 遊び方 lists the 11 levels and the ★ tail`);
   });
 
   /* ---- 5. 減点 floats in real play ---- */

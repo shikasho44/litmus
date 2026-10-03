@@ -169,12 +169,14 @@ describe('first clear and clear time (2026-09-29)', () => {
 
 describe('a prototype case (?proto=seeds) without its switch — src/config/proto.ts', () => {
   const PROTO = 'c09-rescued-morning'; // shared/proto.ts PROTO_CASES; no switch in tests
+  const LAB = 'c10-shaken-bottle'; // shared/proto.ts PROTO_CASES (?proto=lab)
 
   it('its save stays out of the 名探偵度数 and 「続きから」, and is kept for when the switch is back', async () => {
     const { resumableCaseId, shownCases } = await import('./save');
     completeCase(ID, run('A', 80, 'hard'));
     completeCase(PROTO, run('S', 100, 'hard'));
-    expect(Object.keys(saveData.value.cases).sort()).toEqual([ID, PROTO].sort());
+    completeCase(LAB, run('S', 100, 'normal')); // a リトマス・ラボ sample (?proto=lab): the same rule
+    expect(Object.keys(saveData.value.cases).sort()).toEqual([ID, PROTO, LAB].sort());
     expect(Object.keys(shownCases(saveData.value.cases))).toEqual([ID]);
     expect(detectiveTotal(shownCases(saveData.value.cases))).toBe(112);
     // an unfinished prototype run is never the case 「続きから」 reopens

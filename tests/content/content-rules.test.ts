@@ -45,13 +45,13 @@ const HOLMA_VOICE = /ですねェ|ですとも|ございま|クックック|ク�
 const KEIGO = /(?:です|ます|でした|ました|ません|でしょう)(?=[。、…！？」』]|$)/u;
 
 describe('content rules', () => {
-  it('loads the eight public cases, plus the prototype cases behind ?proto=seeds and ?proto=tsukuru', () => {
+  it('loads the eight public cases, plus the prototype cases behind ?proto=seeds and ?proto=lab', () => {
     expect(cases.filter((c) => c.proto).map((c) => [c.id, c.proto, c.publish])).toEqual([
       ['c09-rescued-morning', 'seeds', false],
-      // the I-001 ツクール samples (2026-10-04)
-      ['c10-shaken-bottle', 'tsukuru', false],
-      ['c11-wet-window', 'tsukuru', false],
-      ['c12-two-shadows', 'tsukuru', false],
+      // the I-001 リトマス・ラボ samples (2026-10-04)
+      ['c10-shaken-bottle', 'lab', false],
+      ['c11-wet-window', 'lab', false],
+      ['c12-two-shadows', 'lab', false],
     ]);
     expect(publicCases.map((c) => c.id).sort()).toEqual([
       'c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper',

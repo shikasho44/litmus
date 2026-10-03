@@ -21,14 +21,14 @@ const PUBLIC = [
   'c08-half-folded-towel', 'c05-tiptoe-milk-bottle', 'c06-snowman-below-zero', 'c07-thirst-beside-water',
   'c01-room-without-breath', 'c02-ball-at-dusk', 'c03-shed-in-snow', 'c04-white-flower-supper',
 ];
-/** The I-001 ツクール samples (?proto=tsukuru, 2026-10-04): another switch, never shown with seeds. */
-const TSUKURU = ['c10-shaken-bottle', 'c11-wet-window', 'c12-two-shadows'];
+/** The I-001 リトマス・ラボ samples (?proto=lab, 2026-10-04): another switch, never shown with seeds. */
+const LAB = ['c10-shaken-bottle', 'c11-wet-window', 'c12-two-shadows'];
 const reg = () => contentRegistry();
 const ids = (xs: { data: { id: string } }[]) => xs.map((c) => c.data.id);
 
 describe('shared/proto.ts', () => {
   it('reads the switches from a header / query / stored value', () => {
-    expect(PROTO_IDS).toEqual(['i005', 'seeds', 'tsukuru']);
+    expect(PROTO_IDS).toEqual(['i005', 'seeds', 'lab']);
     expect(PROTO_HEADER).toBe('x-janedoe-proto');
     expect(parseProtos('seeds')).toEqual(['seeds']);
     expect(parseProtos('SEEDS, i005')).toEqual(['i005', 'seeds']);
@@ -57,7 +57,7 @@ describe('shared/proto.ts', () => {
   it('PROTO_CASES (the browser’s copy) equals the case files that carry `proto`', () => {
     const fromFiles = Object.fromEntries(reg().cases.filter((c) => c.data.proto).map((c) => [c.data.id, c.data.proto]));
     expect(fromFiles).toEqual({ ...PROTO_CASES });
-    expect(fromFiles).toEqual({ [PROTO_ID]: 'seeds', ...Object.fromEntries(TSUKURU.map((id) => [id, 'tsukuru'])) });
+    expect(fromFiles).toEqual({ [PROTO_ID]: 'seeds', ...Object.fromEntries(LAB.map((id) => [id, 'lab'])) });
   });
 });
 
@@ -72,7 +72,7 @@ describe('the registry with the real content', () => {
   it('with ?proto=seeds the prototype case joins as number 9; the catalogue (list(true)) always has it', () => {
     expect(ids(reg().list(false, ['seeds']))).toEqual([...PUBLIC, PROTO_ID]);
     expect(ids(reg().list(false, ['i005', 'seeds']))).toEqual([...PUBLIC, PROTO_ID]);
-    expect(ids(reg().list(true))).toEqual([...PUBLIC, PROTO_ID, ...TSUKURU]);
+    expect(ids(reg().list(true))).toEqual([...PUBLIC, PROTO_ID, ...LAB]);
     expect(reg().get(PROTO_ID)).toBeUndefined();
     expect(reg().get(PROTO_ID, true, [])).toBeUndefined();
     expect(reg().get(PROTO_ID, false, ['seeds'])?.data.number).toBe(9);

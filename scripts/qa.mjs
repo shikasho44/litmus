@@ -29,7 +29,7 @@
 //   c05 審問官 (cloze) · c06 見習い (choice) · c07 教授 (free) — the intro cases CASE 02–04 —
 //   c01 審問官 (cloze) · c02 見習い (choice, noise break skipped after round 1) · c03 教授 (free) · c04 審問官 (cloze).
 //   c09 審問官 (cloze) — the prototype case, only with --proto seeds —
-//   c10 審問官 (cloze) · c11 見習い (choice) · c12 教授 (free) — the I-001 ツクール samples, only with --proto tsukuru —
+//   c10 審問官 (cloze) · c11 見習い (choice) · c12 教授 (free) — the I-001 リトマス・ラボ samples, only with --proto lab —
 // Game over: 審問官 on the last light → the case restarts (new token, other cases untouched);
 // 見習い on the last light → back to the start of the inquest with the lights refilled.
 //
@@ -54,9 +54,10 @@ const PORT = Number(arg('--port', process.env.QA_PORT || 5198));
 const BASE = `http://127.0.0.1:${PORT}/`;
 const SMOKE = !argv.includes('--no-smoke');
 const SMOKE_ONLY = argv.includes('--smoke-only');
-/** Feature prototypes to switch on (?proto=…, comma separated: i005, seeds); '' = the live default. */
+/** Feature prototypes to switch on (?proto=…, comma separated: i005, seeds, lab); '' = the live default. */
 const PROTO = arg('--proto', '');
-const PROTOS = PROTO.toLowerCase().split(/[\s,]+/).filter(Boolean);
+// the old switch name still works (shared/proto.ts PROTO_ALIASES: tsukuru → lab, renamed 2026-10-04)
+const PROTOS = PROTO.toLowerCase().split(/[\s,]+/).filter(Boolean).map((w) => (w === 'tsukuru' ? 'lab' : w));
 const I005 = PROTOS.includes('i005');
 const VIEW = /^(\d{3,4})x(\d{3,4})$/.exec(arg('--viewport', '')) ?? null;
 const SEED_RANDOM = argv.includes('--seed-random');
@@ -427,9 +428,9 @@ async function titleToFiles(page, name) {
   check(HIDDEN_PROTO_CASES.every((c) => !tagIds.includes(c.id)), `files: no prototype case without its switch (${HIDDEN_PROTO_CASES.map((c) => c.id).join(', ') || 'none'})`);
   const protoTags = await page.locator('.tag__proto').count();
   check(protoTags === CASES.filter((c) => c.proto).length, `files: ${protoTags} 「試作」 stamp(s) (expected ${CASES.filter((c) => c.proto).length})`);
-  // the ツクール samples say what they are on the card (2026-10-04)
-  const tsukuruTags = await page.$$eval('.tag__proto[data-proto-case="tsukuru"]', (els) => els.map((e) => e.textContent));
-  check(tsukuruTags.length === CASES.filter((c) => c.proto === 'tsukuru').length && tsukuruTags.every((t) => t === 'ツクールの見本（やさしい謎・AIと作った）'), `files: ${tsukuruTags.length} card(s) labelled 「ツクールの見本（やさしい謎・AIと作った）」`);
+  // the リトマス・ラボ samples say what they are on the card (2026-10-04)
+  const labTags = await page.$$eval('.tag__proto[data-proto-case="lab"]', (els) => els.map((e) => e.textContent));
+  check(labTags.length === CASES.filter((c) => c.proto === 'lab').length && labTags.every((t) => t === 'ラボの見本（やさしい謎・AIと作った）'), `files: ${labTags.length} card(s) labelled 「ラボの見本（やさしい謎・AIと作った）」`);
   const seen = await page.evaluate(() => window.__JD.getState().save.meta.prologueSeen);
   check(seen === true, 'prologue skip marks the prologue as seen');
 }

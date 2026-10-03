@@ -21,7 +21,7 @@
  *   --strategy s                 Jev candidate strategy (default JEV_CANDIDATES or the engine default)
  *   --judge jev|rules            the game's judge (default jev, the production default). rules = the free
  *                                offline judge of the static build: only the player model costs money
- *                                (2026-10-04, the I-001 ツクール samples must also play without AI)
+ *                                (2026-10-04, the I-001 リトマス・ラボ samples must also play without AI)
  *   --out dir                    default bench/reports/playtest (under vite's watch-ignore)
  *   --quiet                      no per-turn log lines
  *

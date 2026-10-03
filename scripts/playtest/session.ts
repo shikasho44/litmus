@@ -15,6 +15,10 @@ import type { Persona } from './personas.js';
 import { debatePrompt, investigationPrompt, MAX_HINTS, MAX_QUESTIONS, parsePlayerJson, systemPrompt, toAction, verdictPrompt, type InvestigationView, type PlayerAction } from './player.js';
 import type { RunSpend, SharedBudget } from './budget.js';
 import type { AskPart, RunLog, ShotEvent } from './types.js';
+import { PROTO_IDS } from '../../shared/proto.js';
+
+/** Every prototype switch on: the playtest reaches the prototype cases too (shared/proto.ts). */
+const P = { protos: PROTO_IDS };
 
 export const MAX_VERDICTS = 4;
 const MAX_SHOTS_PER_ROUND = 5;
@@ -38,8 +42,8 @@ class BudgetStop extends Error {}
 
 export async function playCase(o: SessionOptions): Promise<RunLog> {
   const t0 = Date.now();
-  const pub: CasePublic = await o.svc.getCase(o.caseId, { admin: true });
-  let { token, progress } = await o.svc.newToken(o.caseId, { admin: true });
+  const pub: CasePublic = await o.svc.getCase(o.caseId, { admin: true, ...P });
+  let { token, progress } = await o.svc.newToken(o.caseId, { admin: true, ...P });
   const held = new Map<string, PublicFact>(pub.startingFacts.map((f) => [f.id, f]));
   const log: RunLog = {
     id: o.id,
@@ -92,7 +96,7 @@ export async function playCase(o: SessionOptions): Promise<RunLog> {
   const doAsk = async (message: string): Promise<void> => {
     turn++;
     const t = Date.now();
-    const res = await o.svc.ask({ caseId: o.caseId, question: message, token }, { admin: true, withTrace: true });
+    const res = await o.svc.ask({ caseId: o.caseId, question: message, token }, { admin: true, withTrace: true, ...P });
     token = res.token;
     progress = res.progress;
     const trace = res.trace as EngineTrace | undefined;
@@ -121,7 +125,7 @@ export async function playCase(o: SessionOptions): Promise<RunLog> {
   };
 
   const doHint = async (): Promise<void> => {
-    const h = await o.svc.hint({ caseId: o.caseId, token });
+    const h = await o.svc.hint({ caseId: o.caseId, token }, P);
     token = h.token;
     progress = h.progress;
     log.hints.push({ turn, level: h.level, text: h.text });
@@ -129,7 +133,7 @@ export async function playCase(o: SessionOptions): Promise<RunLog> {
   };
 
   const debate = async (): Promise<void> => {
-    const start = await o.svc.inquestStart({ caseId: o.caseId, token });
+    const start = await o.svc.inquestStart({ caseId: o.caseId, token }, P);
     token = start.token;
     progress = start.progress;
     for (const round of start.rounds) {
@@ -154,7 +158,7 @@ export async function playCase(o: SessionOptions): Promise<RunLog> {
       if (a.action === 'grant') {
         if (granted) continue;
         granted = true;
-        const g = await o.svc.grant({ caseId: o.caseId, token, roundId: round.id });
+        const g = await o.svc.grant({ caseId: o.caseId, token, roundId: round.id }, P);
         token = g.token;
         progress = g.progress;
         if (g.granted) {
@@ -177,7 +181,7 @@ export async function playCase(o: SessionOptions): Promise<RunLog> {
       const stmt = round.statements.find((x) => x.id === a.statement) ?? (Number.isInteger(num) ? round.statements[num - 1] : undefined);
       try {
         if (!stmt) throw new ApiError('bad_request', `no statement ${a.statement}`, false);
-        const r = await o.svc.shot({ caseId: o.caseId, token, roundId: round.id, statementId: stmt.id, span, factId: a.fact });
+        const r = await o.svc.shot({ caseId: o.caseId, token, roundId: round.id, statementId: stmt.id, span, factId: a.fact }, P);
         token = r.token;
         progress = r.progress;
         const ev: ShotEvent = { round: round.id, statement: a.statement, span, fact: a.fact, correct: r.correct, lines: r.lines, speaker: r.speaker, hint: r.hint, kind: 'shot' };
@@ -194,7 +198,7 @@ export async function playCase(o: SessionOptions): Promise<RunLog> {
   };
 
   const doVerdict = async (text: string): Promise<boolean> => {
-    const v = await o.svc.verdict({ caseId: o.caseId, token, text });
+    const v = await o.svc.verdict({ caseId: o.caseId, token, text }, P);
     token = v.token;
     progress = v.progress;
     Object.assign(labels, v.labels);

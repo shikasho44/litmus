@@ -19,6 +19,9 @@
  *   --concurrency N              parallel runs (default 5)
  *   --model m                    player model (default LLM_MODEL or docs/ai.md's choice)
  *   --strategy s                 Jev candidate strategy (default JEV_CANDIDATES or the engine default)
+ *   --judge jev|rules            the game's judge (default jev, the production default). rules = the free
+ *                                offline judge of the static build: only the player model costs money
+ *                                (2026-10-04, the I-001 ツクール samples must also play without AI)
  *   --out dir                    default bench/reports/playtest (under vite's watch-ignore)
  *   --quiet                      no per-turn log lines
  *
@@ -55,11 +58,12 @@ interface Args {
   out: string;
   dryRun: boolean;
   quiet: boolean;
+  judge: 'jev' | 'rules';
   analyze?: string;
 }
 
 function parseArgs(argv: string[]): Args {
-  const a: Args = { cases: 'all', personas: [...PERSONAS], maxUsd: 0.3, concurrency: 5, out: 'bench/reports/playtest', dryRun: false, quiet: false };
+  const a: Args = { cases: 'all', personas: [...PERSONAS], maxUsd: 0.3, concurrency: 5, out: 'bench/reports/playtest', dryRun: false, quiet: false, judge: 'jev' };
   const val = (i: number) => {
     const v = argv[i + 1];
     if (v === undefined || v.startsWith('--')) throw new Error(`${argv[i]} needs a value`);
@@ -91,6 +95,12 @@ function parseArgs(argv: string[]): Args {
         break;
       }
       case '--out': a.out = val(i++); break;
+      case '--judge': {
+        const j = val(i++);
+        if (j !== 'jev' && j !== 'rules') throw new Error(`unknown judge ${j} (jev | rules)`);
+        a.judge = j;
+        break;
+      }
       case '--dry-run': a.dryRun = true; break;
       case '--quiet': a.quiet = true; break;
       case '--analyze': a.analyze = val(i++); break;
@@ -196,7 +206,7 @@ async function main(): Promise<void> {
     llmInner = scriptedPlayer(registry);
   } else {
     if (!env.OPENROUTER_API_KEY?.trim()) throw new Error('OPENROUTER_API_KEY is not set');
-    jevInner = createJevProvider(env);
+    if (args.judge === 'jev') jevInner = createJevProvider(env);
     // The player: no reasoning, latency-first routing (same client as the renderer).
     llmInner = createOpenRouterLlm({ ...env, LLM_MODEL: model });
   }
@@ -204,7 +214,7 @@ async function main(): Promise<void> {
   const outDir = join(resolve(args.out), stamp() + (args.dryRun ? '-dry' : ''));
   mkdirSync(join(outDir, 'runs'), { recursive: true });
   const jobs = cases.flatMap((c) => args.personas.map((p) => ({ caseId: c.data.id, persona: p })));
-  console.log(`▶ playtest: ${jobs.length} runs (${cases.map((c) => c.data.id.slice(0, 3)).join(',')} × ${args.personas.map((p) => p.id).join(',')}), player ${args.dryRun ? 'scripted' : model}, judge ${args.dryRun ? 'rules' : `jev[${strategy}]`}, cap $${args.maxUsd}`);
+  console.log(`▶ playtest: ${jobs.length} runs (${cases.map((c) => c.data.id.slice(0, 3)).join(',')} × ${args.personas.map((p) => p.id).join(',')}), player ${args.dryRun ? 'scripted' : model}, judge ${args.dryRun || args.judge === 'rules' ? 'rules' : `jev[${strategy}]`}, cap $${args.maxUsd}`);
 
   const logs: RunLog[] = [];
   let next = 0;
@@ -220,7 +230,7 @@ async function main(): Promise<void> {
       }
       const spend = newRunSpend();
       const decision = jevInner ? new BudgetedDecision(jevInner, budget, spend) : undefined;
-      const components = args.dryRun ? { mode: 'rules' as const, warnings: [] } : createComponents({ ...env, DECISION_PROVIDER: 'jev', PIPELINE_MODE: 'jev' }, 'jev', { decisionProvider: decision, strategy });
+      const components = args.dryRun || args.judge === 'rules' ? { mode: 'rules' as const, warnings: [] } : createComponents({ ...env, DECISION_PROVIDER: 'jev', PIPELINE_MODE: 'jev' }, 'jev', { decisionProvider: decision, strategy });
       const svc = new GameService({ content: () => registry, secret: 'playtest-secret-0123456789abcdef', components, dev: true });
       const llm = new BudgetedLlm(llmInner, budget, spend);
       const log = await playCase({ svc, caseId, persona, llm, model: args.dryRun ? 'scripted' : model, budget, spend, id, log: args.quiet ? undefined : (m) => console.log(`  ${m}`) });
@@ -236,7 +246,7 @@ async function main(): Promise<void> {
   const summary = analyzeRuns(logs, registry, {
     createdAt: new Date().toISOString(),
     player: args.dryRun ? 'scripted' : model,
-    judge: args.dryRun ? 'rules' : `jev[${strategy}]`,
+    judge: args.dryRun || args.judge === 'rules' ? 'rules' : `jev[${strategy}]`,
     capUsd: args.maxUsd,
     spend: { jevUsd: round6(budget.jevUsd), llmUsd: round6(budget.llmUsd), totalUsd: round6(budget.spent), jevCalls: budget.jevCalls, llmCalls: budget.llmCalls, errors: budget.errors },
     runs: jobs.length,

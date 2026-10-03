@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>ツクールの見本3問｜リトマス審問 企画ノート</title>
+<!--
+  I-001 リトマス審問ツクールの「いちばん小さい試作」の記録（2026-10-04）。
+  _template.html を複製。CSS はページの中に入れたまま、外部の読み込みはしない。
+-->
+<style>
+  :root {
+    --ink: #0B0D12; --ink-2: #141821; --ink-3: #1E2430;
+    --bone: #F2EFE6; --bone-2: #D8D3C4; --bone-3: #A7A08F;
+    --line: rgba(242, 239, 230, 0.14); --line-2: rgba(242, 239, 230, 0.26);
+    --formalin: #C6FF3D; --formalin-deep: #6E9A0C;
+    --alarm: #FF2E63; --cyan: #3DE0FF; --amber: #FFB020; --violet: #9B6BFF; --mute: #8A93A6;
+    --sans: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body { margin: 0; background: var(--ink); color: var(--bone-2); font-family: var(--sans); font-size: 16px; line-height: 1.85; letter-spacing: .02em; }
+  a { color: var(--cyan); text-underline-offset: 3px; }
+  strong { color: var(--bone); }
+  code { font-family: var(--mono); font-size: .86em; background: var(--ink-3); border: 1px solid var(--line); padding: .05em .4em; border-radius: 3px; color: var(--bone); word-break: break-word; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header.hero { border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(198,255,61,.06), transparent 70%); }
+  header.hero .wrap { padding-top: 36px; padding-bottom: 28px; }
+  .back { font-size: 13px; }
+  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: .24em; color: var(--formalin); text-transform: uppercase; margin-top: 12px; }
+  h1 { color: var(--bone); font-size: clamp(26px, 5vw, 40px); line-height: 1.3; margin: 8px 0 10px; }
+  .lead { max-width: 780px; font-size: 17px; margin: 0; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .badge { font-family: var(--mono); font-size: 12px; padding: 3px 10px; border: 1px solid var(--line-2); background: var(--ink-2); color: var(--bone-2); }
+  .badge.ok { border-color: var(--formalin-deep); color: var(--formalin); }
+  .badge.warn { border-color: rgba(255,176,32,.5); color: var(--amber); }
+  .badge.no { border-color: rgba(255,46,99,.5); color: var(--alarm); }
+  section { padding: 36px 0 4px; }
+  h2 { color: var(--bone); font-size: clamp(21px, 3.4vw, 26px); line-height: 1.4; margin: 0 0 8px; }
+  h2 .en { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .28em; color: var(--formalin); font-weight: 400; margin-bottom: 4px; }
+  h3 { color: var(--bone); font-size: 17px; margin: 24px 0 8px; padding-left: 10px; border-left: 4px solid var(--formalin); line-height: 1.5; }
+  p { margin: 8px 0; }
+  ul, ol { padding-left: 1.3em; margin: 8px 0; }
+  li + li { margin-top: 4px; }
+  .note { font-size: 14px; color: var(--bone-3); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
+  .card { background: var(--ink-2); border: 1px solid var(--line); padding: 16px 18px; }
+  .card h4 { margin: 0 0 6px; color: var(--bone); font-size: 16px; }
+  .card .tag { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; color: var(--formalin); }
+  .callout { border: 1px solid var(--line-2); border-left: 4px solid var(--cyan); background: var(--ink-2); padding: 12px 16px; margin: 14px 0; }
+  .callout.kurare { border-left-color: var(--violet); }
+  .callout.kurare::before { content: 'くられ先生のツボ'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--violet); margin-bottom: 4px; }
+  .callout.warn { border-left-color: var(--amber); }
+  .callout.warn::before { content: '気をつけること'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--amber); margin-bottom: 4px; }
+  .callout.alert { border-left-color: var(--alarm); }
+  .callout.alert::before { content: '大事なお知らせ'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--alarm); margin-bottom: 4px; }
+  .callout.next { border-left-color: var(--formalin); }
+  .callout.next::before { content: '次の一歩'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--formalin); margin-bottom: 4px; }
+  .table-wrap { overflow-x: auto; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 560px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--bone); background: var(--ink-3); font-weight: 700; white-space: nowrap; }
+  details { background: var(--ink-2); border: 1px solid var(--line); padding: 10px 14px; margin: 10px 0; }
+  details summary { cursor: pointer; color: var(--bone); }
+  footer { border-top: 1px solid var(--line); margin-top: 48px; padding: 18px 0 40px; font-size: 13px; color: var(--mute); }
+  /* the order conversation (作る人 / ホルマ) */
+  .talk { display: grid; gap: 8px; margin: 12px 0; }
+  .talk p { margin: 0; padding: 8px 12px; background: var(--ink-3); border: 1px solid var(--line); }
+  .talk .who { display: inline-block; min-width: 4.5em; font-size: 12px; letter-spacing: .1em; color: var(--formalin); }
+  .talk .holma .who { color: var(--amber); }
+  .ending { font-size: 18px; color: var(--bone); border-left: 4px solid var(--violet); padding: 6px 12px; background: var(--ink-2); margin: 10px 0; }
+  .num { font-family: var(--mono); color: var(--bone); }
+  @media (max-width: 520px) { body { font-size: 15px; } .lead { font-size: 16px; } .ending { font-size: 16px; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <a class="back" href="index.html">← 企画ノートの台帳へ</a>
+    <div class="kicker">IDEA · I-001 試作</div>
+    <h1>ツクールの見本3問</h1>
+    <p class="lead">「こんな結末の謎にしたい」という一行から、ホルマ（AI）が3つだけ聞き返し、解ける謎に組み立て、検査とAIの試し遊びを通す——リトマス審問ツクールの流れを、画面を作らずに3回やってみました。できた3問は、今のゲームでそのまま遊べます。</p>
+    <div class="badges"><span class="badge">種類：遊び方（みんなで作る）</span><span class="badge ok">状態：試作</span><span class="badge">切り替え：?proto=tsukuru</span><span class="badge">作った日：2026-10-04</span><span class="badge warn">AIの費用：$0.072（約11円）</span></div>
+  </div>
+</header>
+<main class="wrap">
+
+  <section>
+    <div class="callout alert">
+      <p><strong>OpenRouter のキーが、上限の $15 に届きました。</strong>試し遊びの途中で、キーに設定された使用上限（$15）を使い切りました。このキーは公開中のAI判定版（litmus.fourthplace43.com）と同じものです。上限を上げるまで、AI判定版の Jev は失敗し、その問いは無料の規則判定で答えます（画面に小さく「簡易判定」。ゲームは止まりません）。</p>
+      <p>この作業で使ったのは $0.072 で、決めていた予算（$0.50）の中です。始める前の残りは約 $0.06 しかありませんでした。始める前にキーの残りを確かめるべきでした。<strong>上限の変更は、持ち主の方が OpenRouter の設定で行ってください。</strong></p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="en">SUMMARY</span>3行でいうと</h2>
+    <ul>
+      <li><strong>3問とも、遊べる形になりました。</strong>検査器は3問とも合格（規則判定の自己一致 100%、警告0）。PC とスマホの通しプレイも合格。答えの一行（「過冷却」「結露」「光源がふたつ」）だけを書いても正解になります。</li>
+      <li><strong>AIの下書きは、そのままでは穴だらけでした。</strong>いちばん多い穴は「はい／いいえの向きの取り違え」。たとえば「太陽は出ていましたか？」に「はい」と答えてしまう。AIの試し遊びが、それで遠回りした探偵の記録ごと見つけてくれました。</li>
+      <li><strong>本番では、1問あたり数円〜数十円で作れそうです。</strong>今回の試し遊びは1本 $0.002〜0.015（0.3〜2円）。下書きと検査を足しても、企画書の見込み「数十円」に収まります。</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="en">FLOW</span>やった流れ（本番のツクールと同じ順番）</h2>
+    <div class="table-wrap"><table>
+      <tr><th>段階</th><th>本番のツクール</th><th>今回の試作でやったこと</th></tr>
+      <tr><td>① 注文</td><td>結末を話す。ホルマが3つだけ聞き返す</td><td>結末の一行と、3つの答え（だれと遊ぶ／むずかしさ／最初の場面）だけから始めた（会話は下に）</td></tr>
+      <tr><td>② 下書き</td><td>AIが問題文・真相・所見・想定質問・ヒント・答えの要素・科学解説を作る</td><td>下書き係のAIとして、わたし（Claude）が作った。科学は本当の出典を1件ずつ開いて確かめた（各3〜4件）</td></tr>
+      <tr><td>③ 安全</td><td>死・けが・犯罪・実在の人物を止める</td><td>遊ぶ人が読む文（1問あたり約400）を言葉の一覧で調べた</td></tr>
+      <tr><td>④ 形と漏れ・自己採点</td><td>今の「事件の検査器」</td><td><code>npm run validate</code>（答えの語の漏れ・想定質問の自己一致）。加えて、作る人の答えの一行が正解になるかを確かめた</td></tr>
+      <tr><td>⑤ 別の答え</td><td>別のAIに「同じ所見で成り立つ別の答え」を探させる</td><td>別の会社のAI（openai/gpt-6-luna）に、所見をぜんぶ渡して探させた</td></tr>
+      <tr><td>⑥ AIの試し遊び</td><td>子ども・大人・ひねくれ者などの役で遊ばせる</td><td><code>scripts/playtest.ts</code> で5人×3問。判定は無料の規則判定（静的版と同じ。AIなしでも遊べることを確かめるため）</td></tr>
+      <tr><td>⑦ 直して、確かめ直す</td><td>詰まった所を直す候補として並べる</td><td>記録を読んで直した。2回目の試し遊びはキーの上限で回せなかったので、1回目の質問210問を直した謎に流し直した（無料）</td></tr>
+      <tr><td>⑧ 作者のクリアチェック</td><td>作った人が表から1回解く</td><td>自動の通しプレイ（<code>scripts/qa.mjs</code>）で代わりにした。PC とスマホ</td></tr>
+      <tr><td>⑨ 公開</td><td>コードを知っている人だけ</td><td><code>?proto=tsukuru</code> を付けたときだけ出る。事件ファイルの札に「ツクールの見本（やさしい謎・AIと作った）」</td></tr>
+    </table></div>
+  </section>
+
+  <!-- ───────────────────────── sample 1 ───────────────────────── -->
+  <section id="s1">
+    <h2><span class="en">SAMPLE 1 · CASE 10</span>ひとふりのシャーベット（過冷却）</h2>
+    <div class="ending">冷凍庫から出した水のペットボトルを振ったら、中身が一瞬でシャーベットになった。答えは過冷却。</div>
+    <h3>注文の会話（模擬）</h3>
+    <div class="talk">
+      <p><span class="who">作る人</span>冷凍庫から出した水のペットボトルを振ったら、中身が一瞬でシャーベットになった、っていう謎を作りたい。答えは過冷却。</p>
+      <p class="holma"><span class="who">ホルマ</span>よい謎ですねェ。3つだけ伺います。① だれと遊びますか。② むずかしさは。③ 最初に見せる場面は。</p>
+      <p><span class="who">作る人</span>クラスで。ふつう。最初は「振ったら凍った」の場面で。</p>
+    </div>
+    <h3>AIが作ったもの</h3>
+    <p>問題文「夏の夕方、部活から帰った中学生が、冷凍庫から水のペットボトルを取り出した。……軽く振ったとたん、数秒でシャーベットになった。——冷凍庫の中では凍らなかった水が、なぜ外で振っただけで凍ったのか？」。真相は、混じりけの少ない水が静かに冷えて0℃より冷たいのに凍らずにいて（過冷却）、振ったゆれで氷のたねができ一気に広がった、凍るときの熱で0℃にもどったのでシャーベット、というもの。</p>
+    <p>下書きの1回目：<span class="num">所見22・想定質問135</span>。仕上がり：<span class="num">所見25（うちカード16）・想定質問162</span>（言い換え16・打ち間違い5・否定形4・答えを聞き出す4・核心6・関係ない11・安全の問い9・死の種類の封印4）、質問の例13、ヒント3段、答えの要素3（必須2）、まちがった筋書き5、審問1ラウンド、コマ4枚（選択2）、科学解説、確認テスト2、出典3（大阪市立科学館研究報告 2015、日本冷凍空調学会「過冷却水」、Honda Kids 自由研究）。</p>
+    <h3>検査で見つかったこと</h3>
+    <ul>
+      <li><strong>検査器（1回目）</strong>：合格・警告2。「真相の文が、まちがった筋書き『塩』に当たる」（真相に「塩などは入っておらず」と書いたため）。「男の子が冷凍庫に入れたのですか？」が死の種類の封印に当たり「答えられない」になる。</li>
+      <li><strong>作る人の答え</strong>：「過冷却」だけを書くと「ほぼ正解」止まりだった。→ 用語だけでも通るように直した。</li>
+      <li><strong>自分での質問の試し</strong>：「水にごみはあった？」が「はい」になる（氷のたねの所見の言葉に「ごみ」を入れていた）。→ 「混じりけのない水」の所見を分けた。</li>
+      <li><strong>別の答え（⑤）</strong>：「ボトルの内側に、目に見えない氷のかけらが前からついていて、振ってそれが広がった」。過冷却とゆれ、という答えの芯は同じなので、「霜や氷のかけらもついていなかった」を所見に足しただけ。</li>
+    </ul>
+    <h3>AIの試し遊び（判定は規則判定）</h3>
+    <div class="table-wrap"><table>
+      <tr><th>役</th><th>直す前（1回目）</th><th>どこで詰まったか</th></tr>
+      <tr><td>中学2年生</td><td>解決・7問</td><td>—</td></tr>
+      <tr><td>会社員（未経験）</td><td>解決・9問</td><td>審問の反証で4回外し、泣きつき</td></tr>
+      <tr><td>意地悪な人</td><td>解決・10問</td><td>同上</td></tr>
+      <tr><td>質問が下手な人</td><td>解決・40問</td><td>「振ったとき中に何か入ってた？」→はい、「別の液体？」→はい、「油？」→はい。<strong>どれも誤り</strong>。油の種類を25問も訊き続けた</td></tr>
+      <tr><td>小学4年生</td><td><strong>解けず</strong>・40問</td><td>「〜が原因ですか？」の形が9問続けて「具体的に」。「ふたをあけたとき空気が入った？」→はい（誤り）で遠回り。最後のひらがなの宣告「0度よりつめたいのに、こおらなかった」が答えの要素に当たらなかった</td></tr>
+    </table></div>
+    <p>解けた割合 <span class="num">4/5</span>、宣告までの質問は解けた4人で 7〜40問。</p>
+    <h3>直したこと</h3>
+    <ul>
+      <li>はい／いいえの向きを分けた：「ふたは閉まったまま」（開けた？→いいえ）と「確かめようと軽く振った」、「すんだ水」（純水に近い？→はい）と「ごみや氷のかけらはない」（ごみがあった？→いいえ）。</li>
+      <li>「油・粉・別の液体・凍るのをじゃまするもの」は「何もまぜていない」へ。広すぎた言葉（最初から見えている所見の「冷凍庫」、「液体」「つぶ」）を外した。</li>
+      <li>宣告：ひらがな（こおらなかった）や「きっかけがなくて凍らなかった」も、答えの要素「0℃より冷たいのに凍っていなかった」として受けるようにした。</li>
+      <li>通しプレイで「争った跡は？」が「具体的に」になった（どの事件にもある定番の問い）→「だれもさわっていない」で「いいえ」と答える。3問とも同じに直した。</li>
+      <li>審問：「0℃より冷たくなった水はかならず凍る」には、「氷のたね」の所見を当てても正解に。</li>
+    </ul>
+    <p><strong>確かめ直し</strong>：1回目の質問106問を直した謎に流すと、答えが変わったのは53問。<span class="num">48問が正しくなり、4問が悪くなった</span>（長い仮定の問い2つが「いいえ」に、2つが「具体的に」に）、1問はどちらでもない。油の25問は、入口の「油でしたか？」が「いいえ」になったので、もう始まらない。</p>
+    <p class="note">かかった時間：注文1分未満／下書き12分（出典を開く5分＋書く7分）／検査と直し3分／試し遊び1分（15本を同時に）／記録を読んで直す 約5分。AIの費用：試し遊び $0.0378、別の答え $0.0014。遊ぶ URL：https://litmus.fourthplace43.com/?proto=tsukuru（公開後）</p>
+  </section>
+
+  <!-- ───────────────────────── sample 2 ───────────────────────── -->
+  <section id="s2">
+    <h2><span class="en">SAMPLE 2 · CASE 11</span>うちがわの雨つぶ（結露）</h2>
+    <div class="ending">朝、部屋の窓の外側ではなく内側だけが濡れていた。答えは結露。</div>
+    <h3>注文の会話（模擬）</h3>
+    <div class="talk">
+      <p><span class="who">作る人</span>朝、部屋の窓の外側じゃなくて内側だけが濡れていた、っていう謎。答えは結露。</p>
+      <p class="holma"><span class="who">ホルマ</span>ほう、身近な謎ですねェ。3つだけ。① だれと遊びますか。② むずかしさは。③ 最初に見せる場面は。</p>
+      <p><span class="who">作る人</span>家族で。やさしく。最初は窓の場面で。</p>
+    </div>
+    <h3>AIが作ったもの</h3>
+    <p>問題文「冬の朝。子ども部屋で目をさました姉妹は、窓を見ておどろいた。ガラスの内側に、こまかい水のつぶがびっしり。……外側はからからにかわいていた。——窓はなぜ、内側だけぬれていたのか？」。導入の語りに「部屋のすみには、ゆうべ干した洗濯物」を見せておいた（家族向け・やさしいので）。</p>
+    <p>下書きの1回目：<span class="num">所見21・想定質問119</span>。仕上がり：<span class="num">所見26（うちカード13）・想定質問137</span>、質問の例12、ヒント3段、答えの要素3、まちがった筋書き4、審問1ラウンド、コマ4枚、確認テスト2、出典3（東京都「健康・快適居住環境の指針」結露対策、気象庁「予報用語 気温、湿度」、道総研 林産試験場「林産試だより」2004年12月号）。日本サッシ協会の資料2件は開けず（404）、ガラスメーカーの資料は文字が読めなかったので使っていない。</p>
+    <h3>検査で見つかったこと</h3>
+    <ul>
+      <li><strong>検査器</strong>：1回目から合格・警告0。でも、自分で質問を試すと9か所がおかしかった（「部屋」という言葉が最初の所見に吸われる、「ストーブを使っていた？」→はい、加湿器・料理・お風呂が「具体的に」、「部屋は乾燥していた？」→はい）。→ 「加湿器もストーブもない」「料理もお湯もなし」の所見を足した。<strong>検査器の合格だけでは足りない</strong>例。</li>
+      <li><strong>別の答え（⑤）</strong>：「夜のあいだに内側に霜ができて、朝までに溶けた」。結露の仲間だが、筋が少し違う。→ 「霜や氷はついていなかった」を足した。</li>
+    </ul>
+    <h3>AIの試し遊び</h3>
+    <div class="table-wrap"><table>
+      <tr><th>役</th><th>直す前（1回目）</th><th>どこで詰まったか</th></tr>
+      <tr><td>中学2年生</td><td>解決・8問</td><td>—</td></tr>
+      <tr><td>会社員（未経験）</td><td>解決・10問</td><td>反証で2回外す</td></tr>
+      <tr><td>質問が下手な人</td><td>解決・11問</td><td>—</td></tr>
+      <tr><td>小学4年生</td><td>解決・11問（宣告2回目）</td><td>1回目のひらがなの宣告「みえないみずが、つめたいガラスにさわって」が要素に当たらず「要素不足」。反証で4回外して泣きつき</td></tr>
+      <tr><td>意地悪な人</td><td>解決・15問</td><td>「二重窓でしたか？」→はい、「窓は少しでも開いていた？」→はい（<strong>どちらも誤り</strong>）。反証で5回外す</td></tr>
+    </table></div>
+    <p>解けた割合 <span class="num">5/5</span>、宣告までの質問 8〜15問。3問のうちいちばん素直に解かれた。</p>
+    <h3>直したこと</h3>
+    <ul>
+      <li>向きを分けた：「1まいガラスの窓」と「二重窓ではない」、「窓は閉まっていた」と「だれも開けていない」。</li>
+      <li>「閉め切られて」「しめきって」が別の所見（湿っている）に吸われていたのを直した。ひらがなの「みえないみず」「へやのなかの水」「あったか」を足した。</li>
+      <li>「外側が乾いていたのは、外の空気が乾いていたから？」は「一部そう」に（外の冷たい空気は水蒸気が少ない。けれど決め手は、外側のガラスが外の空気より冷たくないこと）。</li>
+      <li>審問：「水はそとからしみこんだ」には、「空気の中の見えない水」の所見を当てても正解に。</li>
+    </ul>
+    <p><strong>確かめ直し</strong>：1回目の質問55問のうち、答えが変わったのは8問で、<span class="num">8問とも正しくなった</span>。小学4年生の1回目のひらがなの宣告は、直したあとは正解になる。</p>
+    <p class="note">かかった時間：注文1分未満／下書き8分半（出典4分＋書く4分半）／自分での質問の試しと直し 約1分／試し遊び1分／読んで直す 約3分。AIの費用：試し遊び $0.0186、別の答え $0.0012。遊ぶ URL：https://litmus.fourthplace43.com/?proto=tsukuru（公開後）</p>
+  </section>
+
+  <!-- ───────────────────────── sample 3 ───────────────────────── -->
+  <section id="s3">
+    <h2><span class="en">SAMPLE 3 · CASE 12</span>ふたつの影（光源がふたつ）</h2>
+    <div class="ending">ある日の校庭で、ひとりの影がふたつできていた。答えは光源がふたつ。</div>
+    <h3>注文の会話（模擬）</h3>
+    <div class="talk">
+      <p><span class="who">作る人</span>ある日の校庭で、ひとりの影がふたつできていた。答えは光源がふたつ。</p>
+      <p class="holma"><span class="who">ホルマ</span>影の謎とは、私の好物ですねェ。3つだけ。① だれと遊びますか。② むずかしさは。③ 最初に見せる場面は。</p>
+      <p><span class="who">作る人</span>友だちと。ふつう。場面はおまかせで。</p>
+      <p class="holma"><span class="who">ホルマ</span>では、日が沈んだあとの秋の校庭に。照明の柱は2本、東のすみと西のすみ——本当に起きることだけで組みましょう。</p>
+    </div>
+    <p class="note">場面の選び方：昼の「太陽と、窓ガラスに反射した光」も考えたが、ふつうの窓ガラスがはね返す光は弱く、影がはっきり見えるとは言い切れないので、確実に起きる「夜間照明が2本」にした。</p>
+    <h3>AIが作ったもの</h3>
+    <p>問題文「秋の夕方。小学校の校庭でサッカーの練習をしていたユウトは、足もとを見て声をあげた。自分の影が、ふたつある。——ひとりにひとつのはずの影が、なぜふたつできていたのか？」。手がかりは「影はどちらもうすく、重なった足もとだけ濃い」「近い照明の影ほど短い」など。サイエンスヒント（I-005 の試作の印）は「手術室の照明は、たくさんの光で影を目立たなくしている」。</p>
+    <p>下書きの1回目：<span class="num">所見21・想定質問111</span>。仕上がり：<span class="num">所見24（うちカード15）・想定質問126</span>、質問の例12、ヒント3段、答えの要素3（必須1）、まちがった筋書き5、審問1ラウンド、コマ4枚、確認テスト2、出典4（宮城県総合教育センター 授業案、イリノイ大学 Physics Van「Double Shadows」「Umbras and Penumbras」、コトバンク「無影灯」）。</p>
+    <h3>検査で見つかったこと</h3>
+    <ul>
+      <li><strong>検査器</strong>：合格・警告1（真相の文の「太陽」「おばけ」の打ち消しが、まちがった筋書きに当たる）。→ 「太陽ではなく、照明が2つ」と書いた宣告が誤りにならないよう、筋書きを「太陽で影」「夕日と」のような言い方にしぼった。</li>
+      <li><strong>作る人の答え</strong>：「光源がふたつ」だけでは「ほぼ正解」だった（2つ目の要素「それぞれの光の反対側に影」を必須にしていた）。→ 作る人の答えそのものが通るように、2つ目の要素を任意にした。</li>
+      <li><strong>自分での質問の試し</strong>：「街灯は？」「車のライトは？」「校舎の明かりは？」が「はい」。→ 「ほかの明かりは届かない」を足した。</li>
+      <li><strong>安全（③）</strong>：「手術室」が引っかかった。医療の場面だが、けがの話ではないので、作る人の確認つきで残した（本番なら「要確認」として作る人に見せる項目）。</li>
+      <li><strong>別の答え（⑤）</strong>：見つからず（影の向きの所見が、どの光でどの影ができたかを決めているため）。</li>
+    </ul>
+    <h3>AIの試し遊び</h3>
+    <div class="table-wrap"><table>
+      <tr><th>役</th><th>直す前（1回目）</th><th>どこで詰まったか</th></tr>
+      <tr><td>小学4年生</td><td>解決・18問</td><td>「光は夕日の光？」→はい（誤り）。「校庭のライトはふたつ？」が照明の所見に届かず、反証の所見がなくて泣きつき</td></tr>
+      <tr><td>中学2年生</td><td>途中で止まった・14問</td><td>「ユウトの体に何かが重なっていた？」→はい（誤り）から、「透明なもの」を8問追いかけた</td></tr>
+      <tr><td>会社員（未経験）</td><td>途中で止まった・13問</td><td>「このとき太陽は出ていましたか？」→はい（誤り）</td></tr>
+      <tr><td>質問が下手な人</td><td>途中で止まった・3問</td><td>「たいようわ出てましたか？」→はい（誤り）</td></tr>
+      <tr><td>意地悪な人</td><td>途中で止まった・1問</td><td>「ユウトのほかに立っていた人はいましたか？」→はい（誤り）</td></tr>
+    </table></div>
+    <p>4本は、キーの上限で探偵役のAIが答えられなくなって止まった（謎のせいではない）。それでも記録から、3問の中でいちばん大きな穴が見つかった：<strong>名前「ユウト」を言葉に持つ所見が、ユウトの出てくる問いを全部「はい」にしていた</strong>。もう一つは「日は沈んでいた」の所見が「太陽」という言葉で「太陽は出ていた？」にも「はい」と答えていたこと。</p>
+    <h3>直したこと</h3>
+    <ul>
+      <li>「ユウト」を所見の言葉から外した。「太陽は沈んでいた」（太陽が出ていた？→いいえ）と「暗くなってきた」（日は沈んでいた？→はい）に分けた。「光はひとつではない」（ひとつだけ？→いいえ）を足した。</li>
+      <li>「光がふたつ」「左右」「ひとつずつ」「複数」は照明の柱2本の所見へ。電球・蛍光灯は照明へ。</li>
+      <li>審問：「照らした光はひとつだけ」には「光はひとつではない」を当てても正解に。</li>
+      <li>質問枠を 20／16／12 から 22／18／16 に（教授の12問を、自動の通しプレイの台本が審問の前に使い切ったため。所見24の謎には12問は少なかった）。</li>
+    </ul>
+    <p><strong>確かめ直し</strong>：1回目の質問49問のうち、答えが変わったのは17問。<span class="num">16問が正しくなり</span>、1問はどちらでもない（「照明はユウトの真正面か真後ろ？」）。悪くなった問いはなし。</p>
+    <p class="note">かかった時間：注文1分未満／下書き8分（出典3分＋書く5分）／検査と直し 約1分／試し遊び1分／読んで直す 約4分。AIの費用：試し遊び $0.0125、別の答え $0.0005。遊ぶ URL：https://litmus.fourthplace43.com/?proto=tsukuru（公開後）</p>
+  </section>
+
+  <section>
+    <h2><span class="en">NUMBERS</span>3問をならべると</h2>
+    <div class="table-wrap"><table>
+      <tr><th></th><th>ひとふりのシャーベット</th><th>うちがわの雨つぶ</th><th>ふたつの影</th></tr>
+      <tr><td>注文</td><td>クラス・ふつう</td><td>家族・やさしい</td><td>友だち・ふつう</td></tr>
+      <tr><td>所見（1回目 → 仕上がり）</td><td>22 → 25</td><td>21 → 26</td><td>21 → 24</td></tr>
+      <tr><td>想定質問（1回目 → 仕上がり）</td><td>135 → 162</td><td>119 → 137</td><td>111 → 126</td></tr>
+      <tr><td>自己一致／ひとつ抜きの一般化</td><td>100% ／ 72.8%</td><td>100% ／ 70.8%</td><td>100% ／ 76.2%</td></tr>
+      <tr><td>別の答え</td><td>同じ芯の別の筋 1</td><td>同じ芯の別の筋 1</td><td>なし</td></tr>
+      <tr><td>試し遊び（解けた）</td><td>4/5</td><td>5/5</td><td>1/1（4本は途中で止まった）</td></tr>
+      <tr><td>流し直しで正しくなった／悪くなった</td><td>48 ／ 4（106問中）</td><td>8 ／ 0（55問中）</td><td>16 ／ 0（49問中）</td></tr>
+      <tr><td>通しプレイ（PC／スマホ・規則判定）</td><td>合格 66／65 項目（審問官・穴埋め）</td><td>合格 66／65 項目（見習い・選択）</td><td>合格 63／62 項目（教授・自由記述）</td></tr>
+      <tr><td>AIの費用</td><td>$0.039</td><td>$0.020</td><td>$0.013</td></tr>
+    </table></div>
+    <p class="note">「ひとつ抜きの一般化」は、想定質問を1つずつ抜いて、ほかの問いだけで正しく答えられるかの割合。知らない言い方への強さの目安。公式の事件（c05 など）も同じくらい。</p>
+  </section>
+
+  <section>
+    <h2><span class="en">LESSONS</span>本番のツクールに向けて分かったこと</h2>
+    <h3>AIが間違えたこと</h3>
+    <ul>
+      <li><strong>はい／いいえの向き</strong>（いちばん多い）。所見は「どの言葉の問いに、はい／いいえのどちらで答えるか」を1つしか持てない。「日は沈んでいた（はい）」に「太陽」という言葉を入れると、「太陽は出ていた？」も「はい」になる。下書きのAIには、<strong>反対向きの問いが来る言葉は、別の所見に分ける</strong>という決まりを教える必要がある。</li>
+      <li><strong>広すぎる言葉</strong>：人の名前（ユウト）、場所（部屋・冷凍庫・校庭）、ふつうの言葉（液体・つぶ・しめ）。</li>
+      <li><strong>作る人の答えが通らない</strong>：答えの要素を厳しくしすぎた（3問中2問）。</li>
+      <li><strong>打ち消しの書き方</strong>：真相に「塩は入っていない」「おばけではない」と書くと、まちがった筋書きに当たる。</li>
+      <li>科学のまちがいは見つからなかった（出典を開いて確かめながら書いたため）。ただし本番の下書きAIは出典を開けないことが多いので、科学は「よく知られた現象」に限るか、人の確認が要る。</li>
+    </ul>
+    <h3>どの検査が何を見つけたか</h3>
+    <div class="table-wrap"><table>
+      <tr><th>検査</th><th>見つけたもの</th><th>費用</th></tr>
+      <tr><td>検査器（形・漏れ・自己一致）</td><td>真相の文の打ち消し（3問中2問）、封印に当たる問い。<strong>合格しても、知らない言い方への穴は分からない</strong></td><td>無料・数秒</td></tr>
+      <tr><td>作る人の答えを宣告にかける</td><td>答えの一行が「ほぼ正解」止まり（2問）。今回足した、いちばん安くて効く検査</td><td>無料</td></tr>
+      <tr><td>安全の言葉の一覧</td><td>「犯人はいない」「この事件の科学」（言い換えた）、「手術室」（確認して残した）</td><td>無料</td></tr>
+      <tr><td>別の答え（別のAI）</td><td>同じ芯の別の筋（2問）。決定的な穴ではないが、所見を1枚足すきっかけ</td><td>1問 約$0.001</td></tr>
+      <tr><td>AIの試し遊び</td><td><strong>向きの取り違えのほとんど</strong>。しかも「その誤答で探偵がどれだけ遠回りしたか」まで分かる。いちばん役に立った</td><td>1本 $0.002〜0.015</td></tr>
+      <tr><td>通しプレイ（作者の代わり）</td><td>表から最後まで解けること、画面がこわれないこと</td><td>無料</td></tr>
+    </table></div>
+    <h3>画面が引き受けること</h3>
+    <ul>
+      <li><strong>言葉の着せ替え（「リトマス・ラボ」の言葉）</strong>：今の画面は死を前提にした言葉のまま。見本で目に入るのは「死因審問」「死因宣告」「死因確定 CAUSE OF DEATH CONFIRMED」、自由記述の宣告の問い「彼女に、何が起きたのか。なぜ死んだのか。あなたの言葉で。」と例文「何が起き、体に何が起こり、なぜ亡くなったのか」、記録の「死因 CAUSE OF DEATH」と「事件の全貌」、科学解剖の「今回の死因」「事件中の伏線」、事件ファイルの「名前を失った者たちの記録」と「解剖を始める」、関係ない問いの返事「死因には関係ない」「彼女の死には」、名前「ジェーン・ドゥ」、場所「零番安置室」。謎のデータの中は避けて書けたが、画面の言葉はツクール用に別に用意する（今回は作っていない）。</li>
+      <li><strong>死の種類の封印</strong>：だれも死なない謎でも「男の子が冷凍庫に入れたの？」が「宣告まで封印」になる。謎ごとに封印を外せる設定が要る（逆に、「誰かがわざと凍らせた？」は封印をすり抜け、想定質問で「答えられない」にしてある）。</li>
+      <li><strong>審問とコマと確認テスト</strong>：今のエンジンは、反証のラウンド・コマ4枚・確認テスト・宣告の選択肢まで要る。下書きAIの仕事が企画書の想定より多い。ツクールでは「審問なし・宣告だけ」の軽い形を選べるとよい。AIの探偵は反証が苦手（審問まで進んだ11本のうち5本が泣きつき）で、人の試し遊びで確かめたい。</li>
+      <li><strong>直しの画面</strong>：試し遊びの記録から「この問いにこう答えたが、本当は？」を作る人に選ばせる形にすると、今回わたしが手でやった直しを、作る人が数分でできる。</li>
+      <li><strong>絵</strong>：絵なしで十分遊べた（下）。</li>
+    </ul>
+    <h3>絵について（今回の選び方）</h3>
+    <p>新しい絵は作っていない（0枚）。画面がもともと「絵がないときの形」を持っていたので、それを使った。背景なしは暗い背景、コマなしは網点の枠になる。足したのは1つだけ：<strong>肖像の絵がないとき、破片の肖像が「もの」の輪郭（ペットボトル・窓・子どもの影）を描く</strong>（今までは人の胸像を描いていた）。輪郭は SVG の線1本で、AIが書ける。導入の語りの場面は真っ暗で少しさびしいので、ほしければ共通の背景を1枚用意する手がある。</p>
+    <h3>本番での1問あたりの費用（見込み）</h3>
+    <div class="table-wrap"><table>
+      <tr><th>段階</th><th>見込み</th></tr>
+      <tr><td>下書き（所見25・想定質問150前後を書く。中くらいのモデル）</td><td>$0.02〜0.10</td></tr>
+      <tr><td>別の答え</td><td>$0.001</td></tr>
+      <tr><td>試し遊び 5本（規則判定なら探偵役の分だけ。Jev 判定なら1本 約$0.014）</td><td>$0.04〜0.07</td></tr>
+      <tr><td>直したあとの試し遊び 5本</td><td>$0.04〜0.07</td></tr>
+      <tr><td><strong>合計</strong></td><td><strong>$0.10〜0.25（15〜40円）</strong></td></tr>
+    </table></div>
+    <p class="note">今回の下書きはわたし（Claude）が書いたので、OpenRouter の費用には入っていない。為替は 150円/$。</p>
+    <div class="callout warn">
+      <ul>
+        <li>試し遊びは1つのモデル（DeepSeek）で、各問5本。数字は傾向として読む。2回目の試し遊びは、キーの上限で回せなかった。</li>
+        <li>試し遊びの判定は規則判定（静的版と同じ）。AI判定版（Jev）ならもっと答えがぶれにくいが、作るときの検査を規則判定で通しておけば、静的版でも遊べる。</li>
+        <li>エンジンの小さな癖も見つかった（今回は直していない）：「小さいつぶ」の「いつ」を「いつ？」の問いと読み「具体的に」と返す／「どこから来たの？」に「はい」と答えることがある。</li>
+        <li>科学の解説は「AIの下書き」の表示（reviewStatus: draft-ai）。人の確認はまだ。</li>
+      </ul>
+    </div>
+    <div class="callout next">
+      <p>見本の3問を <code>?proto=tsukuru</code> で遊んでもらい、手ごたえを見る。よければ第1段階（自分と友だちだけ）の画面づくりへ。その前に、OpenRouter のキーの上限を戻すこと。</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="en">FILES</span>どこにあるか</h2>
+    <ul>
+      <li>謎のデータ：<code>content/cases/c10-shaken-bottle/</code>・<code>c11-wet-window/</code>・<code>c12-two-shadows/</code>（<code>case.json</code> の <code>proto: "tsukuru"</code>）</li>
+      <li>切り替え：<code>shared/proto.ts</code>（<code>tsukuru</code>）。札の文字 <code>src/ui/CaseTag.tsx</code>。絵なしの肖像 <code>src/ui/ShardPortrait.tsx</code></li>
+      <li>試し遊びの道具：<code>scripts/playtest.ts</code> に <code>--judge rules</code> を足した。試作の事件も遊べるようにした</li>
+      <li>回帰セット（AIの探偵の質問から）：<code>tests/content/regression/c10〜c12</code>。テスト <code>tests/engine/proto-tsukuru.test.ts</code></li>
+      <li>決めたことの記録：<code>docs/decisions.md</code>（2026-10-04 「I-001 ツクールの見本3問」）</li>
+    </ul>
+  </section>
+
+</main>
+<footer><div class="wrap">更新：2026-10-04 ／ リトマス審問 企画ノート（内部資料・公開しない）</div></footer>
+</body>
+</html>

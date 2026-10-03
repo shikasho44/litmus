@@ -1,6 +1,6 @@
 /**
- * Feature PROTOTYPES behind a URL switch (docs/decisions.md 「I-005 の試作」 2026-10-03 and
- * 「事件の種 No.4『助けられた朝』を試作」 2026-10-04). The switches themselves live in
+ * Feature PROTOTYPES behind a URL switch (docs/decisions.md 「I-005 の試作」 2026-10-03,
+ * 「事件の種 No.4『助けられた朝』を試作」 2026-10-04 and 「I-001 ツクールの見本3問」 2026-10-04). The switches themselves live in
  * shared/proto.ts (the server reads them too).
  *
  *   ?proto=i005        the four ideas from the supervisor's original 「ジェーンドゥの死因」 design
@@ -9,6 +9,9 @@
  *                      page and the 矛盾の一文 under the case title (src/features/i005)
  *   ?proto=seeds       the prototype cases made from the 事件の種 (case.json `proto: "seeds"`):
  *                      listed, playable and counted only with the switch (shared/proto.ts)
+ *   ?proto=tsukuru     the three sample puzzles of the I-001 ツクール (case.json `proto: "tsukuru"`,
+ *                      docs/ideas/I-001-samples.html): same rules as seeds; their case card says
+ *                      「ツクールの見本（やさしい謎・AIと作った）」 (src/ui/CaseTag.tsx)
  *   ?proto=i005,seeds  both (`?proto=seeds&proto=i005` works too)
  *
  * The URL says exactly which switches are on; the choice is remembered for this tab
@@ -80,6 +83,8 @@ export const PROTOS: readonly ProtoId[] = boot();
 export const PROTO_I005 = PROTOS.includes('i005');
 /** The 事件の種 prototype cases are on (listed, playable, counted). */
 export const PROTO_SEEDS = PROTOS.includes('seeds');
+/** The I-001 ツクール sample puzzles are on (listed, playable, counted). */
+export const PROTO_TSUKURU = PROTOS.includes('tsukuru');
 
 /**
  * A prototype case whose switch is off in this tab: its save stays out of 「続きから」, the

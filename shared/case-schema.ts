@@ -283,7 +283,7 @@ export const CaseSchema = z.object({
   publish: z.boolean(),
   /**
    * PROTOTYPE case (2026-10-04, shared/proto.ts): listed and playable only while the player has
-   * this switch on (`?proto=seeds`), in every build, whatever `publish` says; never offered in
+   * this switch on (`?proto=seeds`, `?proto=tsukuru`), in every build, whatever `publish` says; never offered in
    * online versus. Without the switch the case does not exist for the player (the dev server
    * included, so the default QA sees the public cases only). Keep `publish: false` with it, so the
    * case stays out of the public list if the field is ever dropped. The browser mirrors the id in
@@ -324,7 +324,11 @@ export const CaseSchema = z.object({
     nameKana: z.string(),
     age: z.number().int(),
     occupation: z.string(),
-    portrait: z.string(),                    // public path
+    /**
+     * Public path. '' = no portrait art (2026-10-04, the I-001 ツクール samples: user-made puzzles get
+     * no hand-made art): the shard portrait then draws `silhouette`, which must be an SVG path.
+     */
+    portrait: z.string(),
     lookBrief: z.string(),                   // appearance brief for art (public: silhouette only)
     farewell: z.array(z.string()).min(2),    // her last words once her identity is restored
     /**
@@ -348,7 +352,8 @@ export const CaseSchema = z.object({
   }),
 
   assets: z.object({
-    background: z.string(),                  // case scene background (public path)
+    /** Case scene background (public path). '' = none: the designed dark backdrop (the ツクール samples). */
+    background: z.string(),
     accent: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
   }),
 

@@ -7,7 +7,11 @@ import { JANE_SILHOUETTE, SHARD_H, SHARD_W, makeShards, pointsAttr } from './sha
 import './shards.css';
 
 export interface ShardPortraitProps {
-  /** Public path of the portrait (e.g. cases/c01/portrait.webp). Missing → vector fallback. */
+  /**
+   * Public path of the portrait (e.g. cases/c01/portrait.webp). Missing or '' → vector fallback:
+   * a person's bust, or the object's own outline when `silhouette` is an SVG path (cases without
+   * hand-made art, such as the I-001 ツクール samples).
+   */
   image?: string;
   shardCount?: number;
   /** Number of lit shards (in the deterministic reveal order) or explicit shard ids ('s0'…). */
@@ -49,6 +53,8 @@ export function ShardPortrait({ image, shardCount = 34, revealed = 0, solved = f
   const url = useImage(image);
   const shards = useMemo(() => makeShards(shardCount, seed), [shardCount, seed]);
   const silPath = silhouettePath(silhouette);
+  /** An object soul's outline (not the default bust): what the vector fallback draws without art. */
+  const objectPath = silPath && silPath !== JANE_SILHOUETTE ? silPath : null;
   const svgRef = useRef<SVGSVGElement>(null);
   const [assembled, setAssembled] = useState(solved);
   const [animating, setAnimating] = useState(false);
@@ -187,14 +193,30 @@ export function ShardPortrait({ image, shardCount = 34, revealed = 0, solved = f
             <stop offset="0" stop-color="#E9CDB9" />
             <stop offset="1" stop-color="#B98F7C" />
           </linearGradient>
-          <g id={`${u}-fallback`}>
-            <rect width={SHARD_W} height={SHARD_H} fill={`url(#${u}-bg)`} />
-            <path d="M40 400 C52 334 98 312 150 308 C202 312 248 334 260 400 Z" fill="#35566A" />
-            <path d="M118 262 C124 290 124 300 118 312 L182 312 C176 300 176 290 182 262 Z" fill={`url(#${u}-skin)`} />
-            <ellipse cx="150" cy="170" rx="56" ry="72" fill={`url(#${u}-skin)`} />
-            <path d="M150 88 C204 88 222 130 220 176 C218 214 226 244 212 262 C204 230 202 190 196 160 C180 150 150 138 128 118 C118 146 104 170 100 196 C96 226 96 248 88 262 C74 240 82 214 80 176 C78 128 98 88 150 88 Z" fill="#241E2B" />
-            <ellipse cx="150" cy="190" rx="40" ry="44" fill="#FFFFFF" opacity="0.08" />
-          </g>
+          {objectPath && (
+            <linearGradient id={`${u}-obj`} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#EAF6FF" />
+              <stop offset="0.55" stop-color="#9FC3DA" />
+              <stop offset="1" stop-color="#5C7F98" />
+            </linearGradient>
+          )}
+          {objectPath ? (
+            // no portrait art (e.g. the I-001 ツクール samples): the object soul's own outline, lit
+            <g id={`${u}-fallback`}>
+              <rect width={SHARD_W} height={SHARD_H} fill={`url(#${u}-bg)`} />
+              <path d={objectPath} fill={`url(#${u}-obj)`} opacity="0.9" />
+              <path d={objectPath} fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="2.5" />
+            </g>
+          ) : (
+            <g id={`${u}-fallback`}>
+              <rect width={SHARD_W} height={SHARD_H} fill={`url(#${u}-bg)`} />
+              <path d="M40 400 C52 334 98 312 150 308 C202 312 248 334 260 400 Z" fill="#35566A" />
+              <path d="M118 262 C124 290 124 300 118 312 L182 312 C176 300 176 290 182 262 Z" fill={`url(#${u}-skin)`} />
+              <ellipse cx="150" cy="170" rx="56" ry="72" fill={`url(#${u}-skin)`} />
+              <path d="M150 88 C204 88 222 130 220 176 C218 214 226 244 212 262 C204 230 202 190 196 160 C180 150 150 138 128 118 C118 146 104 170 100 196 C96 226 96 248 88 262 C74 240 82 214 80 176 C78 128 98 88 150 88 Z" fill="#241E2B" />
+              <ellipse cx="150" cy="190" rx="40" ry="44" fill="#FFFFFF" opacity="0.08" />
+            </g>
+          )}
         </defs>
 
         <g clip-path={clipped ? `url(#${u}-sil)` : undefined} class="shards__clip">

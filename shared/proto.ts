@@ -1,11 +1,13 @@
 /**
- * Prototype switches (2026-10-03 I-005, 2026-10-04 seeds; docs/decisions.md).
+ * Prototype switches (2026-10-03 I-005, 2026-10-04 seeds and tsukuru; docs/decisions.md).
  *
  * In the browser `?proto=<id>` turns a switch on for the tab (src/config/proto.ts); several at once
  * with `?proto=i005,seeds`. Without a switch nothing changes.
  *
  *   i005   the four I-005 pieces in the UI (サイエンスヒント・近さの色・余話・矛盾の一文)
  *   seeds  the prototype cases made from the 事件の種 (case seeds): case.json `proto: "seeds"`
+ *   tsukuru  the three sample puzzles of the I-001 リトマス審問ツクール (made the way the AI drafter
+ *          would make them, no hand-made art): case.json `proto: "tsukuru"`
  *
  * A prototype CASE exists for a player only while its switch is on — in every build, whatever its
  * `publish` says: the server (server/engine/registry.ts) lists and serves it only to requests that
@@ -15,7 +17,7 @@
  *
  * Zod-free: the browser imports this file.
  */
-export const PROTO_IDS = ['i005', 'seeds'] as const;
+export const PROTO_IDS = ['i005', 'seeds', 'tsukuru'] as const;
 export type ProtoId = (typeof PROTO_IDS)[number];
 
 /** Request header with the caller's switches, comma separated (e.g. `seeds` or `i005,seeds`). */
@@ -29,6 +31,10 @@ export const PROTO_HEADER = 'x-janedoe-proto';
  */
 export const PROTO_CASES: Readonly<Record<string, ProtoId>> = {
   'c09-rescued-morning': 'seeds',
+  // I-001 ツクールの見本 (2026-10-04)
+  'c10-shaken-bottle': 'tsukuru',
+  'c11-wet-window': 'tsukuru',
+  'c12-two-shadows': 'tsukuru',
 };
 
 export function isProtoId(v: unknown): v is ProtoId {

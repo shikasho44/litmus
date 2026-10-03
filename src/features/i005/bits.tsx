@@ -55,7 +55,15 @@ export function ScienceAside({ aside }: { aside: Aside }) {
           <span class="sci-aside__title">{aside.title}</span>
         </h2>
       </header>
-      <p class="sci-aside__text">{aside.text}</p>
+      <div class="sci-aside__text">
+        {aside.text
+          .split(/\n+/)
+          .map((t) => t.trim())
+          .filter(Boolean)
+          .map((t, i) => (
+            <p key={i}>{t}</p>
+          ))}
+      </div>
       {aside.supervisorNote === 'placeholder' && (
         <div class="sci-aside__sensei" role="note" aria-label="先生のひとこと（見本）" data-supervisor-placeholder>
           <span class="sci-aside__sensei-k">

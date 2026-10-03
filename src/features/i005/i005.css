@@ -198,6 +198,12 @@
   font-size: 1.12rem;
   color: #d9ccff;
 }
+.sci-aside__text p {
+  margin: 0 0 1em;
+}
+.sci-aside__text p:last-child {
+  margin-bottom: 0;
+}
 .sci-aside__text {
   max-width: 38em;
   margin: 0;

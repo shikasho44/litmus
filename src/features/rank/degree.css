@@ -1,8 +1,11 @@
 /* ==========================================================================
    名探偵度数 — badges (DetectiveBadge), the compact meter (DegreeMeter), the static
-   「減点」 tag (PenaltyTag). Tier colours: bronze → silver → gold → formalin → prismatic,
-   mixed from the tokens only. `.dtier--N` carries the tier colours for anything that sits
-   next to a badge (meter edge, progress bar).
+   「減点」 tag (PenaltyTag). Tier colours (2026-10-04: 11 named levels + the ★ tail), mixed from
+   the tokens only: bronze (1–2) → silver (3–4) → gold (5–6) → formalin (7 名探偵) → cyan (8) →
+   violet (9) → crimson (10) → prismatic (11 伝説の名探偵; the ★ tail keeps it and adds a tab).
+   The second level of a metal is the polished one: brighter, with a faint glow. `.dtier--N`
+   (N = detectiveTier, 0..11) carries the tier colours for anything that sits next to a badge
+   (meter edge, progress bar).
    ========================================================================== */
 .detb--lv0,
 .dtier--0 {
@@ -21,31 +24,79 @@
 }
 .detb--lv2,
 .dtier--2 {
-  /* silver */
-  --db-metal: linear-gradient(145deg, var(--bone) 0%, var(--bone-2) 30%, var(--mute) 66%, var(--ink-4) 100%);
-  --db-edge: var(--bone-2);
-  --db-ink: var(--bone);
-  --db-glow: transparent;
+  /* polished bronze */
+  --db-metal: linear-gradient(145deg, color-mix(in srgb, var(--amber) 70%, var(--bone)) 0%, color-mix(in srgb, var(--amber) 66%, var(--alarm-deep)) 40%, color-mix(in srgb, var(--alarm-deep) 50%, var(--ink)) 100%);
+  --db-edge: color-mix(in srgb, var(--amber) 74%, var(--alarm-deep));
+  --db-ink: color-mix(in srgb, var(--amber) 78%, var(--bone));
+  --db-glow: color-mix(in srgb, var(--amber) 20%, transparent);
 }
 .detb--lv3,
 .dtier--3 {
-  /* gold */
-  --db-metal: linear-gradient(145deg, color-mix(in srgb, var(--amber) 40%, var(--bone)) 0%, var(--amber) 45%, color-mix(in srgb, var(--amber) 58%, var(--alarm-deep)) 100%);
-  --db-edge: var(--amber);
-  --db-ink: var(--amber);
-  --db-glow: color-mix(in srgb, var(--amber) 35%, transparent);
+  /* silver */
+  --db-metal: linear-gradient(145deg, var(--bone-2) 0%, var(--bone-3) 34%, var(--mute) 66%, var(--ink-4) 100%);
+  --db-edge: var(--bone-3);
+  --db-ink: var(--bone-2);
+  --db-glow: transparent;
 }
 .detb--lv4,
 .dtier--4 {
-  /* formalin */
+  /* polished silver */
+  --db-metal: linear-gradient(145deg, var(--bone) 0%, var(--bone-2) 30%, var(--mute) 66%, var(--ink-4) 100%);
+  --db-edge: var(--bone-2);
+  --db-ink: var(--bone);
+  --db-glow: color-mix(in srgb, var(--bone) 20%, transparent);
+}
+.detb--lv5,
+.dtier--5 {
+  /* gold */
+  --db-metal: linear-gradient(145deg, color-mix(in srgb, var(--amber) 52%, var(--bone-2)) 0%, color-mix(in srgb, var(--amber) 85%, var(--ink)) 48%, color-mix(in srgb, var(--amber) 50%, var(--alarm-deep)) 100%);
+  --db-edge: color-mix(in srgb, var(--amber) 85%, var(--bone-3));
+  --db-ink: color-mix(in srgb, var(--amber) 85%, var(--bone-3));
+  --db-glow: color-mix(in srgb, var(--amber) 18%, transparent);
+}
+.detb--lv6,
+.dtier--6 {
+  /* polished gold */
+  --db-metal: linear-gradient(145deg, color-mix(in srgb, var(--amber) 40%, var(--bone)) 0%, var(--amber) 45%, color-mix(in srgb, var(--amber) 58%, var(--alarm-deep)) 100%);
+  --db-edge: var(--amber);
+  --db-ink: var(--amber);
+  --db-glow: color-mix(in srgb, var(--amber) 40%, transparent);
+}
+.detb--lv7,
+.dtier--7 {
+  /* formalin — 名探偵 */
   --db-metal: linear-gradient(145deg, color-mix(in srgb, var(--formalin) 45%, var(--bone)) 0%, var(--formalin) 42%, var(--formalin-deep) 100%);
   --db-edge: var(--formalin);
   --db-ink: var(--formalin);
   --db-glow: var(--formalin-glow);
 }
-.detb--lv5,
-.dtier--5 {
-  /* prismatic */
+.detb--lv8,
+.dtier--8 {
+  /* cyan */
+  --db-metal: linear-gradient(145deg, color-mix(in srgb, var(--cyan) 45%, var(--bone)) 0%, var(--cyan) 42%, var(--cyan-deep) 100%);
+  --db-edge: var(--cyan);
+  --db-ink: var(--cyan);
+  --db-glow: var(--cyan-glow);
+}
+.detb--lv9,
+.dtier--9 {
+  /* violet */
+  --db-metal: linear-gradient(145deg, color-mix(in srgb, var(--violet) 45%, var(--bone)) 0%, var(--violet) 44%, color-mix(in srgb, var(--violet) 50%, var(--ink)) 100%);
+  --db-edge: color-mix(in srgb, var(--violet) 80%, var(--bone));
+  --db-ink: color-mix(in srgb, var(--violet) 62%, var(--bone));
+  --db-glow: color-mix(in srgb, var(--violet) 42%, transparent);
+}
+.detb--lv10,
+.dtier--10 {
+  /* crimson */
+  --db-metal: linear-gradient(145deg, color-mix(in srgb, var(--alarm) 48%, var(--bone)) 0%, var(--alarm) 44%, var(--alarm-deep) 100%);
+  --db-edge: color-mix(in srgb, var(--alarm) 85%, var(--bone));
+  --db-ink: color-mix(in srgb, var(--alarm) 58%, var(--bone));
+  --db-glow: var(--alarm-glow);
+}
+.detb--lv11,
+.dtier--11 {
+  /* prismatic — 伝説の名探偵 (and its ★ tail) */
   --db-metal: conic-gradient(from 20deg, var(--alarm), var(--amber), var(--formalin), var(--cyan), var(--violet), var(--alarm));
   --db-edge: var(--bone);
   --db-ink: var(--bone);
@@ -113,11 +164,35 @@
 .detb--xs .detb__num {
   font-size: calc(var(--db-size) * 0.42);
 }
-.detb--lv5 .detb__num {
+.detb--lv11 .detb__num {
   background: conic-gradient(from 200deg, var(--alarm), var(--amber), var(--formalin), var(--cyan), var(--violet), var(--alarm));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+/* two-digit levels (10, 11, the ★ tail): a touch narrower so the numeral stays inside the disc */
+.detb--wide .detb__num {
+  font-size: calc(var(--db-size) * 0.3);
+  letter-spacing: -0.02em;
+}
+.detb--xs.detb--wide .detb__num {
+  font-size: calc(var(--db-size) * 0.36);
+}
+/* the ★ tail: a small 「★n」 tab hanging from the bottom of the rosette */
+.detb__stars {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--db-size) * -0.08);
+  transform: translateX(-50%);
+  padding: 0 calc(var(--db-size) * 0.07);
+  font-family: var(--font-en);
+  font-size: max(9px, calc(var(--db-size) * 0.17));
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--ink);
+  background: linear-gradient(90deg, var(--amber), var(--formalin), var(--cyan));
+  box-shadow: 1px 1px 0 var(--ink);
 }
 /* no badge yet: an empty dashed ring */
 .detb--lv0 {
@@ -205,7 +280,7 @@ button.dmeter:hover {
   height: 100%;
   background: var(--db-edge);
 }
-.dmeter.dtier--5 .dmeter__bar > span {
+.dmeter.dtier--11 .dmeter__bar > span {
   background: linear-gradient(90deg, var(--alarm), var(--amber), var(--formalin), var(--cyan), var(--violet));
 }
 .dmeter__next {

@@ -169,7 +169,8 @@ given, used to never repeat one and to count the run's free nudges). See §2b.
 
 See `src/state/types.ts`. The rank and points are pure and unit-tested: `src/features/rank/`
 (`rank.ts` — computeRank, PENALTY_RULES, penaltyStep for the in-play 「減点 −n」; `points.ts` —
-runPoints, DETECTIVE_LEVELS, detectiveLevel; `Badge.tsx` — DetectiveBadge / DegreeMeter /
+runPoints, DETECTIVE_LEVELS (11 named levels, 2026-10-04) + the endless ★ tail every LEGEND_STAR_STEP,
+detectiveLevel / detectiveRank / detectiveTier (badge colour tier); `Badge.tsx` — DetectiveBadge / DegreeMeter /
 PenaltyTag; the result block is `src/scenes/Result/Degree.tsx`).
 
 Settings: `bgmVolume, sfxVolume, voiceBlips, muted, textSpeed (slow|normal|fast|instant),

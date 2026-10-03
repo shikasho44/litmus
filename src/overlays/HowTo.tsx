@@ -7,7 +7,7 @@ import { overlay, route } from '../app/router';
 import { LightsRow } from '../features/difficulty/Lights';
 import { DIFFICULTY_META } from '../features/difficulty/meta';
 import { DetectiveBadge, PenaltyTag } from '../features/rank/Badge';
-import { DETECTIVE_LEVELS, DIFFICULTY_MULTIPLIER, SPLUS_BONUS } from '../features/rank/points';
+import { DETECTIVE_LEVELS, DIFFICULTY_MULTIPLIER, LEGEND_STAR_STEP, SPLUS_BONUS, TOP_DETECTIVE_LEVEL, detectiveRank } from '../features/rank/points';
 import { replayTutorial } from '../features/tutorial/tutorial';
 import { BudgetHowToArt } from '../features/budget/HowToArt';
 import { toast } from '../ui/Toast';
@@ -170,20 +170,29 @@ function ScienceArt() {
   );
 }
 
+/** The whole ladder (11 named levels, src/features/rank/points.ts) and the endless ★ tail after it. */
 function DegreeArt() {
+  const tail = detectiveRank(TOP_DETECTIVE_LEVEL + 1);
   return (
     <div class="howto-art howto-degree">
       <ol class="howto-degree__list">
-        {DETECTIVE_LEVELS.map((l) => (
-          <li key={l.level} class="howto-degree__row">
+        {DETECTIVE_LEVELS.map((l, i) => (
+          <li key={l.level} class="howto-degree__row" style={{ '--i': i }}>
             <DetectiveBadge level={l.level} size="xs" />
             <span class="howto-degree__name">
               <span class="howto-degree__lv t-mono">LV.{l.level}</span>
               {l.name}
             </span>
-            <span class="howto-degree__min t-mono">{l.min}〜</span>
+            <span class="howto-degree__min t-mono">{l.min.toLocaleString('ja-JP')}〜</span>
           </li>
         ))}
+        <li class="howto-degree__row howto-degree__row--tail" style={{ '--i': DETECTIVE_LEVELS.length }}>
+          <DetectiveBadge level={tail.level} size="xs" />
+          <span class="howto-degree__name">
+            <span class="howto-degree__lv t-mono">LV.{tail.level}〜</span>★2・★3……
+          </span>
+          <span class="howto-degree__min t-mono">{LEGEND_STAR_STEP}ごと</span>
+        </li>
       </ol>
       <p class="howto-degree__pen">
         <PenaltyTag points={3.5} />
@@ -342,6 +351,9 @@ const STEPS: Step[] = [
         </p>
         <p class="t-sm t-bone2">
           事件ごとの最高記録を合計したものが<strong>名探偵度数</strong>。同じ事件を遊び直しても、最高記録を超えた分だけ増えます。度数が貯まると称号が上がります。
+        </p>
+        <p class="t-sm t-bone2">
+          称号は全部で{TOP_DETECTIVE_LEVEL}段。最初の数件はすぐに上がり、上へ行くほど多くの事件が要ります。いちばん上の「{DETECTIVE_LEVELS[DETECTIVE_LEVELS.length - 1].name}」のあとも、度数{LEGEND_STAR_STEP}ごとに★が増えていきます。
         </p>
       </>
     ),

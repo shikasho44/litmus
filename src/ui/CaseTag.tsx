@@ -94,7 +94,7 @@ export function CaseTag({ summary: c, status, bestRank, bestPoints, onOpen, onSe
         <p class="tag__title-en">{c.titleEn}</p>
         {c.proto && (
           <p class="tag__proto" data-proto-case={c.proto}>
-            {c.proto === 'tsukuru' ? 'ツクールの見本（やさしい謎・AIと作った）' : `試作 — ?proto=${c.proto} のときだけの事件`}
+            {c.proto === 'lab' ? 'ラボの見本（やさしい謎・AIと作った）' : `試作 — ?proto=${c.proto} のときだけの事件`}
           </p>
         )}
         {PROTO_I005 && <HookLine text={c.hook} class="hookline--tag" />}

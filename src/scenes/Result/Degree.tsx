@@ -14,7 +14,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/ho
 import { audio } from '../../audio';
 import { DIFFICULTY_META } from '../../features/difficulty/meta';
 import { DetectiveBadge } from '../../features/rank/Badge';
-import { detectiveLevel, resultPoints, SPLUS_BONUS, type DetectiveLevel } from '../../features/rank';
+import { detectiveLevel, detectiveTier, resultPoints, SPLUS_BONUS, type DetectiveLevel } from '../../features/rank';
 import { motionReduced } from '../../fx/motion';
 import type { CaseResult } from '../../state/types';
 
@@ -26,7 +26,7 @@ function setText(el: HTMLElement | null, v: number | string) {
   else el.textContent = String(v);
 }
 
-const nextLine = (l: DetectiveLevel) => (l.next ? `次の称号「${l.next.name}」まで あと${l.toNext}` : '最高位の称号です');
+const nextLine = (l: DetectiveLevel) => `次の称号「${l.next.name}」まで あと${l.toNext}`;
 
 export function DegreeBlock({ result, total, fresh, revealed }: { result: CaseResult; total: number; fresh: boolean; revealed: boolean }) {
   const pts = useMemo(() => resultPoints(result), [result]);
@@ -146,7 +146,7 @@ export function DegreeBlock({ result, total, fresh, revealed }: { result: CaseRe
   return (
     <section
       ref={root}
-      class={`rs-deg dtier--${level} ${up ? 'is-up' : ''}`}
+      class={`rs-deg dtier--${detectiveTier(level)} ${up ? 'is-up' : ''}`}
       aria-label="名探偵度数"
       style={entered ? undefined : { opacity: 0 }}
       data-degree={total}

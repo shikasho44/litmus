@@ -50,6 +50,17 @@ describe('the ?proto switch', () => {
     expect(s.dump()).toEqual({ [PROTO_STORAGE_KEY]: 'seeds' });
   });
 
+  it('the old ?proto=tsukuru turns `lab` on and is remembered as lab (renamed 2026-10-04, an alias for old links)', () => {
+    expect(resolveProto('lab', null)).toEqual({ ids: ['lab'], store: 'set' });
+    expect(resolveProto('tsukuru', null)).toEqual({ ids: ['lab'], store: 'set' });
+    expect(resolveProto(null, 'tsukuru')).toEqual({ ids: ['lab'], store: 'keep' }); // a tab stored before the rename
+    const s = memoryStorage();
+    expect(readProto('?proto=seeds,tsukuru', s)).toEqual(['seeds', 'lab']);
+    expect(s.dump()).toEqual({ [PROTO_STORAGE_KEY]: 'seeds,lab' });
+    expect(caseHiddenByProto('c10-shaken-bottle', ['lab'])).toBe(false);
+    expect(caseHiddenByProto('c10-shaken-bottle', ['seeds'])).toBe(true);
+  });
+
   it('remembers ?proto=i005 for the session, so hash navigation (no query) keeps it; ?proto=off forgets it', () => {
     const s = memoryStorage();
     expect(readProto('?mute=1&proto=i005', s)).toEqual(['i005']);

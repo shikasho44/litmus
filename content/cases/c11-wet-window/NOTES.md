@@ -1,6 +1,6 @@
 # CASE 11「うちがわの雨つぶ」RAINDROPS ON THE INSIDE 制作ノート
 
-作成 2026-10-04。**I-001 リトマス審問ツクールの見本**（`?proto=tsukuru` のときだけ出る。`docs/ideas/I-001-samples.html`）。
+作成 2026-10-04。**I-001 リトマス・ラボ（仮の名前）の見本**（`?proto=lab` のときだけ出る。`docs/ideas/I-001-samples.html`）。2026-10-04 に「ツクール」から「リトマス・ラボ」へ改名（RPGツクールと重なるため。旧 `?proto=tsukuru` もしばらくは同じ意味で通る）。
 結末の一行と、ホルマの3つの聞き返しへの答えだけから、AI（下書き係）が組み立てた。正本は `case.json`。`reviewStatus: draft-ai`（人の確認前）。
 
 ## 注文

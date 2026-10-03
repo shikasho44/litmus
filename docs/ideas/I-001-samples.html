@@ -4,9 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow" />
-<title>ツクールの見本3問｜リトマス審問 企画ノート</title>
+<title>リトマス・ラボの見本3問｜リトマス審問 企画ノート</title>
 <!--
-  I-001 リトマス審問ツクールの「いちばん小さい試作」の記録（2026-10-04）。
+  I-001 リトマス・ラボ（仮の名前。もとの仮称「ツクール」）の「いちばん小さい試作」の記録（2026-10-04）。
   _template.html を複製。CSS はページの中に入れたまま、外部の読み込みはしない。
 -->
 <style>
@@ -81,9 +81,10 @@
   <div class="wrap">
     <a class="back" href="index.html">← 企画ノートの台帳へ</a>
     <div class="kicker">IDEA · I-001 試作</div>
-    <h1>ツクールの見本3問</h1>
-    <p class="lead">「こんな結末の謎にしたい」という一行から、ホルマ（AI）が3つだけ聞き返し、解ける謎に組み立て、検査とAIの試し遊びを通す——リトマス審問ツクールの流れを、画面を作らずに3回やってみました。できた3問は、今のゲームでそのまま遊べます。</p>
-    <div class="badges"><span class="badge">種類：遊び方（みんなで作る）</span><span class="badge ok">状態：試作</span><span class="badge">切り替え：?proto=tsukuru</span><span class="badge">作った日：2026-10-04</span><span class="badge warn">AIの費用：$0.072（約11円）</span></div>
+    <h1>リトマス・ラボの見本3問</h1>
+    <p class="lead">「こんな結末の謎にしたい」という一行から、ホルマ（AI）が3つだけ聞き返し、解ける謎に組み立て、検査とAIの試し遊びを通す——リトマス・ラボの流れを、画面を作らずに3回やってみました。できた3問は、今のゲームでそのまま遊べます。</p>
+    <div class="badges"><span class="badge">種類：遊び方（みんなで作る）</span><span class="badge ok">状態：試作</span><span class="badge">切り替え：?proto=lab</span><span class="badge">作った日：2026-10-04</span><span class="badge warn">AIの費用：$0.072（約11円）</span></div>
+    <p class="lead">名前について（2026-10-04）：作る仕組みの仮の呼び名を「ツクール」から<strong>「リトマス・ラボ」</strong>（これも仮）に改めました。「ツクール」はRPGツクールと重なるためです。遊ぶ URL は <code>?proto=lab</code>（古い <code>?proto=tsukuru</code> もしばらくは同じ意味で開けます）。</p>
   </div>
 </header>
 <main class="wrap">
@@ -105,9 +106,9 @@
   </section>
 
   <section>
-    <h2><span class="en">FLOW</span>やった流れ（本番のツクールと同じ順番）</h2>
+    <h2><span class="en">FLOW</span>やった流れ（本番のリトマス・ラボと同じ順番）</h2>
     <div class="table-wrap"><table>
-      <tr><th>段階</th><th>本番のツクール</th><th>今回の試作でやったこと</th></tr>
+      <tr><th>段階</th><th>本番のリトマス・ラボ</th><th>今回の試作でやったこと</th></tr>
       <tr><td>① 注文</td><td>結末を話す。ホルマが3つだけ聞き返す</td><td>結末の一行と、3つの答え（だれと遊ぶ／むずかしさ／最初の場面）だけから始めた（会話は下に）</td></tr>
       <tr><td>② 下書き</td><td>AIが問題文・真相・所見・想定質問・ヒント・答えの要素・科学解説を作る</td><td>下書き係のAIとして、わたし（Claude）が作った。科学は本当の出典を1件ずつ開いて確かめた（各3〜4件）</td></tr>
       <tr><td>③ 安全</td><td>死・けが・犯罪・実在の人物を止める</td><td>遊ぶ人が読む文（1問あたり約400）を言葉の一覧で調べた</td></tr>
@@ -116,7 +117,7 @@
       <tr><td>⑥ AIの試し遊び</td><td>子ども・大人・ひねくれ者などの役で遊ばせる</td><td><code>scripts/playtest.ts</code> で5人×3問。判定は無料の規則判定（静的版と同じ。AIなしでも遊べることを確かめるため）</td></tr>
       <tr><td>⑦ 直して、確かめ直す</td><td>詰まった所を直す候補として並べる</td><td>記録を読んで直した。2回目の試し遊びはキーの上限で回せなかったので、1回目の質問210問を直した謎に流し直した（無料）</td></tr>
       <tr><td>⑧ 作者のクリアチェック</td><td>作った人が表から1回解く</td><td>自動の通しプレイ（<code>scripts/qa.mjs</code>）で代わりにした。PC とスマホ</td></tr>
-      <tr><td>⑨ 公開</td><td>コードを知っている人だけ</td><td><code>?proto=tsukuru</code> を付けたときだけ出る。事件ファイルの札に「ツクールの見本（やさしい謎・AIと作った）」</td></tr>
+      <tr><td>⑨ 公開</td><td>コードを知っている人だけ</td><td><code>?proto=lab</code> を付けたときだけ出る。事件ファイルの札に「ラボの見本（やさしい謎・AIと作った）」</td></tr>
     </table></div>
   </section>
 
@@ -159,7 +160,7 @@
       <li>審問：「0℃より冷たくなった水はかならず凍る」には、「氷のたね」の所見を当てても正解に。</li>
     </ul>
     <p><strong>確かめ直し</strong>：1回目の質問106問を直した謎に流すと、答えが変わったのは53問。<span class="num">48問が正しくなり、4問が悪くなった</span>（長い仮定の問い2つが「いいえ」に、2つが「具体的に」に）、1問はどちらでもない。油の25問は、入口の「油でしたか？」が「いいえ」になったので、もう始まらない。</p>
-    <p class="note">かかった時間：注文1分未満／下書き12分（出典を開く5分＋書く7分）／検査と直し3分／試し遊び1分（15本を同時に）／記録を読んで直す 約5分。AIの費用：試し遊び $0.0378、別の答え $0.0014。遊ぶ URL：https://litmus.fourthplace43.com/?proto=tsukuru（公開後）</p>
+    <p class="note">かかった時間：注文1分未満／下書き12分（出典を開く5分＋書く7分）／検査と直し3分／試し遊び1分（15本を同時に）／記録を読んで直す 約5分。AIの費用：試し遊び $0.0378、別の答え $0.0014。遊ぶ URL：https://litmus.fourthplace43.com/?proto=lab（公開後）</p>
   </section>
 
   <!-- ───────────────────────── sample 2 ───────────────────────── -->
@@ -198,7 +199,7 @@
       <li>審問：「水はそとからしみこんだ」には、「空気の中の見えない水」の所見を当てても正解に。</li>
     </ul>
     <p><strong>確かめ直し</strong>：1回目の質問55問のうち、答えが変わったのは8問で、<span class="num">8問とも正しくなった</span>。小学4年生の1回目のひらがなの宣告は、直したあとは正解になる。</p>
-    <p class="note">かかった時間：注文1分未満／下書き8分半（出典4分＋書く4分半）／自分での質問の試しと直し 約1分／試し遊び1分／読んで直す 約3分。AIの費用：試し遊び $0.0186、別の答え $0.0012。遊ぶ URL：https://litmus.fourthplace43.com/?proto=tsukuru（公開後）</p>
+    <p class="note">かかった時間：注文1分未満／下書き8分半（出典4分＋書く4分半）／自分での質問の試しと直し 約1分／試し遊び1分／読んで直す 約3分。AIの費用：試し遊び $0.0186、別の答え $0.0012。遊ぶ URL：https://litmus.fourthplace43.com/?proto=lab（公開後）</p>
   </section>
 
   <!-- ───────────────────────── sample 3 ───────────────────────── -->
@@ -242,7 +243,7 @@
       <li>質問枠を 20／16／12 から 22／18／16 に（教授の12問を、自動の通しプレイの台本が審問の前に使い切ったため。所見24の謎には12問は少なかった）。</li>
     </ul>
     <p><strong>確かめ直し</strong>：1回目の質問49問のうち、答えが変わったのは17問。<span class="num">16問が正しくなり</span>、1問はどちらでもない（「照明はユウトの真正面か真後ろ？」）。悪くなった問いはなし。</p>
-    <p class="note">かかった時間：注文1分未満／下書き8分（出典3分＋書く5分）／検査と直し 約1分／試し遊び1分／読んで直す 約4分。AIの費用：試し遊び $0.0125、別の答え $0.0005。遊ぶ URL：https://litmus.fourthplace43.com/?proto=tsukuru（公開後）</p>
+    <p class="note">かかった時間：注文1分未満／下書き8分（出典3分＋書く5分）／検査と直し 約1分／試し遊び1分／読んで直す 約4分。AIの費用：試し遊び $0.0125、別の答え $0.0005。遊ぶ URL：https://litmus.fourthplace43.com/?proto=lab（公開後）</p>
   </section>
 
   <section>
@@ -263,7 +264,7 @@
   </section>
 
   <section>
-    <h2><span class="en">LESSONS</span>本番のツクールに向けて分かったこと</h2>
+    <h2><span class="en">LESSONS</span>本番のリトマス・ラボに向けて分かったこと</h2>
     <h3>AIが間違えたこと</h3>
     <ul>
       <li><strong>はい／いいえの向き</strong>（いちばん多い）。所見は「どの言葉の問いに、はい／いいえのどちらで答えるか」を1つしか持てない。「日は沈んでいた（はい）」に「太陽」という言葉を入れると、「太陽は出ていた？」も「はい」になる。下書きのAIには、<strong>反対向きの問いが来る言葉は、別の所見に分ける</strong>という決まりを教える必要がある。</li>
@@ -284,9 +285,9 @@
     </table></div>
     <h3>画面が引き受けること</h3>
     <ul>
-      <li><strong>言葉の着せ替え（「リトマス・ラボ」の言葉）</strong>：今の画面は死を前提にした言葉のまま。見本で目に入るのは「死因審問」「死因宣告」「死因確定 CAUSE OF DEATH CONFIRMED」、自由記述の宣告の問い「彼女に、何が起きたのか。なぜ死んだのか。あなたの言葉で。」と例文「何が起き、体に何が起こり、なぜ亡くなったのか」、記録の「死因 CAUSE OF DEATH」と「事件の全貌」、科学解剖の「今回の死因」「事件中の伏線」、事件ファイルの「名前を失った者たちの記録」と「解剖を始める」、関係ない問いの返事「死因には関係ない」「彼女の死には」、名前「ジェーン・ドゥ」、場所「零番安置室」。謎のデータの中は避けて書けたが、画面の言葉はツクール用に別に用意する（今回は作っていない）。</li>
+      <li><strong>言葉の着せ替え（「リトマス・ラボ」の言葉）</strong>：今の画面は死を前提にした言葉のまま。見本で目に入るのは「死因審問」「死因宣告」「死因確定 CAUSE OF DEATH CONFIRMED」、自由記述の宣告の問い「彼女に、何が起きたのか。なぜ死んだのか。あなたの言葉で。」と例文「何が起き、体に何が起こり、なぜ亡くなったのか」、記録の「死因 CAUSE OF DEATH」と「事件の全貌」、科学解剖の「今回の死因」「事件中の伏線」、事件ファイルの「名前を失った者たちの記録」と「解剖を始める」、関係ない問いの返事「死因には関係ない」「彼女の死には」、名前「ジェーン・ドゥ」、場所「零番安置室」。謎のデータの中は避けて書けたが、画面の言葉はリトマス・ラボ用に別に用意する（今回は作っていない）。</li>
       <li><strong>死の種類の封印</strong>：だれも死なない謎でも「男の子が冷凍庫に入れたの？」が「宣告まで封印」になる。謎ごとに封印を外せる設定が要る（逆に、「誰かがわざと凍らせた？」は封印をすり抜け、想定質問で「答えられない」にしてある）。</li>
-      <li><strong>審問とコマと確認テスト</strong>：今のエンジンは、反証のラウンド・コマ4枚・確認テスト・宣告の選択肢まで要る。下書きAIの仕事が企画書の想定より多い。ツクールでは「審問なし・宣告だけ」の軽い形を選べるとよい。AIの探偵は反証が苦手（審問まで進んだ11本のうち5本が泣きつき）で、人の試し遊びで確かめたい。</li>
+      <li><strong>審問とコマと確認テスト</strong>：今のエンジンは、反証のラウンド・コマ4枚・確認テスト・宣告の選択肢まで要る。下書きAIの仕事が企画書の想定より多い。リトマス・ラボでは「審問なし・宣告だけ」の軽い形を選べるとよい。AIの探偵は反証が苦手（審問まで進んだ11本のうち5本が泣きつき）で、人の試し遊びで確かめたい。</li>
       <li><strong>直しの画面</strong>：試し遊びの記録から「この問いにこう答えたが、本当は？」を作る人に選ばせる形にすると、今回わたしが手でやった直しを、作る人が数分でできる。</li>
       <li><strong>絵</strong>：絵なしで十分遊べた（下）。</li>
     </ul>
@@ -311,18 +312,18 @@
       </ul>
     </div>
     <div class="callout next">
-      <p>見本の3問を <code>?proto=tsukuru</code> で遊んでもらい、手ごたえを見る。よければ第1段階（自分と友だちだけ）の画面づくりへ。その前に、OpenRouter のキーの上限を戻すこと。</p>
+      <p>見本の3問を <code>?proto=lab</code> で遊んでもらい、手ごたえを見る。よければ第1段階（自分と友だちだけ）の画面づくりへ。その前に、OpenRouter のキーの上限を戻すこと。</p>
     </div>
   </section>
 
   <section>
     <h2><span class="en">FILES</span>どこにあるか</h2>
     <ul>
-      <li>謎のデータ：<code>content/cases/c10-shaken-bottle/</code>・<code>c11-wet-window/</code>・<code>c12-two-shadows/</code>（<code>case.json</code> の <code>proto: "tsukuru"</code>）</li>
-      <li>切り替え：<code>shared/proto.ts</code>（<code>tsukuru</code>）。札の文字 <code>src/ui/CaseTag.tsx</code>。絵なしの肖像 <code>src/ui/ShardPortrait.tsx</code></li>
+      <li>謎のデータ：<code>content/cases/c10-shaken-bottle/</code>・<code>c11-wet-window/</code>・<code>c12-two-shadows/</code>（<code>case.json</code> の <code>proto: "lab"</code>）</li>
+      <li>切り替え：<code>shared/proto.ts</code>（<code>lab</code>。古い <code>tsukuru</code> も別名として通る）。札の文字 <code>src/ui/CaseTag.tsx</code>。絵なしの肖像 <code>src/ui/ShardPortrait.tsx</code></li>
       <li>試し遊びの道具：<code>scripts/playtest.ts</code> に <code>--judge rules</code> を足した。試作の事件も遊べるようにした</li>
-      <li>回帰セット（AIの探偵の質問から）：<code>tests/content/regression/c10〜c12</code>。テスト <code>tests/engine/proto-tsukuru.test.ts</code></li>
-      <li>決めたことの記録：<code>docs/decisions.md</code>（2026-10-04 「I-001 ツクールの見本3問」）</li>
+      <li>回帰セット（AIの探偵の質問から）：<code>tests/content/regression/c10〜c12</code>。テスト <code>tests/engine/proto-lab.test.ts</code></li>
+      <li>決めたことの記録：<code>docs/decisions.md</code>（2026-10-04 「I-001 ツクールの見本3問」と「ツクール → リトマス・ラボ（仮）に改名」）</li>
     </ul>
   </section>
 

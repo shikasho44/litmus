@@ -10,7 +10,7 @@ export interface ShardPortraitProps {
   /**
    * Public path of the portrait (e.g. cases/c01/portrait.webp). Missing or '' → vector fallback:
    * a person's bust, or the object's own outline when `silhouette` is an SVG path (cases without
-   * hand-made art, such as the I-001 ツクール samples).
+   * hand-made art, such as the I-001 リトマス・ラボ samples).
    */
   image?: string;
   shardCount?: number;
@@ -201,7 +201,7 @@ export function ShardPortrait({ image, shardCount = 34, revealed = 0, solved = f
             </linearGradient>
           )}
           {objectPath ? (
-            // no portrait art (e.g. the I-001 ツクール samples): the object soul's own outline, lit
+            // no portrait art (e.g. the I-001 リトマス・ラボ samples): the object soul's own outline, lit
             <g id={`${u}-fallback`}>
               <rect width={SHARD_W} height={SHARD_H} fill={`url(#${u}-bg)`} />
               <path d={objectPath} fill={`url(#${u}-obj)`} opacity="0.9" />

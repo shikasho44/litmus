@@ -662,7 +662,9 @@ async function investigation(page, c, name, { questions, full }) {
   // I-005: the サイエンスヒント — with the switch, ask for it (full runs) and look at its mark
   const sh = scienceHintOf(c);
   if (sh && full) {
-    if (I005 && !(await held()).has(sh.id)) {
+    // (教授's hard budget may already be used up here: then the dock is closed and the run goes on without it)
+    const closed = await has(page, '[data-budget-closed]');
+    if (I005 && !closed && !(await held()).has(sh.id)) {
       const p = probeFor(sh.id, used);
       if (p) {
         used.add(p.q);
@@ -670,7 +672,8 @@ async function investigation(page, c, name, { questions, full }) {
       }
     }
     const got = (await held()).has(sh.id);
-    if (I005) check(got, `${c.id}: the サイエンスヒント ${sh.id} was unlocked by questioning`);
+    if (I005 && !got && closed) console.log(`  · the サイエンスヒント ${sh.id} was not asked for: the question budget is used up`);
+    else if (I005) check(got, `${c.id}: the サイエンスヒント ${sh.id} was unlocked by questioning`);
     if (got) {
       const chip = page.locator('.fchip', { has: page.locator('[data-science-mark]') }).last();
       if (I005) {
@@ -1262,7 +1265,8 @@ async function smoke(browser, c) {
   try {
     await boot(page);
     await page.evaluate(() => {
-      window.__JD.setMeta({ prologueSeen: true });
+      // the coach-mark tutorial of CASE 01 belongs to its full run, not to a smoke run
+      window.__JD.setMeta({ prologueSeen: true, tutorial: { state: 'done', step: 0 } });
       window.__JD.setSettings({ textSpeed: 'fast' });
     });
     await titleGate(page);

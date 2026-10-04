@@ -7,6 +7,7 @@
   "categories": ["化学", "生理学"],
   "estimatedMinutes": 25,
   "publish": true,
+  "shelf": "kurare",
   "reviewStatus": "ai-reviewed",
   "contentWarning": "人の死を扱います（流血・残酷な描写はありません）。推理の中で、事件・病気・自死などの可能性に触れることがあります。",
   "intro": {

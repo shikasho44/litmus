@@ -12,6 +12,7 @@
 import { z } from 'zod';
 import { ANSWER_CLASSES, FACT_CATEGORIES, PROBE_KINDS } from './constants.js';
 import { PROTO_IDS } from './proto.js';
+import { SHELF_IDS } from './shelf.js';
 
 // The enum constants live in the zod-free ./constants (the browser imports them from there);
 // re-exported here so server code and scripts can keep a single import site.
@@ -290,6 +291,13 @@ export const CaseSchema = z.object({
    * PROTO_CASES (shared/proto.ts).
    */
   proto: z.enum(PROTO_IDS).optional(),
+  /**
+   * The 事件ファイル shelf (2026-10-04, shared/shelf.ts): 'kurare' (くられ先生監修 — written for his
+   * supervision; 監修中 until human-reviewed), 'original' (the game's own cases) or 'lab' (リトマス・ラボ,
+   * player/AI-made; only with `proto: "lab"`). Optional: without it a lab prototype is on 'lab',
+   * every other case on 'original'.
+   */
+  shelf: z.enum(SHELF_IDS).optional(),
   reviewStatus: z.enum(['draft-ai', 'ai-reviewed', 'human-reviewed']),
   contentWarning: z.string().optional(),
 

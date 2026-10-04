@@ -251,6 +251,7 @@ TypeScript の bundler 解決・Vite・tsx・vitest はそのまま `.ts` を見
 3. `npm run dev` — dev サーバーは case.json の変更を次のリクエストで自動再読込
 4. `publish: false` の間は本番の一覧に出ない（dev と管理者には見える）
 5. 試作の事件（`proto: "seeds"`・`proto: "lab"`、2026-10-04〜）は、プレイヤーの切り替え `?proto=seeds`・`?proto=lab` があるときだけ一覧・取得できる（`lab` は I-001 リトマス・ラボの見本。2026-10-04 に `tsukuru` から改名し、古い `tsukuru` は `PROTO_ALIASES` で `lab` として受ける）（`publish` によらず、dev と管理者でも同じ。管理 API の mint-token・ask-debug と管理画面の一覧は全部見える）。ブラウザはヘッダー `x-janedoe-proto` で切り替えを送り、静的版は埋め込みエンジンに渡す。オンライン対戦の部屋には使えない。正本は `shared/proto.ts`・`registry.ts` の `list(includeUnpublished, protos)` / `get(id, includeUnpublished, protos)`。ブラウザ側の写し `PROTO_CASES` と case.json の `proto` は validate とテストが一致を確かめる
+6. 事件ファイルの棚（2026-10-04〜）: case.json の `shelf`（`kurare` くられ先生監修・`original` オリジナル・`lab` リトマス・ラボ）は任意。無ければ `proto: "lab"` は `lab`、ほかは `original`（`shared/shelf.ts` の `caseShelf`）。`CaseSummary` は `shelf` と `reviewStatus` を持つ。`lab` の棚は `proto: "lab"` の事件だけ（validate がエラーにする）。事件ファイルの SOLVED／COMPLETE／初見タイム合計は公式の事件（試作でもラボでもない）だけを数える（`isOfficialCase`）
 
 読込経路:
 | 実行環境 | 読み方 |

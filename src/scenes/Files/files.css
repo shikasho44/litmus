@@ -233,6 +233,252 @@
   color: var(--mute);
 }
 
+/* ---- shelves (2026-10-04): tabs すべて · くられ先生監修 · オリジナル · (リトマス・ラボ) ---- */
+/* the first-visit tip and the tabs share a row on wide screens (the tags' CTA stays higher) */
+.files__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-bottom: 16px;
+}
+.files .files__bar > .files__tip,
+.files .files__bar > .files__tabs {
+  margin: 0;
+}
+.files__tabs {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 18px;
+  padding: 4px;
+  width: fit-content;
+  max-width: 100%;
+  background: rgba(20, 24, 33, 0.88);
+  border: 1px solid rgba(242, 239, 230, 0.14);
+}
+.files__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  color: var(--bone-2);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  transition: background 0.2s, color 0.2s;
+}
+.files__tab:hover {
+  color: var(--bone);
+  background: rgba(242, 239, 230, 0.06);
+}
+.files__tab.is-on {
+  color: var(--ink);
+  background: var(--formalin);
+}
+.files__tab--lab:not(.is-on) {
+  border-color: rgba(61, 224, 255, 0.45);
+  border-style: dashed;
+}
+.files__tab--lab.is-on {
+  background: var(--cyan);
+}
+.files__tab-n {
+  min-width: 1.6em;
+  padding: 0 5px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  line-height: 1.6;
+  text-align: center;
+  color: var(--bone-3);
+  background: rgba(242, 239, 230, 0.08);
+}
+.files__tab.is-on .files__tab-n {
+  color: var(--ink);
+  background: rgba(11, 13, 18, 0.14);
+}
+@media (pointer: coarse) {
+  .files__tab {
+    min-height: 44px;
+  }
+}
+.files__shelves {
+  display: grid;
+  gap: 44px;
+}
+.files__shelf {
+  display: grid;
+  gap: 12px;
+}
+.files__shelf-head {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 4px 16px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid rgba(242, 239, 230, 0.16);
+}
+.files__shelf-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+}
+.files__shelf-jp {
+  font-family: var(--font-display);
+  font-size: clamp(22px, 2.2vw, 30px);
+  line-height: 1.2;
+  color: var(--bone);
+}
+.files__shelf-en {
+  font-family: var(--font-en);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.3em;
+  color: var(--mute);
+}
+.files__shelf-state {
+  align-self: center;
+  padding: 1px 8px;
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.files__shelf-count {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--bone-3);
+}
+.files__shelf-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  color: var(--bone-2);
+}
+.files__shelf--lab .files__shelf-head {
+  border-bottom-color: rgba(61, 224, 255, 0.4);
+}
+.files__shelf--lab .files__shelf-jp {
+  color: var(--cyan);
+}
+
+/* 「謎を作る」 (リトマス・ラボ tab): an honest 準備中 panel */
+.labmake {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  gap: 12px;
+  max-width: 860px;
+  margin-top: 8px;
+  padding: 18px 20px 20px;
+  background: rgba(20, 24, 33, 0.92);
+  border: 1px dashed rgba(61, 224, 255, 0.5);
+}
+.labmake__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.labmake__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  color: var(--bone);
+}
+.labmake__state {
+  padding: 1px 10px;
+  background: var(--amber);
+  color: var(--ink);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.labmake__lead,
+.labmake__foot {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.8;
+  color: var(--bone-2);
+}
+.labmake__foot {
+  font-size: var(--fs-xs);
+  color: var(--bone-3);
+}
+.labmake__routes {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.labmake__route {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.labmake__key {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  font-family: var(--font-en);
+  font-size: 18px;
+  color: var(--ink);
+  background: var(--cyan);
+}
+.labmake__route-title {
+  margin: 0 0 2px;
+  font-weight: 700;
+  color: var(--bone);
+}
+.labmake__route-text {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  color: var(--bone-2);
+}
+[data-layout='narrow'] .files__bar {
+  gap: 10px;
+  margin-bottom: 14px;
+}
+[data-layout='narrow'] .files__tabs {
+  width: 100%;
+}
+/* phone: 「くられ先生監修 [監修中] 0/5」 on one line (the English word goes) */
+[data-layout='narrow'] .files__shelf-en {
+  display: none;
+}
+[data-layout='narrow'] .files__shelf-head {
+  align-items: center;
+}
+[data-layout='narrow'] .files__tab {
+  flex: 1 1 auto;
+  justify-content: center;
+  padding: 0 8px;
+  font-size: var(--fs-xs);
+  gap: 5px;
+}
+[data-layout='narrow'] .files__shelves {
+  gap: 36px;
+}
+[data-layout='narrow'] .files__shelf-note {
+  font-size: var(--fs-xs);
+}
+[data-layout='narrow'] .labmake {
+  padding: 14px 14px 16px;
+}
+
 /* skeleton */
 .tag--skeleton .tag__card {
   min-height: 460px;
@@ -368,6 +614,21 @@
   [data-layout='wide'] .files__tip {
     margin-bottom: 0;
   }
+  [data-layout='wide'] .files__bar {
+    margin-bottom: 10px;
+  }
+  [data-layout='wide'] .files__shelf-head {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+  }
+  [data-layout='wide'] .files__shelf-note {
+    grid-column: auto;
+    grid-row: 1;
+    grid-column-start: 2;
+  }
+  [data-layout='wide'] .files__shelf {
+    gap: 6px;
+  }
   [data-layout='wide'] .files .tag {
     padding-top: 18px;
   }
@@ -408,5 +669,14 @@
 @media (max-width: 360px) {
   .files__grid {
     grid-template-columns: 1fr;
+  }
+}
+/* 320-wide phones: the three shelf tabs on one row (the counts go; each shelf heading says x/n) */
+@media (max-width: 360px) {
+  [data-layout='narrow'] .files__tab-n {
+    display: none;
+  }
+  [data-layout='narrow'] .files__tab {
+    padding: 0 6px;
   }
 }

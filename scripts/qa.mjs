@@ -431,6 +431,28 @@ async function titleToFiles(page, name) {
   // the リトマス・ラボ samples say what they are on the card (2026-10-04)
   const labTags = await page.$$eval('.tag__proto[data-proto-case="lab"]', (els) => els.map((e) => e.textContent));
   check(labTags.length === CASES.filter((c) => c.proto === 'lab').length && labTags.every((t) => t === 'ラボの見本（やさしい謎・AIと作った）'), `files: ${labTags.length} card(s) labelled 「ラボの見本（やさしい謎・AIと作った）」`);
+  // the shelves (2026-10-04): すべて · くられ先生監修 · オリジナル, and リトマス・ラボ only with ?proto=lab;
+  // すべて (the first tab) shows them as sections, the lab one last; the counters read x/8 (official only)
+  const tabs = await page.$$eval('[data-files-tab]', (els) => els.map((e) => e.getAttribute('data-files-tab')));
+  const labOn = PROTOS.includes('lab');
+  check(tabs.join(',') === (labOn ? 'all,kurare,original,lab' : 'all,kurare,original'), `files: shelf tabs ${tabs.join(' · ')}`);
+  const sections = await page.$$eval('[data-shelf]', (els) => els.map((e) => e.getAttribute('data-shelf')));
+  check(sections[0] === 'kurare' && sections[1] === 'original' && sections.includes('lab') === labOn, `files: すべて shows the shelves ${sections.join(' · ')}`);
+  const official = CASES.filter((c) => !c.proto).length;
+  const totals = await page.$$eval('.files__stats small', (els) => els.slice(0, 2).map((e) => e.textContent));
+  check(totals.every((t) => t === `/${official}`), `files: SOLVED / COMPLETE count the ${official} official cases (${totals.join(' ')})`);
+  const kurareStamps = await page.$$eval('.tag__supervision', (els) => els.map((e) => e.textContent));
+  check(kurareStamps.length === CASES.filter((c) => c.shelf === 'kurare').length && kurareStamps.every((t) => t === 'くられ先生監修監修中'), `files: ${kurareStamps.length} card(s) stamped くられ先生監修・監修中`);
+  if (labOn) {
+    await page.locator('[data-files-tab="lab"]').click();
+    await tick(page, 600);
+    const labIds = await page.$$eval('[data-shelf] article.tag h3[id^="case-"]', (els) => els.map((h) => h.id.slice(5, 8)));
+    check(labIds.join(',') === CASES.filter((c) => c.proto === 'lab').map((c) => c.id.slice(0, 3)).join(','), `files: the リトマス・ラボ tab holds only the lab puzzles (${labIds.join(' ')})`);
+    check((await page.locator('[data-lab-make]').count()) === 1 && (await page.locator('[data-lab-make] button, [data-lab-make] input, [data-lab-make] textarea').count()) === 0, 'files: 「謎を作る」 panel says 準備中, nothing to press');
+    await shot(page, name('files-lab'));
+    await page.locator('[data-files-tab="all"]').click();
+    await tick(page, 400);
+  }
   const seen = await page.evaluate(() => window.__JD.getState().save.meta.prologueSeen);
   check(seen === true, 'prologue skip marks the prologue as seen');
 }
@@ -1231,7 +1253,10 @@ async function result(page, c, name, { full }) {
   check(Number(meter) >= (s.bestPoints ?? 0), `${c.id}: the files header shows 名探偵度数 ${meter}`);
   const firstTag = ((await page.locator(`article.tag:has(#case-${c.id}-title) .tag__first`).textContent().catch(() => '')) ?? '').replace(/\s+/g, '');
   const total = ((await page.locator('[data-first-total]').textContent().catch(() => '')) ?? '').replace(/\s+/g, '');
-  check(firstTag.includes('初見') && total.includes('初見タイム合計'), `${c.id}: the case tag shows the first clear (${firstTag}) and the files header 初見タイム合計 (${total})`);
+  // 初見タイム合計 counts the official cases only (2026-10-04 shelves): a prototype case's first clear stays on its tag
+  const officialFirsts = await page.evaluate((ids) => ids.filter((id) => !!window.__JD.getState().save.cases[id]?.firstClear).length, CASES.filter((x) => !x.proto).map((x) => x.id));
+  if (c.proto) check(firstTag.includes('初見') && Number(/\/(\d+)件/.exec(total)?.[1] ?? 0) === officialFirsts, `${c.id}: the case tag shows the first clear (${firstTag}); the prototype case stays out of 初見タイム合計 (${total || 'none'})`);
+  else check(firstTag.includes('初見') && total.includes('初見タイム合計'), `${c.id}: the case tag shows the first clear (${firstTag}) and the files header 初見タイム合計 (${total})`);
   const tag = page.locator(`article.tag:has(#case-${c.id}-title)`);
   await tag.scrollIntoViewIfNeeded();
   await tick(page, 1600);

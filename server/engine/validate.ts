@@ -12,6 +12,7 @@ import { parseSegments } from './public-view.js';
 import { evaluateVerdict } from './verdict.js';
 import { formatZodIssues } from './registry.js';
 import { PROTO_CASES } from '../../shared/proto.js';
+import { caseShelf } from '../../shared/shelf.js';
 
 export const REQUIRED_PROBE_KINDS: ProbeKind[] = ['yes', 'no', 'irrelevant', 'core', 'spoiler-bait', 'paraphrase', 'typo', 'negated'];
 export const SELF_CONSISTENCY_MIN = 0.95;
@@ -83,6 +84,11 @@ export function validateParsedCase(c: Case, opts: ValidateOptions = {}): CaseVal
   const shipped = c.publish || !!c.proto;
   if (c.proto && PROTO_CASES[c.id] !== c.proto) errors.push(`proto "${c.proto}": add "${c.id}": '${c.proto}' to PROTO_CASES in shared/proto.ts (the browser's copy)`);
   if (!c.proto && Object.prototype.hasOwnProperty.call(PROTO_CASES, c.id)) errors.push(`PROTO_CASES in shared/proto.ts lists ${c.id}, but the case has no proto field`);
+  // the 事件ファイル shelf (shared/shelf.ts): the リトマス・ラボ holds only lab prototypes, and a lab
+  // prototype never stands among the official shelves
+  if (caseShelf(c) === 'lab' && c.proto !== 'lab') errors.push(`shelf "lab" needs proto: "lab" (the リトマス・ラボ shelf exists only behind ?proto=lab)`);
+  if (c.proto === 'lab' && caseShelf(c) !== 'lab') errors.push(`proto "lab" on shelf "${caseShelf(c)}": a リトマス・ラボ puzzle stands on the lab shelf`);
+  if (caseShelf(c) === 'kurare' && c.reviewStatus === 'draft-ai') warnings.push('shelf "kurare" with reviewStatus draft-ai: let the AI review run before it goes on the くられ先生監修 shelf');
   if (c.proto && c.publish) warnings.push(`proto "${c.proto}" with publish: true — keep publish: false, so the case stays out of the public list if the proto field is dropped`);
 
   // ── truth / core ──────────────────────────────────────────────

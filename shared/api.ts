@@ -39,6 +39,10 @@ export interface CaseSummary {
    * caller with that switch on. The UI marks it 「試作」 and keeps it out of online versus.
    */
   proto?: string;
+  /** The 事件ファイル shelf (shared/shelf.ts caseShelf: case-schema `shelf`, or the default from `proto`). */
+  shelf?: 'kurare' | 'original' | 'lab';
+  /** case-schema reviewStatus: the くられ先生監修 shelf says 監修中 until 'human-reviewed'. */
+  reviewStatus?: 'draft-ai' | 'ai-reviewed' | 'human-reviewed';
 }
 
 export interface PublicFact {

@@ -9,6 +9,7 @@ import type { CasePublic, CaseSummary, ExampleQuestion, PublicFact, Reconstructi
 import { shardWeights } from './state.js';
 import { hashString } from './lines.js';
 import { normalize } from './normalize.js';
+import { caseShelf } from '../../shared/shelf.js';
 
 export function publicFact(f: Fact): PublicFact {
   const out: PublicFact = { id: f.id, text: f.text, category: f.category, importance: f.importance };
@@ -44,6 +45,8 @@ export function toSummary(c: Case): CaseSummary {
     accent: c.assets.accent,
     // what the shards show before the solve (the solution sends the real portrait)
     portrait: c.victim.shardPortrait ?? c.victim.portrait,
+    shelf: caseShelf(c), // the 事件ファイル shelf (shared/shelf.ts)
+    reviewStatus: c.reviewStatus,
   };
   if (c.victim.silhouette && c.victim.silhouette !== 'bust') s.silhouette = c.victim.silhouette;
   if (c.contentWarning) s.contentWarning = c.contentWarning;

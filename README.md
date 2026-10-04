@@ -132,6 +132,7 @@ npx tsc --noEmit && npx vitest run && npm run validate && npx vite build && npm 
    検査内容: 形式、ヒント3つ、答えの要素、出典3件以上、公開してよい文に答えの語（`leakTerms`）が無いこと、想定質問との自己一致率95%以上 など（`docs/engine.md` §4）。
 3. `npm run dev` で遊んで確かめる。`publish: false` の間は本番の一覧に出ません。
    試作の事件は `"proto": "seeds"` を付けると、URL に `?proto=seeds` を付けたときだけ出ます（dev・本番・静的版・Cloudflare とも。2026-10-04 の「助けられた朝」c09 がこれ。`shared/proto.ts`、`docs/decisions.md`）。I-001 リトマス・ラボ（仮の名前。2026-10-04 に「ツクール」から改名）の見本3問（c10〜c12、絵なし）は `"proto": "lab"` で、`?proto=lab` のときだけ出ます（`docs/ideas/I-001-samples.html`。古い `?proto=tsukuru` もしばらくは同じ意味で通ります）。
+   事件ファイルの棚は `"shelf"`（`"kurare"` くられ先生監修・`"original"` オリジナル・`"lab"` リトマス・ラボ）で決めます。書かなければ `proto: "lab"` はラボ、ほかはオリジナルです（`shared/shelf.ts`、`docs/decisions.md` 2026-10-04「事件ファイルを棚に分けた」）。
 4. `npm test` と `npm run qa -- --case <id>` を通す。書き方の決まり（ホルマの口調・安全の配慮）は `content/VOICE.md`。
 
 科学解説は人の専門家が確認するまで `reviewStatus` を `ai-reviewed` のままにします（画面に「専門家確認前の下書き」と出ます）。

@@ -11,6 +11,7 @@
   "estimatedMinutes": 10,
   "publish": false,
   "proto": "lab",
+  "shelf": "lab",
   "reviewStatus": "draft-ai",
   "contentWarning": "リトマス・ラボの見本です。結末の一行から、AIが組み立てた「やさしい謎」。だれも傷つきません。",
   "intro": {

@@ -25,6 +25,8 @@ export interface CaseTagProps {
   restored?: RestoredIdentity;
   /** The case's first clear (difficulty and clear time), when it was recorded. */
   firstClear?: Pick<FirstClear, 'difficulty' | 'clearMs'>;
+  /** The くられ先生監修 shelf's stamp (src/scenes/Files/shelves.ts supervisionLabel): 監修中 / 監修済み. */
+  supervision?: string | null;
 }
 
 /**
@@ -50,7 +52,7 @@ const ACTION: Record<CaseStatus, { jp: string; en: string }> = {
 };
 
 /** Toe-tag case card for the 事件ファイル screen. */
-export function CaseTag({ summary: c, status, bestRank, bestPoints, onOpen, onSecondary, secondaryLabel, index = 0, onFocusCase, restored, firstClear }: CaseTagProps) {
+export function CaseTag({ summary: c, status, bestRank, bestPoints, onOpen, onSecondary, secondaryLabel, index = 0, onFocusCase, restored, firstClear, supervision }: CaseTagProps) {
   const num = String(c.number).padStart(2, '0');
   const { body, hook } = splitHook(c.summary);
   const identified = !!restored && (status === 'solved' || status === 'complete');
@@ -95,6 +97,11 @@ export function CaseTag({ summary: c, status, bestRank, bestPoints, onOpen, onSe
         {c.proto && (
           <p class="tag__proto" data-proto-case={c.proto}>
             {c.proto === 'lab' ? 'ラボの見本（やさしい謎・AIと作った）' : `試作 — ?proto=${c.proto} のときだけの事件`}
+          </p>
+        )}
+        {supervision && (
+          <p class="tag__supervision" data-supervision={supervision}>
+            くられ先生監修<span class="tag__supervision-state">{supervision}</span>
           </p>
         )}
         {PROTO_I005 && <HookLine text={c.hook} class="hookline--tag" />}

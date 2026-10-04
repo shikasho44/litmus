@@ -8,8 +8,14 @@ import { detectiveTotal } from '../../features/rank/points';
 import { caseStatus, saveData, shownCases } from '../../state/save';
 import { formatElapsed } from '../../state/hooks';
 import { Button, IconButton } from '../../ui/Button';
+import { audio } from '../../audio';
 import { CaseTag } from '../../ui/CaseTag';
 import { Icon } from '../../ui/Icon';
+import { PROTO_LAB } from '../../config/proto';
+import type { CaseSummary } from '../../../shared/api';
+import type { ShelfId } from '../../../shared/shelf';
+import { LabMakePanel } from './LabMakePanel';
+import { SHELF_META, TAB_LABEL, filesTabs, officialCases, readStoredTab, resolveTab, shelfCases, storeTab, supervisionLabel, tabShelves, type FilesTab } from './shelves';
 import './files.css';
 
 /**
@@ -57,6 +63,13 @@ export function FilesScene(_: SceneProps) {
   const roomBg = useImage(ART.roomZero);
   const [focus, setFocus] = useState<string | null>(null);
   const [tipOff, setTipOff] = useState(tipDismissed);
+  // the shelf tab (すべて · くられ先生監修 · オリジナル · リトマス・ラボ), remembered for this tab (sessionStorage)
+  const [tab, setTabState] = useState<FilesTab>(() => resolveTab(readStoredTab(), PROTO_LAB));
+  const setTab = (t: FilesTab) => {
+    setTabState(t);
+    storeTab(t);
+  };
+  const tabs = filesTabs(PROTO_LAB);
   // case backgrounds are mounted lazily: once hovered/focused, kept for the cross-fade
   const [touched] = useState(() => new Set<string>());
   if (focus) touched.add(focus);
@@ -68,14 +81,18 @@ export function FilesScene(_: SceneProps) {
     void loadCases();
   }, []);
 
-  const solvedCount = list ? list.filter((c) => ['solved', 'complete'].includes(caseStatus(save.cases[c.id]))).length : 0;
-  const completeCount = list ? list.filter((c) => caseStatus(save.cases[c.id]) === 'complete').length : 0;
+  // the counters count the OFFICIAL cases only (shared/shelf.ts isOfficialCase: no prototype, not the
+  // lab) — x/8 with or without a ?proto switch; a prototype case is counted on its own shelf heading
+  const official = list ? officialCases(list) : [];
+  const isSolved = (c: CaseSummary) => ['solved', 'complete'].includes(caseStatus(save.cases[c.id]));
+  const solvedCount = official.filter(isSolved).length;
+  const completeCount = official.filter((c) => caseStatus(save.cases[c.id]) === 'complete').length;
   // a prototype case without its switch (?proto) is not counted (shownCases)
   const anyStarted = Object.values(shownCases(save.cases)).some((c) => c.stage !== 'new');
   const focused = list?.find((c) => c.id === focus);
   const degree = detectiveTotal(shownCases(save.cases));
   // 初見タイム合計: the first-clear times of every case that has one (owner: how fast can you do them all on first sight)
-  const firsts = list ? list.map((c) => save.cases[c.id]?.firstClear).filter((f) => !!f) : [];
+  const firsts = official.map((c) => save.cases[c.id]?.firstClear).filter((f) => !!f);
   const firstTotal = firsts.reduce((sum, f) => sum + f.clearMs, 0);
 
   return (
@@ -115,14 +132,14 @@ export function FilesScene(_: SceneProps) {
                     <dt>SOLVED</dt>
                     <dd>
                       {solvedCount}
-                      <small>/{list.length}</small>
+                      <small>/{official.length}</small>
                     </dd>
                   </div>
                   <div>
                     <dt>COMPLETE</dt>
                     <dd>
                       {completeCount}
-                      <small>/{list.length}</small>
+                      <small>/{official.length}</small>
                     </dd>
                   </div>
                   {firsts.length > 0 && (
@@ -138,31 +155,6 @@ export function FilesScene(_: SceneProps) {
               )}
             </div>
           </header>
-
-          {!anyStarted && !tipOff && state !== 'error' && (
-            <aside class="files__tip" aria-label="はじめての方へ">
-              <Icon name="info" size={16} />
-              <p>
-                はじめてなら <strong>CASE 01</strong> から。質問のコツは
-              </p>
-              <button type="button" class="files__tip-link" onClick={() => openOverlay('howto')}>
-                <Icon name="help" size={16} />
-                遊び方
-              </button>
-              <IconButton
-                icon="close"
-                label="このヒントを閉じる"
-                size="sm"
-                variant="plain"
-                sfx="close"
-                class="files__tip-close"
-                onClick={() => {
-                  tipDismissed = true;
-                  setTipOff(true);
-                }}
-              />
-            </aside>
-          )}
 
           {state === 'error' && (
             <div class="files__error" role="alert">
@@ -180,28 +172,128 @@ export function FilesScene(_: SceneProps) {
             </div>
           )}
 
-          <div class="files__grid" aria-busy={state === 'loading'}>
-            {!list && state !== 'error' && [0, 1, 2].map((i) => <SkeletonTag key={i} i={i} />)}
-            {list?.map((c, i) => {
-              const p = save.cases[c.id];
-              const status = caseStatus(p);
-              return (
-                <CaseTag
-                  key={c.id}
-                  summary={c}
-                  index={i}
-                  status={status}
-                  bestRank={p?.bestRank}
-                  bestPoints={p?.bestRank ? p.bestPoints : undefined}
-                  onOpen={() => openCase(c.id)}
-                  onFocusCase={() => setFocus(c.id)}
-                  onSecondary={p?.lastResult ? () => goto('result', { caseId: c.id }) : undefined}
-                  secondaryLabel="記録"
-                  restored={p?.restored}
-                  firstClear={p?.firstClear}
+          <div class="files__bar">
+            {!anyStarted && !tipOff && state !== 'error' && (
+              <aside class="files__tip" aria-label="はじめての方へ">
+                <Icon name="info" size={16} />
+                <p>
+                  はじめてなら <strong>CASE 01</strong> から。質問のコツは
+                </p>
+                <button type="button" class="files__tip-link" onClick={() => openOverlay('howto')}>
+                  <Icon name="help" size={16} />
+                  遊び方
+                </button>
+                <IconButton
+                  icon="close"
+                  label="このヒントを閉じる"
+                  size="sm"
+                  variant="plain"
+                  sfx="close"
+                  class="files__tip-close"
+                  onClick={() => {
+                    tipDismissed = true;
+                    setTipOff(true);
+                  }}
                 />
-              );
-            })}
+              </aside>
+            )}
+
+            {list && (
+              <div class="files__tabs" role="tablist" aria-label="事件の棚">
+                {tabs.map((t) => {
+                  const n = t === 'all' ? list.length : shelfCases(list, t).length;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      role="tab"
+                      id={`files-tab-${t}`}
+                      class={`files__tab files__tab--${t} ${tab === t ? 'is-on' : ''}`}
+                      aria-selected={tab === t}
+                      aria-controls="files-shelves"
+                      tabIndex={tab === t ? 0 : -1}
+                      data-files-tab={t}
+                      onClick={() => {
+                        if (t !== tab) audio.sfx('toggle');
+                        setTab(t);
+                      }}
+                      onKeyDown={(e) => {
+                        const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+                        if (!d) return;
+                        e.preventDefault();
+                        const next = tabs[(tabs.indexOf(t) + d + tabs.length) % tabs.length];
+                        setTab(next);
+                        document.getElementById(`files-tab-${next}`)?.focus();
+                      }}
+                    >
+                      <span class="files__tab-jp">{TAB_LABEL[t]}</span>
+                      <span class="files__tab-n" aria-label={`${n}件`}>
+                        {n}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div class="files__shelves" id="files-shelves" role={list ? 'tabpanel' : undefined} aria-labelledby={list ? `files-tab-${tab}` : undefined} aria-busy={state === 'loading'}>
+            {!list && state !== 'error' && (
+              <div class="files__grid">
+                {[0, 1, 2].map((i) => (
+                  <SkeletonTag key={i} i={i} />
+                ))}
+              </div>
+            )}
+            {list &&
+              (() => {
+                let index = 0;
+                return tabShelves(tab).map((shelf: ShelfId) => {
+                  const cases = shelfCases(list, shelf);
+                  if (cases.length === 0 && !(shelf === 'lab' && tab === 'lab')) return null;
+                  const meta = SHELF_META[shelf];
+                  const solved = cases.filter(isSolved).length;
+                  return (
+                    <section key={shelf} class={`files__shelf files__shelf--${shelf}`} data-shelf={shelf} aria-labelledby={`shelf-${shelf}-title`}>
+                      <header class="files__shelf-head">
+                        <h2 class="files__shelf-title" id={`shelf-${shelf}-title`}>
+                          <span class="files__shelf-jp">{meta.jp}</span>
+                          <span class="files__shelf-en">{meta.en}</span>
+                          {cases.some((c) => supervisionLabel(c) === '監修中') && <span class="files__shelf-state">監修中</span>}
+                        </h2>
+                        <p class="files__shelf-count t-mono" aria-label={`解決 ${solved}／${cases.length}件`}>
+                          {solved}/{cases.length}
+                        </p>
+                        <p class="files__shelf-note">{meta.note}</p>
+                      </header>
+                      <div class="files__grid">
+                        {cases.map((c) => {
+                          const p = save.cases[c.id];
+                          const status = caseStatus(p);
+                          return (
+                            <CaseTag
+                              key={c.id}
+                              summary={c}
+                              index={index++}
+                              status={status}
+                              bestRank={p?.bestRank}
+                              bestPoints={p?.bestRank ? p.bestPoints : undefined}
+                              onOpen={() => openCase(c.id)}
+                              onFocusCase={() => setFocus(c.id)}
+                              onSecondary={p?.lastResult ? () => goto('result', { caseId: c.id }) : undefined}
+                              secondaryLabel="記録"
+                              restored={p?.restored}
+                              firstClear={p?.firstClear}
+                              supervision={supervisionLabel(c)}
+                            />
+                          );
+                        })}
+                      </div>
+                      {shelf === 'lab' && tab === 'lab' && <LabMakePanel />}
+                    </section>
+                  );
+                });
+              })()}
           </div>
 
           <p class="files__foot t-mono">ALL CASES ARE FICTIONAL — 登場する事件・人物はすべて架空です</p>

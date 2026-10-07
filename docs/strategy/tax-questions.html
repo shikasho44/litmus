@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>税理士に聞くこと｜リトマス審問 収益化</title>
+<style>
+  :root {
+    --ink: #0B0D12; --ink-2: #141821; --ink-3: #1E2430;
+    --bone: #F2EFE6; --bone-2: #D8D3C4; --bone-3: #A7A08F;
+    --line: rgba(242, 239, 230, 0.14); --line-2: rgba(242, 239, 230, 0.26);
+    --formalin: #C6FF3D; --formalin-deep: #6E9A0C;
+    --alarm: #FF2E63; --cyan: #3DE0FF; --amber: #FFB020; --violet: #9B6BFF; --mute: #8A93A6;
+    --sans: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body { margin: 0; background: var(--ink); color: var(--bone-2); font-family: var(--sans); font-size: 16px; line-height: 1.85; letter-spacing: .02em; }
+  a { color: var(--cyan); text-underline-offset: 3px; }
+  strong { color: var(--bone); }
+  code { font-family: var(--mono); font-size: .86em; background: var(--ink-3); border: 1px solid var(--line); padding: .05em .4em; border-radius: 3px; color: var(--bone); word-break: break-word; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header.hero { border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(198,255,61,.06), transparent 70%); }
+  header.hero .wrap { padding-top: 36px; padding-bottom: 28px; }
+  .back { font-size: 13px; }
+  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: .24em; color: var(--formalin); text-transform: uppercase; margin-top: 12px; }
+  h1 { color: var(--bone); font-size: clamp(26px, 5vw, 40px); line-height: 1.3; margin: 8px 0 10px; }
+  .lead { max-width: 780px; font-size: 17px; margin: 0; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .badge { font-family: var(--mono); font-size: 12px; padding: 3px 10px; border: 1px solid var(--line-2); background: var(--ink-2); color: var(--bone-2); }
+  .badge.ok { border-color: var(--formalin-deep); color: var(--formalin); }
+  .badge.warn { border-color: rgba(255,176,32,.5); color: var(--amber); }
+  .badge.no { border-color: rgba(255,46,99,.5); color: var(--alarm); }
+  section { padding: 36px 0 4px; }
+  h2 { color: var(--bone); font-size: clamp(21px, 3.4vw, 26px); line-height: 1.4; margin: 0 0 8px; }
+  h2 .en { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .28em; color: var(--formalin); font-weight: 400; margin-bottom: 4px; }
+  h3 { color: var(--bone); font-size: 17px; margin: 24px 0 8px; padding-left: 10px; border-left: 4px solid var(--formalin); line-height: 1.5; }
+  p { margin: 8px 0; }
+  ul, ol { padding-left: 1.3em; margin: 8px 0; }
+  li + li { margin-top: 4px; }
+  .note { font-size: 14px; color: var(--bone-3); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
+  .card { background: var(--ink-2); border: 1px solid var(--line); padding: 16px 18px; }
+  .card h4 { margin: 0 0 6px; color: var(--bone); font-size: 16px; }
+  .card .tag { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; color: var(--formalin); }
+  .callout { border: 1px solid var(--line-2); border-left: 4px solid var(--cyan); background: var(--ink-2); padding: 12px 16px; margin: 14px 0; }
+  .callout.kurare { border-left-color: var(--violet); }
+  .callout.kurare::before { content: 'くられ先生のツボ'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--violet); margin-bottom: 4px; }
+  .callout.warn { border-left-color: var(--amber); }
+  .callout.warn::before { content: '気をつけること'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--amber); margin-bottom: 4px; }
+  .callout.next { border-left-color: var(--formalin); }
+  .callout.next::before { content: '次の一歩'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--formalin); margin-bottom: 4px; }
+  .table-wrap { overflow-x: auto; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 560px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--bone); background: var(--ink-3); font-weight: 700; white-space: nowrap; }
+  details { background: var(--ink-2); border: 1px solid var(--line); padding: 10px 14px; margin: 10px 0; }
+  details summary { cursor: pointer; color: var(--bone); }
+  footer { border-top: 1px solid var(--line); margin-top: 48px; padding: 18px 0 40px; font-size: 13px; color: var(--mute); }
+  @media (max-width: 520px) { body { font-size: 15px; } .lead { font-size: 16px; } }
+  .pri { font-family: var(--mono); font-size: 11px; padding: 1px 6px; border: 1px solid var(--line-2); white-space: nowrap; }
+  .pri.a { color: var(--alarm); border-color: rgba(255,46,99,.5); }
+  .pri.b { color: var(--amber); border-color: rgba(255,176,32,.5); }
+  .pri.c { color: var(--mute); }
+  td.q { color: var(--bone); }
+  .check li { list-style: none; margin-left: -1.2em; }
+  .check li::before { content: '□ '; color: var(--formalin); }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <a class="back" href="index.html">← 収益化と調べものの台帳へ</a>
+    <div class="kicker">PREPARATION · P-001</div>
+    <h1>税理士に聞くこと</h1>
+    <p class="lead">リトマス審問でお金を受け取り始める前に、税理士に確かめることの一覧です。一般社団法人フォースプレイスとして売る前提で、収益化の提案（S-001）の判断に効く順に並べました。1回の相談（1時間ほど）で A をすべて、時間があれば B まで聞く想定です。</p>
+    <div class="badges"><span class="badge">作成：2026-10-07</span><span class="badge warn">状態：相談の予約待ち</span><span class="badge">質問：18</span></div>
+  </div>
+</header>
+<main class="wrap">
+
+<section><h2><span class="en">FIRST</span>いちばん大事な1問</h2>
+  <div class="callout next"><strong>「フォースプレイスは非営利型の一般社団法人か」</strong>。答えによって、法人税がゲームの売上にかかるかどうか、どう記帳するかが変わります。予約のときに、この1問を先に伝えておくと、当日の話が早く進みます。</div>
+  <p class="note">急ぎの目安：<span class="pri a">A 今すぐ</span>＝相談で必ず聞く。<span class="pri b">B 有料の前</span>＝お金を受け取る1か月前までに。<span class="pri c">C あとで</span>＝その計画が動いたら。</p>
+</section>
+
+<section><h2><span class="en">BRING</span>相談に持っていくもの</h2>
+  <ul class="check">
+    <li>定款と登記事項証明書（非営利型かどうかの確認）</li>
+    <li>直近2期の決算書と、事業年度（何月決算か）</li>
+    <li>インボイスの登録番号（登録していれば）</li>
+    <li>いまの本業の売上の内訳（研修・講師など）</li>
+    <li>収益化の提案 S-001 の「3. 収入の柱」と「4. 試算」を印刷したもの（月の売上の見込み）</li>
+    <li>くられ先生・絵描きさんへの支払いの予定（金額・時期・個人か会社か）</li>
+    <li>毎月の海外の請求（Cloudflare 月5ドル、OpenRouter）</li>
+  </ul>
+</section>
+
+<section><h2><span class="en">ENTITY</span>1. 法人と消費税（いちばん先に）</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>#</th><th>急ぎ</th><th>聞くこと</th><th>なぜ聞くか・いまの理解</th><th>効く判断</th></tr></thead><tbody>
+<tr><td>1</td><td><span class="pri a">A 今すぐ</span></td><td class="q">フォースプレイスは<strong>「非営利型」の一般社団法人</strong>ですか。それとも普通の（全所得課税の）一般社団法人ですか。</td><td>非営利型なら、法人税は「収益事業」の所得だけにかかります［1］。普通型なら、全部の所得に法人税がかかります。ここで以下の答えがすべて変わります。定款と登記で確かめてもらいます。</td><td>全部</td></tr>
+<tr><td>2</td><td><span class="pri a">A 今すぐ</span></td><td class="q">非営利型の場合、次の売上は<strong>収益事業（34業種）</strong>に当たりますか。<br>① 事件パックのダウンロード販売 ② 出前授業・体験授業 ③ 授業用ライセンス ④ 自治体・科学館のイベント ⑤ 広告収入 ⑥ 支援者プラン（月額）</td><td>34業種には物品販売業・請負業・出版業・技芸教授業などがあります［2］。デジタルの販売や授業がどれに当たるかは判断が分かれそうなので、1件ずつ聞きます。</td><td>②④ 学校・自治体</td></tr>
+<tr><td>3</td><td><span class="pri a">A 今すぐ</span></td><td class="q"><strong>インボイス（適格請求書発行事業者）の登録</strong>はしていますか。していない場合、登録した方がよいですか。</td><td>学校・塾・企業・自治体との取引では、インボイスを求められることがあります。登録すると、売上が小さくても消費税の申告と納税が必要になります。</td><td>4 学校・自治体</td></tr>
+<tr><td>4</td><td><span class="pri a">A 今すぐ</span></td><td class="q">いま<strong>消費税の免税事業者</strong>ですか（2期前の課税売上が1,000万円以下か）。登録する場合、<strong>簡易課税</strong>と本則のどちらがよいですか。</td><td>法人の「2割特例」は、2026-09-30 を含む課税期間で終わりました［3］。これから登録するなら、2割特例は使えない前提で、簡易課税（みなし仕入率）との比較を聞きます。</td><td>1・2 有料の線と時期</td></tr>
+<tr><td>5</td><td><span class="pri a">A 今すぐ</span></td><td class="q">いまの本業（研修・講師など）とゲームの売上を、<strong>会計上どう分けて</strong>おけばよいですか（区分経理）。</td><td>非営利型なら、収益事業とそれ以外を分けて記帳する必要があります。始める前に科目や口座の分け方を決めておくと、あとが楽です。</td><td>全部</td></tr>
+</tbody></table></div>
+</section>
+
+<section><h2><span class="en">SALES</span>2. 売上の扱い</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>#</th><th>急ぎ</th><th>聞くこと</th><th>なぜ聞くか・いまの理解</th><th>効く判断</th></tr></thead><tbody>
+<tr><td>6</td><td><span class="pri b">B 有料の前</span></td><td class="q">事件パックの売上は、<strong>いつ売上にする</strong>のですか（購入時か）。返金したときの処理は。</td><td>買い切りで、購入コードで開く形を予定しています（S-001 ③）。返金や子どもの課金の取り消しもあり得ます。</td><td>2 最初の有料</td></tr>
+<tr><td>7</td><td><span class="pri b">B 有料の前</span></td><td class="q"><strong>Stripe の手数料（3.6%）</strong>は、売上から引いた額で計上してよいですか。それとも売上と手数料を両方立てますか。</td><td>決済は Stripe を法人で申し込む予定です（S-001 7章）。</td><td>2 最初の有料</td></tr>
+<tr><td>8</td><td><span class="pri b">B 有料の前</span></td><td class="q"><strong>Google AdSense などの広告収入</strong>の消費税の扱いは「不課税」でよいですか。</td><td>2015年10月以降、不課税として扱われているという解説があります［4］。広告は補助の収入（S-001 ①②）なので、最初に一度確かめるだけで十分です。</td><td>3 広告</td></tr>
+<tr><td>9</td><td><span class="pri b">B 有料の前</span></td><td class="q"><strong>海外の請求書（OpenRouter・Cloudflare・Stripe）</strong>の消費税は、どう処理しますか（リバースチャージや仕入税額控除）。</td><td>AI の判定（OpenRouter）とサーバー（Cloudflare）はどちらも海外の事業者です。毎月の経費なので、処理の決まりを先に聞きます。</td><td>全部</td></tr>
+<tr><td>10</td><td><span class="pri b">B 有料の前</span></td><td class="q"><strong>海外の人が日本から事件パックを買った場合</strong>、または海外から買われた場合の消費税は。</td><td>今は日本語だけですが、配信で海外の人が見ることもあります。いまは「あとで」でよい質問です。</td><td>—</td></tr>
+</tbody></table></div>
+</section>
+
+<section><h2><span class="en">PAYMENTS</span>3. 支払いの扱い（先生・絵描きさん）</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>#</th><th>急ぎ</th><th>聞くこと</th><th>なぜ聞くか・いまの理解</th><th>効く判断</th></tr></thead><tbody>
+<tr><td>11</td><td><span class="pri a">A 今すぐ</span></td><td class="q"><strong>くられ先生への10万円</strong>（監修と10問の制作）は、源泉徴収が要りますか。先生が個人で受け取るか、会社で受け取るかで変わりますか。</td><td>個人への原稿料・監修料などは源泉徴収（10.21%）が要ります［5］。支払いの時期が近いので、急ぎの質問です。</td><td>5 くられ先生</td></tr>
+<tr><td>12</td><td><span class="pri b">B 有料の前</span></td><td class="q"><strong>先生への売上の30%のお分け</strong>は、税務上なにになりますか（原稿料の追加か、著作物の使用料か）。源泉徴収は要りますか。</td><td>先生のパックの売上（決済手数料を引いた額）の30%を、売り始める1か月前に提案する予定です（S-001 5章）。覚書の書き方にも関わります。</td><td>5 くられ先生</td></tr>
+<tr><td>13</td><td><span class="pri a">A 今すぐ</span></td><td class="q"><strong>手描きのイラスト（約20万円）</strong>の支払いは、源泉徴収が要りますか。絵描きさんがインボイス未登録の場合、消費税の控除はどうなりますか。</td><td>デザインやイラストの報酬も源泉徴収の対象になることがあります［5］。未登録の相手への支払いの控除は、2026-10-01 から 70% です［3］。</td><td>初期費用</td></tr>
+<tr><td>14</td><td><span class="pri b">B 有料の前</span></td><td class="q"><strong>初期費用（監修10万円＋絵20万円＝約30万円）</strong>は、その年の経費にできますか。それとも資産として何年かに分けますか。</td><td>事件の原稿や絵は何年も使う「作品」です。どう計上するかで、その年の利益が変わります。</td><td>初期費用の回収</td></tr>
+<tr><td>15</td><td><span class="pri c">C あとで</span></td><td class="q">もし将来、<strong>ツクールで一般の人が作った事件</strong>に謝礼を払う場合、源泉徴収や支払調書は要りますか。</td><td>今は計画だけです（一般の人の問題は死を扱わない、採用はこちらが決める）。</td><td>—</td></tr>
+</tbody></table></div>
+</section>
+
+<section><h2><span class="en">SUPPORT</span>4. 支援・クラウドファンディング・月額</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>#</th><th>急ぎ</th><th>聞くこと</th><th>なぜ聞くか・いまの理解</th><th>効く判断</th></tr></thead><tbody>
+<tr><td>16</td><td><span class="pri b">B 有料の前</span></td><td class="q"><strong>支援（寄付）</strong>を受け付けた場合、収益になりますか。お礼の特典をつけると扱いが変わりますか。</td><td>ココフォリアは寄付から始めて、支援者の特典をのちに有料プランにしました（R-003）。同じ順番を試すときに要ります。</td><td>R-003 支援者プラン</td></tr>
+<tr><td>17</td><td><span class="pri b">B 有料の前</span></td><td class="q"><strong>クラウドファンディング</strong>（お返しつき）の入金は、いつの売上ですか（入金時か、お返しを送ったときか）。</td><td>S-001 ⑨。目標50万円、CAMPFIRE の手数料17%の試算があります。決算をまたぐと、税金の時期が変わります。</td><td>⑨ クラファン</td></tr>
+<tr><td>18</td><td><span class="pri c">C あとで</span></td><td class="q"><strong>月額の支援者プラン</strong>を始めた場合、年払いを受けたときの前受けの扱いは。</td><td>月額は「数字を見てから」の段階です。今は聞かなくてもよい質問です。</td><td>⑤ 月額</td></tr>
+</tbody></table></div>
+</section>
+
+<section><h2><span class="en">AFTER</span>相談のあとに決まること</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>答え</th><th>決まること</th></tr></thead>
+    <tbody>
+      <tr><td>非営利型か・収益事業か（1・2）</td><td>ゲームの売上に法人税がかかるか。学校の仕事を先にするか、事件パックを先にするか（S-001 判断 2・4）。</td></tr>
+      <tr><td>インボイス・消費税（3・4）</td><td>値段を税込でいくらにするか。試算に消費税（売上の約9%）を入れるか。学校向けの見積書の書き方。</td></tr>
+      <tr><td>源泉徴収（11・12・13）</td><td>先生・絵描きさんへの支払いの手順と、覚書の書き方（S-001 判断 5）。</td></tr>
+      <tr><td>寄付・クラファン（16・17）</td><td>「支援者プラン」や「クラファン」を試すかどうか（R-003・S-001 ⑨）。</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout warn">ここに書いた「いまの理解」は、調べた範囲の一般論です。フォースプレイスでの正しい扱いは、税理士の答えを正とします。答えが出たら、持ち主の判断として docs/dev-history.md に追記します。</div>
+</section>
+
+<section><h2><span class="en">SOURCES</span>出典</h2>
+  <ol>
+    <li><a href="https://www.nta.go.jp/publication/pamph/hojin/koekihojin/pdf/01.pdf">国税庁「一般社団法人・一般財団法人と法人税」</a></li>
+    <li><a href="https://biz.moneyforward.com/establish/basic/83524/">マネーフォワード「非営利型一般社団法人の収益事業」（2025-12-11）</a></li>
+    <li><a href="https://biz.moneyforward.com/invoice/basic/55388">マネーフォワード「インボイスの経過措置（令和8年度改正）」（2026-05-29 更新）</a></li>
+    <li><a href="https://tax.mykomon.com/daily_contents_29301.html">MyKomon「Google AdSense の収入と消費税」</a></li>
+    <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/gensen/2795.htm">国税庁 タックスアンサー No.2795「原稿料や講演料などを支払ったとき」</a></li>
+  </ol>
+  <p class="note">1・3・5 は S-001 の出典と同じです。</p>
+</section>
+</main>
+<footer><div class="wrap">更新：2026-10-07 ／ リトマス審問（内部資料・公開しない）</div></footer>
+</body>
+</html>

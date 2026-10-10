@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>構想：ゲーム制作事業と不登校支援｜リトマス審問 収益化</title>
+<style>
+  :root {
+    --ink: #0B0D12; --ink-2: #141821; --ink-3: #1E2430;
+    --bone: #F2EFE6; --bone-2: #D8D3C4; --bone-3: #A7A08F;
+    --line: rgba(242, 239, 230, 0.14); --line-2: rgba(242, 239, 230, 0.26);
+    --formalin: #C6FF3D; --formalin-deep: #6E9A0C;
+    --alarm: #FF2E63; --cyan: #3DE0FF; --amber: #FFB020; --violet: #9B6BFF; --mute: #8A93A6;
+    --sans: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body { margin: 0; background: var(--ink); color: var(--bone-2); font-family: var(--sans); font-size: 16px; line-height: 1.85; letter-spacing: .02em; }
+  a { color: var(--cyan); text-underline-offset: 3px; }
+  strong { color: var(--bone); }
+  code { font-family: var(--mono); font-size: .86em; background: var(--ink-3); border: 1px solid var(--line); padding: .05em .4em; border-radius: 3px; color: var(--bone); word-break: break-word; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header.hero { border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(198,255,61,.06), transparent 70%); }
+  header.hero .wrap { padding-top: 36px; padding-bottom: 28px; }
+  .back { font-size: 13px; }
+  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: .24em; color: var(--formalin); text-transform: uppercase; margin-top: 12px; }
+  h1 { color: var(--bone); font-size: clamp(26px, 5vw, 40px); line-height: 1.3; margin: 8px 0 10px; }
+  .lead { max-width: 780px; font-size: 17px; margin: 0; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .badge { font-family: var(--mono); font-size: 12px; padding: 3px 10px; border: 1px solid var(--line-2); background: var(--ink-2); color: var(--bone-2); }
+  .badge.ok { border-color: var(--formalin-deep); color: var(--formalin); }
+  .badge.warn { border-color: rgba(255,176,32,.5); color: var(--amber); }
+  .badge.no { border-color: rgba(255,46,99,.5); color: var(--alarm); }
+  section { padding: 36px 0 4px; }
+  h2 { color: var(--bone); font-size: clamp(21px, 3.4vw, 26px); line-height: 1.4; margin: 0 0 8px; }
+  h2 .en { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .28em; color: var(--formalin); font-weight: 400; margin-bottom: 4px; }
+  h3 { color: var(--bone); font-size: 17px; margin: 24px 0 8px; padding-left: 10px; border-left: 4px solid var(--formalin); line-height: 1.5; }
+  p { margin: 8px 0; }
+  ul, ol { padding-left: 1.3em; margin: 8px 0; }
+  li + li { margin-top: 4px; }
+  .note { font-size: 14px; color: var(--bone-3); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
+  .card { background: var(--ink-2); border: 1px solid var(--line); padding: 16px 18px; }
+  .card h4 { margin: 0 0 6px; color: var(--bone); font-size: 16px; }
+  .card .tag { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; color: var(--formalin); }
+  .callout { border: 1px solid var(--line-2); border-left: 4px solid var(--cyan); background: var(--ink-2); padding: 12px 16px; margin: 14px 0; }
+  .callout.kurare { border-left-color: var(--violet); }
+  .callout.kurare::before { content: 'くられ先生のツボ'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--violet); margin-bottom: 4px; }
+  .callout.warn { border-left-color: var(--amber); }
+  .callout.warn::before { content: '気をつけること'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--amber); margin-bottom: 4px; }
+  .callout.next { border-left-color: var(--formalin); }
+  .callout.next::before { content: '次の一歩'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--formalin); margin-bottom: 4px; }
+  .table-wrap { overflow-x: auto; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 560px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--bone); background: var(--ink-3); font-weight: 700; white-space: nowrap; }
+  details { background: var(--ink-2); border: 1px solid var(--line); padding: 10px 14px; margin: 10px 0; }
+  details summary { cursor: pointer; color: var(--bone); }
+  footer { border-top: 1px solid var(--line); margin-top: 48px; padding: 18px 0 40px; font-size: 13px; color: var(--mute); }
+  @media (max-width: 520px) { body { font-size: 15px; } .lead { font-size: 16px; } }
+  .ladder { display: grid; gap: 10px; margin-top: 14px; }
+  .step { display: grid; grid-template-columns: 56px 1fr; gap: 12px; background: var(--ink-2); border: 1px solid var(--line); padding: 14px 16px; }
+  .step .n { font-family: var(--mono); font-size: 26px; color: var(--formalin); line-height: 1; }
+  .step h4 { margin: 0 0 4px; color: var(--bone); font-size: 16px; }
+  .step.later { opacity: .8; border-style: dashed; }
+  .tree { background: var(--ink-2); border: 1px solid var(--line); padding: 16px 18px; font-size: 15px; }
+  .tree .root { color: var(--bone); font-weight: 700; }
+  .tree ul { margin: 6px 0 0; }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <a class="back" href="index.html">← 収益化と調べものの台帳へ</a>
+    <div class="kicker">VISION · V-001</div>
+    <h1>構想：ゲームで得たお金を、活動と不登校支援へ</h1>
+    <p class="lead">ヨンサンさんが 2026-10-10 に話した構想の記録です。リトマス審問の収益化は、この大きな流れの最初の一つです。ここに書いたことは「目指す形」で、まだ決まった計画ではありません。</p>
+    <div class="badges"><span class="badge">記録：2026-10-10</span><span class="badge warn">状態：構想（数字はこれから）</span></div>
+  </div>
+</header>
+<main class="wrap">
+
+<section><h2><span class="en">VISION</span>目指す形</h2>
+  <ul>
+    <li><strong>ゲーム制作事業で得たお金は、すべて活動費に充てる。</strong></li>
+    <li>最終的には、その収益を<strong>不登校支援事業</strong>に回していく。いろいろな地域に行くこと、各地域で活動している人たちを支えることも含めて。</li>
+    <li>そのための入口として、<strong>販売戦略のメインサイト</strong>（ヨンサンさん用）を作り、そこからゲームごとの販売戦略に分ける。</li>
+  </ul>
+  <div class="tree">
+    <div class="root">販売戦略のメインサイト（ゲーム制作事業の全体）</div>
+    <ul>
+      <li>リトマス審問の販売戦略 ← <strong>いまここ</strong>（S-001）</li>
+      <li>気候迷宮のリセットの販売戦略</li>
+      <li>事業特区育成ゲームの販売戦略</li>
+    </ul>
+  </div>
+</section>
+
+<section><h2><span class="en">STEPS</span>お金の回り方の段階</h2>
+  <p>いきなり支援には回せないので、下から順に満たしていく形で考えます。</p>
+  <div class="ladder">
+    <div class="step"><div class="n">1</div><div><h4>各ゲームが、自分の運営費をまかなう</h4><p>AI・サーバー・監修・絵などの費用を、そのゲームの売上で払える状態。リトマス審問ではここがまず目標です。</p></div></div>
+    <div class="step"><div class="n">2</div><div><h4>余りを、ヨンサンさんの活動費に回す</h4><p>例：ゲームの運営費をまかなうための講演会や、地域に行く交通費。講演をゲームの活動として開けば、その費用をゲームの収益から出せます。</p></div></div>
+    <div class="step later"><div class="n">3</div><div><h4>地域で活動する人たちの支援に回す（将来）</h4><p>ある程度の収益が安定して出るようになってから。どれくらいの額があれば無理なく続けられるかは、これから考える課題です。</p></div></div>
+  </div>
+  <div class="callout warn">ヨンサンさん自身の見立て：「現実的なところを考えないと、運営が立ち行かなくなる」。段階3は、段階1・2が数字で回ってから決めます。</div>
+</section>
+
+<section><h2><span class="en">ACCOUNTING</span>本業とゲームの売上を、会計でどう分けるか</h2>
+  <p>フォースプレイスは普通型（非営利型ではない）なので、法人税は本業もゲームも<strong>まとめて全部の所得</strong>にかかります。税金のために分ける決まりはありません。ただ、上の構想（ゲームのお金は活動費へ、いずれ支援へ）を数字で確かめるために、<strong>中身を分けて見られる形</strong>にしておくのをおすすめします。</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>やること</th><th>中身</th><th>いつ</th></tr></thead>
+    <tbody>
+      <tr><td><strong>① 部門を分ける</strong></td><td>会計ソフトの「部門」（またはタグ）を作る。例：<code>研修・講師</code>／<code>ゲーム：リトマス審問</code>／<code>ゲーム：気候迷宮</code>／<code>ゲーム：事業特区</code>／<code>不登校支援</code>。売上も経費も、どの部門かを付けて入れる。</td><td>最初の売上の前</td></tr>
+      <tr><td><strong>② 入金口座を分ける</strong></td><td>Stripe などの振込先を、ゲーム用の口座にする。口座の残高が、そのままゲーム事業の手元の目安になる。</td><td>決済の申し込み時</td></tr>
+      <tr><td><strong>③ 共通の費用の分け方を決める</strong></td><td>パソコン・AI の月額・通信費など、本業とゲームの両方で使うもの。「作業時間の割合」などの決まりを一つ決めて、毎月同じ割合で分ける。</td><td>①と同時</td></tr>
+      <tr><td><strong>④ ゲームのお金を活動費に回すとき</strong></td><td>同じ法人の中なので、お金のやりとり（取引）は要りません。講演会や地域訪問の費用に<code>ゲーム</code>の部門を付ければ、「ゲームの収益で活動した」と帳簿で示せます。</td><td>使うたび</td></tr>
+      <tr><td><strong>⑤ 年に一度、部門ごとの損益を見る</strong></td><td>ゲームごとに「売上 − 運営費 = 余り」を出し、上の段階のどこまで来たかを確かめる。</td><td>決算のとき</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout next">段階3（ほかの団体や地域の人への支援）は、お金が法人の外へ出ます。寄付として出すか、仕事の委託として払うかで、税の扱い（寄付金の損金の限度など）が変わります。これは段階3が近づいたときに、税理士に聞くことに足します。</div>
+</section>
+
+<section><h2><span class="en">FACTS</span>法人と消費税の前提（2026-10-10 に確認）</h2>
+  <ul>
+    <li>一般社団法人フォースプレイスは<strong>非営利型ではない</strong>（普通型）。ゲームの売上も、ふつうに法人税の対象。</li>
+    <li><strong>インボイスは未登録</strong>。</li>
+    <li><strong>消費税は免税事業者</strong>。簡易課税を選んでいる（届出済み、と理解しています）。</li>
+  </ul>
+  <p class="note">免税事業者のあいだは、簡易課税は使われません。インボイスに登録したときや、課税売上が1,000万円を超えて課税事業者になったときに、簡易課税で計算することになります。届出が出ているかは、次に税理士と話すときに一度だけ確かめれば十分です。</p>
+</section>
+
+</main>
+<footer><div class="wrap">更新：2026-10-10 ／ リトマス審問（内部資料・公開しない）</div></footer>
+</body>
+</html>

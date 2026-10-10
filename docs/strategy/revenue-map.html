@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>収益構造の図解｜リトマス審問 収益化</title>
+<style>
+  :root {
+    --ink: #0B0D12; --ink-2: #141821; --ink-3: #1E2430;
+    --bone: #F2EFE6; --bone-2: #D8D3C4; --bone-3: #A7A08F;
+    --line: rgba(242, 239, 230, 0.14); --line-2: rgba(242, 239, 230, 0.26);
+    --formalin: #C6FF3D; --formalin-deep: #6E9A0C;
+    --alarm: #FF2E63; --cyan: #3DE0FF; --amber: #FFB020; --violet: #9B6BFF; --mute: #8A93A6;
+    --sans: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', sans-serif;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body { margin: 0; background: var(--ink); color: var(--bone-2); font-family: var(--sans); font-size: 16px; line-height: 1.85; letter-spacing: .02em; }
+  a { color: var(--cyan); text-underline-offset: 3px; }
+  strong { color: var(--bone); }
+  code { font-family: var(--mono); font-size: .86em; background: var(--ink-3); border: 1px solid var(--line); padding: .05em .4em; border-radius: 3px; color: var(--bone); word-break: break-word; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header.hero { border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(198,255,61,.06), transparent 70%); }
+  header.hero .wrap { padding-top: 36px; padding-bottom: 28px; }
+  .back { font-size: 13px; }
+  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: .24em; color: var(--formalin); text-transform: uppercase; margin-top: 12px; }
+  h1 { color: var(--bone); font-size: clamp(26px, 5vw, 40px); line-height: 1.3; margin: 8px 0 10px; }
+  .lead { max-width: 780px; font-size: 17px; margin: 0; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .badge { font-family: var(--mono); font-size: 12px; padding: 3px 10px; border: 1px solid var(--line-2); background: var(--ink-2); color: var(--bone-2); }
+  .badge.ok { border-color: var(--formalin-deep); color: var(--formalin); }
+  .badge.warn { border-color: rgba(255,176,32,.5); color: var(--amber); }
+  .badge.no { border-color: rgba(255,46,99,.5); color: var(--alarm); }
+  section { padding: 36px 0 4px; }
+  h2 { color: var(--bone); font-size: clamp(21px, 3.4vw, 26px); line-height: 1.4; margin: 0 0 8px; }
+  h2 .en { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .28em; color: var(--formalin); font-weight: 400; margin-bottom: 4px; }
+  h3 { color: var(--bone); font-size: 17px; margin: 24px 0 8px; padding-left: 10px; border-left: 4px solid var(--formalin); line-height: 1.5; }
+  p { margin: 8px 0; }
+  ul, ol { padding-left: 1.3em; margin: 8px 0; }
+  li + li { margin-top: 4px; }
+  .note { font-size: 14px; color: var(--bone-3); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
+  .card { background: var(--ink-2); border: 1px solid var(--line); padding: 16px 18px; }
+  .card h4 { margin: 0 0 6px; color: var(--bone); font-size: 16px; }
+  .card .tag { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; color: var(--formalin); }
+  .callout { border: 1px solid var(--line-2); border-left: 4px solid var(--cyan); background: var(--ink-2); padding: 12px 16px; margin: 14px 0; }
+  .callout.kurare { border-left-color: var(--violet); }
+  .callout.kurare::before { content: 'くられ先生のツボ'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--violet); margin-bottom: 4px; }
+  .callout.warn { border-left-color: var(--amber); }
+  .callout.warn::before { content: '気をつけること'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--amber); margin-bottom: 4px; }
+  .callout.next { border-left-color: var(--formalin); }
+  .callout.next::before { content: '次の一歩'; display: block; font-size: 12px; letter-spacing: .12em; color: var(--formalin); margin-bottom: 4px; }
+  .table-wrap { overflow-x: auto; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 560px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--bone); background: var(--ink-3); font-weight: 700; white-space: nowrap; }
+  details { background: var(--ink-2); border: 1px solid var(--line); padding: 10px 14px; margin: 10px 0; }
+  details summary { cursor: pointer; color: var(--bone); }
+  footer { border-top: 1px solid var(--line); margin-top: 48px; padding: 18px 0 40px; font-size: 13px; color: var(--mute); }
+  @media (max-width: 520px) { body { font-size: 15px; } .lead { font-size: 16px; } }
+  .flow { display: grid; grid-template-columns: 1fr 28px 1.25fr 28px 1fr; gap: 0; align-items: stretch; margin-top: 16px; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  .colhead { font-family: var(--mono); font-size: 11px; letter-spacing: .2em; color: var(--mute); text-transform: uppercase; }
+  .arrow { display: flex; align-items: center; justify-content: center; color: var(--bone-3); font-size: 20px; }
+  .box { background: var(--ink-2); border: 1px solid var(--line); border-left: 4px solid var(--line-2); padding: 10px 12px; font-size: 14px; line-height: 1.6; }
+  .box h4 { margin: 0 0 2px; color: var(--bone); font-size: 15px; }
+  .box .amt { font-family: var(--mono); font-size: 13px; color: var(--bone); }
+  .box.main { border-left-color: var(--formalin); }
+  .box.main2 { border-left-color: #1E9AB8; }
+  .box.sub { border-left-color: var(--mute); }
+  .box.free { border-left-color: var(--bone-3); border-style: dashed; }
+  .box.out { border-left-color: var(--alarm); }
+  .box.left { border: 2px solid var(--formalin); }
+  .lbl { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; }
+  .lbl.main { color: var(--formalin); } .lbl.main2 { color: #3DE0FF; } .lbl.sub { color: var(--mute); }
+  .promo { margin-top: 10px; border: 1px dashed var(--line-2); padding: 10px 12px; font-size: 14px; }
+  .timeline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 14px; }
+  .tl { background: var(--ink-2); border: 1px solid var(--line); border-top: 3px solid var(--line-2); padding: 10px; font-size: 14px; }
+  .tl .when { font-family: var(--mono); font-size: 11px; color: var(--formalin); letter-spacing: .1em; }
+  .tl h4 { margin: 2px 0 4px; color: var(--bone); font-size: 15px; }
+  .tl.now { border-top-color: var(--formalin); }
+  .chart-legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; margin: 8px 0; }
+  .chart-legend span::before { content: ''; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+  #tip { position: fixed; pointer-events: none; background: var(--ink-3); border: 1px solid var(--line-2); color: var(--bone); font-size: 13px; padding: 6px 10px; display: none; z-index: 5; }
+  svg text { font-family: var(--sans); }
+  @media (max-width: 760px) {
+    .flow { grid-template-columns: 1fr; }
+    .arrow { transform: rotate(90deg); height: 28px; }
+    .timeline { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <a class="back" href="index.html">← 収益化と調べものの台帳へ</a>
+    <div class="kicker">STRATEGY · S-001 図解</div>
+    <h1>リトマス審問の収益構造（いまの案）</h1>
+    <p class="lead">収益化の提案（S-001）を、1枚の図にしたものです。誰がお金を払い、何に払い、どこへ出ていき、何が残るか。残りは、構想（V-001）のとおりゲーム制作事業の活動費になります。</p>
+    <div class="badges"><span class="badge">作成：2026-10-10</span><span class="badge">元：S-001（2026-10-03）</span><span class="badge warn">数字は【試算】</span></div>
+  </div>
+</header>
+<main class="wrap">
+
+<section><h2><span class="en">MAP</span>お金の流れ</h2>
+  <div class="flow">
+    <div class="col">
+      <div class="colhead">誰が払う</div>
+      <div class="box"><h4>遊ぶ人</h4>くられ先生のファン、家族・子ども、配信を見た人</div>
+      <div class="box"><h4>学校・塾・自治体・科学館</h4>授業・探究学習・イベント</div>
+      <div class="box"><h4>広告主（Google 経由）</h4>解いた後の画面に出る広告</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col">
+      <div class="colhead">何に払う</div>
+      <div class="box free"><span class="lbl sub">入口・無料</span><h4>今の8件</h4>お金は取らない。遊ぶ人を集める入口。</div>
+      <div class="box main"><span class="lbl main">柱 1</span><h4>事件パック（買い切り）</h4><span class="amt">新作3件 600〜800円 → 先生の10件 1,500円前後</span><br>応援パス 500円前後（広告なし・お名前掲載）。購入コードで開く。</div>
+      <div class="box main2"><span class="lbl main2">柱 2</span><h4>学校・自治体の仕事</h4><span class="amt">出前授業 1コマ4.5万円〜 ／ ライセンス 1クラス年1.5万円 ／ イベント 1日10〜20万円</span><br>死を扱わない事件と「ツクール」で組む。</div>
+      <div class="box sub"><span class="lbl sub">補助</span><h4>広告</h4>解いた後の広告と、見たい人だけの「スペシャルヒント」。<span class="amt">5,000人で月 約7千円</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col">
+      <div class="colhead">出ていく → 残る</div>
+      <div class="box out"><h4>決済手数料</h4><span class="amt">売上の3.6%</span>（Stripe）</div>
+      <div class="box out"><h4>くられ先生へ</h4><span class="amt">先生のパックの売上の30%</span>（案・未提案）</div>
+      <div class="box out"><h4>AI の判定</h4><span class="amt">1事件 1〜3円</span>　遊ばれるほど増える</div>
+      <div class="box out"><h4>サーバー</h4><span class="amt">月 約750円</span>（サイトと共用）</div>
+      <div class="box left"><h4>残り → ゲーム制作事業の活動費</h4>まず初期費用（監修10万円＋絵20万円＝約30万円）の回収へ。そのあと活動費・将来は不登校支援へ（V-001）。</div>
+    </div>
+  </div>
+  <div class="promo"><strong>お金は入らないが、遊ぶ人を連れてくる道：</strong>くられ先生のチャンネルや X での紹介（いちばん効く）、配信者（有料パックのコードを無料で配る）、ファンクラブ限定の事件コード。</div>
+</section>
+
+<section><h2><span class="en">NUMBERS</span>1か月に手元に残る額【試算】</h2>
+  <p>同じ人数で「パックを売る」場合と「広告だけ」の場合を比べました。広告だけだと、遊ぶ人が増えるほど AI の費用が増えて、赤字が大きくなります。</p>
+  <div class="chart-legend"><span style="--c:#1E9AB8">パックあり（広告もあり）</span><span style="--c:#C27F00">広告だけ（パックなし）</span></div>
+  <svg viewBox="0 0 720 300" width="100%" role="img" aria-label="1か月の手元に残る額の試算。パックありは控えめ+1,300円、ふつう+43,300円、うまくいった+310,200円。広告だけは−5,445円、−24,225円、−94,650円。"><line x1="253.0" x2="253.0" y1="20" y2="270" stroke="rgba(242,239,230,0.08)" stroke-width="1"/><text x="253.0" y="288" text-anchor="middle" fill="#8A93A6" font-size="11">-10万</text><line x1="343.0" x2="343.0" y1="20" y2="270" stroke="rgba(242,239,230,0.35)" stroke-width="1"/><text x="343.0" y="288" text-anchor="middle" fill="#8A93A6" font-size="11">+0万</text><line x1="433.0" x2="433.0" y1="20" y2="270" stroke="rgba(242,239,230,0.08)" stroke-width="1"/><text x="433.0" y="288" text-anchor="middle" fill="#8A93A6" font-size="11">+10万</text><line x1="523.0" x2="523.0" y1="20" y2="270" stroke="rgba(242,239,230,0.08)" stroke-width="1"/><text x="523.0" y="288" text-anchor="middle" fill="#8A93A6" font-size="11">+20万</text><line x1="613.0" x2="613.0" y1="20" y2="270" stroke="rgba(242,239,230,0.08)" stroke-width="1"/><text x="613.0" y="288" text-anchor="middle" fill="#8A93A6" font-size="11">+30万</text><text x="4" y="52" text-anchor="start" fill="#D8D3C4" font-size="13">控えめ（1,000人）</text><rect class="bar" data-tip="控えめ（1,000人）・パックあり：+1,300円／月" x="343.0" y="30" width="2.0" height="16" rx="4" fill="#1E9AB8"/><text x="350.2" y="42" text-anchor="start" fill="#F2EFE6" font-size="12">+1,300円</text><rect class="bar" data-tip="控えめ（1,000人）・広告だけ：-5,445円／月" x="338.1" y="50" width="4.9" height="16" rx="4" fill="#C27F00"/><text x="332.1" y="62" text-anchor="end" fill="#F2EFE6" font-size="12">-5,445円</text><text x="4" y="132" text-anchor="start" fill="#D8D3C4" font-size="13">ふつう（5,000人）</text><rect class="bar" data-tip="ふつう（5,000人）・パックあり：+43,300円／月" x="343.0" y="110" width="39.0" height="16" rx="4" fill="#1E9AB8"/><text x="388.0" y="122" text-anchor="start" fill="#F2EFE6" font-size="12">+43,300円</text><rect class="bar" data-tip="ふつう（5,000人）・広告だけ：-24,225円／月" x="321.2" y="130" width="21.8" height="16" rx="4" fill="#C27F00"/><text x="315.2" y="142" text-anchor="end" fill="#F2EFE6" font-size="12">-24,225円</text><text x="4" y="212" text-anchor="start" fill="#D8D3C4" font-size="13">うまくいった（20,000人）</text><rect class="bar" data-tip="うまくいった（20,000人）・パックあり：+310,200円／月" x="343.0" y="190" width="279.2" height="16" rx="4" fill="#1E9AB8"/><text x="628.2" y="202" text-anchor="start" fill="#F2EFE6" font-size="12">+310,200円</text><rect class="bar" data-tip="うまくいった（20,000人）・広告だけ：-94,650円／月" x="257.8" y="210" width="85.2" height="16" rx="4" fill="#C27F00"/><text x="251.8" y="222" text-anchor="end" fill="#F2EFE6" font-size="12">-94,650円</text></svg>
+  <details><summary>表で見る</summary>
+    <div class="table-wrap"><table>
+      <thead><tr><th>1か月に遊ぶ人</th><th>パックあり</th><th>広告だけ</th><th>初期費用30万円の回収</th></tr></thead>
+      <tbody>
+        <tr><td>控えめ（1,000人）</td><td>約 +1,300円</td><td>−5,445円</td><td>実質、回収できない</td></tr>
+        <tr><td>ふつう（5,000人）</td><td>約 +43,300円</td><td>−24,225円</td><td>約7か月</td></tr>
+        <tr><td>うまくいった（20,000人）</td><td>約 +310,200円</td><td>−94,650円</td><td>約1か月</td></tr>
+      </tbody>
+    </table></div>
+  </details>
+  <p class="note">前提：1人が月3件遊ぶ。1事件の AI 費用2円。遊んだ人の1%／2%／3%が平均1,000円のパックを買う。先生へ30%（全部が先生のパックと仮定）。人の作業時間と学校の仕事は入れていません。くわしくは S-001 の「4. 試算」。</p>
+  <div class="grid">
+    <div class="card"><div class="tag">POINT 1</div><h4>本体はパック</h4><p>広告の収入は AI の費用の2〜5割ほど。パックがないと赤字です。</p></div>
+    <div class="card"><div class="tag">POINT 2</div><h4>回収の近道は学校</h4><p>出前授業を月1件取れれば、控えめでも約6.5か月で初期費用を回収できます。</p></div>
+    <div class="card"><div class="tag">POINT 3</div><h4>先生の紹介がいちばん効く</h4><p>紹介で1万人が来て3%が買うと、その月だけで売上 約45万円。だから売れた分をきちんとお返しします。</p></div>
+  </div>
+</section>
+
+<section><h2><span class="en">ORDER</span>進める順番</h2>
+  <div class="timeline">
+    <div class="tl now"><div class="when">いま</div><h4>準備</h4>決済・広告審査の申し込み、AI の専用キーと上限。遊ばれ方（完走率・AI 費用）を測る。</div>
+    <div class="tl"><div class="when">正式公開</div><h4>無料で出す</h4>広告なしでもよい。お金はまだ取らない。</div>
+    <div class="tl"><div class="when">年内</div><h4>学校で体験授業1件</h4>来年度の予算に間に合わせる。</div>
+    <div class="tl"><div class="when">3か月以内</div><h4>新作3件で決済を試す</h4>600〜800円。仕組みを確かめる。</div>
+    <div class="tl"><div class="when">そのあと</div><h4>先生の10件</h4>1,500円前後。1か月前に先生へお分けの提案。</div>
+  </div>
+</section>
+
+<section><h2><span class="en">OPEN</span>まだ決まっていないこと</h2>
+  <p>S-001 の「判断待ちの5つ」（無料と有料の線／最初の有料と時期／広告／学校・自治体／先生へのお分け）は、まだ決まっていません。この図はその「おすすめ」をそのまま描いたものです。判断が変わったら図も直します。</p>
+  <p class="note">別のチャットで作った <code>monetization-model-2026-10.html</code> と <code>引き継ぎ_収益化へ_2026-10-10.md</code> は、まだこちらから読めていません。読めたら、その内容に合わせてこの図を更新します。</p>
+</section>
+</main>
+<div id="tip"></div>
+<script>
+(function(){var t=document.getElementById('tip');document.querySelectorAll('.bar').forEach(function(b){
+b.addEventListener('mousemove',function(e){t.textContent=b.dataset.tip;t.style.display='block';t.style.left=(e.clientX+12)+'px';t.style.top=(e.clientY+12)+'px';});
+b.addEventListener('mouseleave',function(){t.style.display='none';});});})();
+</script>
+<footer><div class="wrap">更新：2026-10-10 ／ リトマス審問（内部資料・公開しない）</div></footer>
+</body>
+</html>
